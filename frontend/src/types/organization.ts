@@ -3,8 +3,21 @@ export type Organization = {
   clerkOrgId: string;
   name: string;
   slug: string;
+  organizationType?: string | null;
+  description?: string | null;
   region: string;
+  website?: string | null;
+  ownerUserId?: string | null;
+  status: string;
   createdAt: string;
   updatedAt: string;
 };
 
+export type CreateOrganizationInput = {
+  name: string;
+  slug?: string;
+  organizationType: string;
+  description?: string;
+  region: string;
+  website?: string;
+};

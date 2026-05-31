@@ -5,7 +5,14 @@ create table organizations (
   clerk_org_id text unique not null,
   name text not null,
   slug text unique not null,
+  organization_type text,
+  description text,
   region text not null default 'us',
+  website text,
+  owner_user_id text,
+  status text not null default 'active',
+  settings jsonb not null default '{}'::jsonb,
+  metadata jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -153,4 +160,3 @@ create index idx_approval_requests_project_id on approval_requests(project_id);
 create index idx_audit_events_project_id on audit_events(project_id);
 create index idx_exceptions_project_id on exceptions(project_id);
 create index idx_manual_services_project_id on manual_services(project_id);
-

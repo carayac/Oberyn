@@ -9,10 +9,10 @@ type AuthSuccessShellProps = {
 
 export function AuthSuccessShell({ id, children }: AuthSuccessShellProps) {
   return (
-    <main id={id} className="flex min-h-screen flex-col overflow-hidden bg-[#fbfcfd] px-10 py-8 text-[#0b0d13] lg:h-screen lg:px-16">
+    <main id={id} className="flex min-h-[100dvh] flex-col overflow-x-hidden bg-[#fbfcfd] px-5 py-6 text-[#0b0d13] sm:px-10 lg:px-16">
       <AuthBrandLogo className="mx-auto" markSize="sm" />
       <div className="flex flex-1 items-center justify-center py-6">{children}</div>
-      <AuthFooter className="mt-auto" compact />
+      <AuthFooter className="mt-auto shrink-0 pt-2" compact />
     </main>
   );
 }

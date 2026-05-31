@@ -11,11 +11,49 @@ import { AuthShell } from "../../components/auth/AuthShell";
 import { getClerkErrorMessage } from "../../lib/clerk/errors";
 import { appRoutes } from "../../routes/routes";
 
+type LoginStep = "credentials" | "firstFactor" | "secondFactor";
+
 export function LoginPage() {
   const navigate = useNavigate();
   const { isLoaded, signIn, setActive } = useSignIn();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
+  const [loginStep, setLoginStep] = useState<LoginStep>("credentials");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function activateSession(result: { createdSessionId?: string | null }) {
+    const sessionId = result.createdSessionId;
+    if (!sessionId) {
+      setErrorMessage("Clerk valido tus datos, pero no devolvio una sesion activa.");
+      return;
+    }
+
+    if (!setActive) {
+      setErrorMessage("Clerk no esta listo para activar la sesion. Intenta nuevamente.");
+      return;
+    }
+
+    await setActive({ session: sessionId });
+    navigate(appRoutes.dashboard);
+  }
+
+  async function prepareEmailCodeFactor(targetStep: LoginStep) {
+    const signInFlow = signIn as unknown as {
+      prepareFirstFactor?: (params: { strategy: "email_code" }) => Promise<unknown>;
+      prepareSecondFactor?: (params: { strategy: "email_code" }) => Promise<unknown>;
+    };
+
+    if (targetStep === "firstFactor" && signInFlow.prepareFirstFactor) {
+      await signInFlow.prepareFirstFactor({ strategy: "email_code" });
+    }
+
+    if (targetStep === "secondFactor" && signInFlow.prepareSecondFactor) {
+      await signInFlow.prepareSecondFactor({ strategy: "email_code" });
+    }
+
+    setLoginStep(targetStep);
+    setInfoMessage("Te enviamos un codigo por correo. Ingresalo para continuar.");
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -27,17 +65,47 @@ export function LoginPage() {
 
     setIsSubmitting(true);
     setErrorMessage(null);
+    setInfoMessage(null);
 
     try {
-      const signInAttempt = await signIn.create({ identifier, password });
+      if (loginStep !== "credentials") {
+        const code = String(formData.get("emailCode") ?? "").trim();
+        const signInFlow = signIn as unknown as {
+          attemptFirstFactor?: (params: { strategy: "email_code"; code: string }) => Promise<{ status: string; createdSessionId?: string | null }>;
+          attemptSecondFactor?: (params: { strategy: "email_code"; code: string }) => Promise<{ status: string; createdSessionId?: string | null }>;
+        };
+        const result =
+          loginStep === "firstFactor"
+            ? await signInFlow.attemptFirstFactor?.({ strategy: "email_code", code })
+            : await signInFlow.attemptSecondFactor?.({ strategy: "email_code", code });
 
-      if (signInAttempt.status === "complete") {
-        await setActive({ session: signInAttempt.createdSessionId });
-        navigate(appRoutes.dashboard);
+        if (result?.status === "complete") {
+          await activateSession(result);
+          return;
+        }
+
+        setErrorMessage("El codigo no completo el inicio de sesion. Intenta de nuevo.");
         return;
       }
 
-      setErrorMessage("Tu inicio de sesion necesita un paso adicional. Revisa tu correo o el panel de Clerk.");
+      const signInAttempt = await signIn.create({ identifier, password });
+
+      if (signInAttempt.status === "complete") {
+        await activateSession(signInAttempt);
+        return;
+      }
+
+      if (signInAttempt.status === "needs_first_factor") {
+        await prepareEmailCodeFactor("firstFactor");
+        return;
+      }
+
+      if (signInAttempt.status === "needs_second_factor") {
+        await prepareEmailCodeFactor("secondFactor");
+        return;
+      }
+
+      setErrorMessage(`Clerk devolvio el estado "${signInAttempt.status}".`);
     } catch (error) {
       setErrorMessage(getClerkErrorMessage(error, "No pudimos iniciar sesion con esas credenciales."));
     } finally {
@@ -56,19 +124,30 @@ export function LoginPage() {
           <AuthFormMessage id="login-form-error" tone="error">
             {errorMessage}
           </AuthFormMessage>
+          <AuthFormMessage id="login-form-info" tone="info">
+            {infoMessage}
+          </AuthFormMessage>
 
-          <AuthField id="login-email" name="email" label="Correo electronico" type="email" placeholder="ejemplo@acme.com" autoComplete="email" required />
-          <AuthPasswordField id="login-password" name="password" label="Contrasena" autoComplete="current-password" required />
+          {loginStep === "credentials" ? (
+            <>
+              <AuthField id="login-email" name="email" label="Correo electronico" type="email" placeholder="ejemplo@acme.com" autoComplete="email" required />
+              <AuthPasswordField id="login-password" name="password" label="Contrasena" autoComplete="current-password" required />
+            </>
+          ) : (
+            <AuthField id="login-email-code" name="emailCode" label="Codigo de verificacion" type="text" placeholder="123456" inputMode="numeric" autoComplete="one-time-code" required />
+          )}
 
-          <div className="flex items-center justify-between gap-4">
-            <AuthCheckbox id="login-remember-me">Recordarme</AuthCheckbox>
-            <AuthInlineLink id="login-forgot-password-link" to={appRoutes.forgotPassword}>
-              Olvidaste tu contrasena?
-            </AuthInlineLink>
-          </div>
+          {loginStep === "credentials" && (
+            <div className="flex items-center justify-between gap-4">
+              <AuthCheckbox id="login-remember-me">Recordarme</AuthCheckbox>
+              <AuthInlineLink id="login-forgot-password-link" to={appRoutes.forgotPassword}>
+                Olvidaste tu contrasena?
+              </AuthInlineLink>
+            </div>
+          )}
 
           <AuthPrimaryButton id="login-submit-button" type="submit" disabled={!isLoaded || isSubmitting} icon={<LockKeyhole className="h-7 w-7" strokeWidth={2.2} />}>
-            {isSubmitting ? "Iniciando..." : "Iniciar sesion"}
+            {isSubmitting ? "Procesando..." : loginStep === "credentials" ? "Iniciar sesion" : "Verificar codigo"}
           </AuthPrimaryButton>
 
           <AuthDivider />

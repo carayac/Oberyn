@@ -10,10 +10,38 @@
     sans-serif;
 }
 
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  overflow-x: hidden;
+}
+
 body {
   margin: 0;
   min-width: 320px;
-  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
+h1,
+h2,
+h3,
+p,
+span,
+a,
+button,
+label,
+td,
+th {
+  overflow-wrap: anywhere;
 }
 
 button,
@@ -21,5 +49,5 @@ input,
 select,
 textarea {
   font: inherit;
+  min-width: 0;
 }
-

@@ -11,12 +11,12 @@ type AuthFieldProps = InputHTMLAttributes<HTMLInputElement> & {
 export function AuthField({ id, label, className, action, ...props }: AuthFieldProps) {
   return (
     <label className="block" htmlFor={id}>
-      <span className="mb-2 block text-[16px] font-extrabold text-[#111318]">{label}</span>
+      <span className="mb-2 block text-[15px] font-extrabold text-[#111318] sm:text-[16px]">{label}</span>
       <span className="relative block">
         <input
           id={id}
           className={cn(
-            "h-[56px] w-full rounded-lg border border-[#d6dde7] bg-white px-5 text-[17px] font-medium text-[#172033] outline-none transition placeholder:text-[#8794a8] focus:border-[#00951d] focus:ring-4 focus:ring-[#00951d]/10",
+            "h-12 w-full rounded-lg border border-[#d6dde7] bg-white px-4 text-[16px] font-medium text-[#172033] outline-none transition placeholder:text-[#8794a8] focus:border-[#00951d] focus:ring-4 focus:ring-[#00951d]/10 sm:h-[54px] sm:px-5 sm:text-[17px]",
             action && "pr-14",
             className,
           )}

@@ -12,6 +12,7 @@ export const appRoutes = {
   dashboard: "/dashboard",
   organizations: "/organizations",
   projects: "/projects",
+  projectNew: "/projects/new",
   projectDetail: "/projects/:projectId",
   projectSettings: "/projects/:projectId/settings",
   projectIntegrations: "/projects/:projectId/integrations",
@@ -25,4 +26,3 @@ export const appRoutes = {
   projectGateway: "/projects/:projectId/gateway",
   projectSDK: "/projects/:projectId/sdk",
 } as const;
-

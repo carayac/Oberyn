@@ -31,15 +31,15 @@ const authFeatures: AuthFeature[] = [
 
 export function AuthFeatureList() {
   return (
-    <div className="space-y-8">
+    <div className="grid gap-5 sm:grid-cols-3 lg:block lg:space-y-8">
       {authFeatures.map(({ id, title, description, Icon }) => (
-        <article key={id} id={`auth-feature-${id}`} className="flex items-start gap-5">
-          <div className="flex h-[64px] w-[64px] shrink-0 items-center justify-center rounded-2xl bg-[#eaf7ee] text-[#00951d]">
-            <Icon className="h-8 w-8" strokeWidth={2.4} />
+        <article key={id} id={`auth-feature-${id}`} className="flex min-w-0 items-start gap-4 lg:gap-5">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#eaf7ee] text-[#00951d] lg:h-[64px] lg:w-[64px]">
+            <Icon className="h-6 w-6 lg:h-8 lg:w-8" strokeWidth={2.4} />
           </div>
-          <div className="pt-2">
-            <h3 className="text-[21px] font-extrabold leading-tight text-[#00951d]">{title}</h3>
-            <p className="mt-3 max-w-[360px] text-[17px] leading-7 text-[#4e5b71]">{description}</p>
+          <div className="min-w-0 pt-1 lg:pt-2">
+            <h3 className="text-[17px] font-extrabold leading-tight text-[#00951d] lg:text-[21px]">{title}</h3>
+            <p className="mt-2 max-w-[360px] text-[14px] leading-6 text-[#4e5b71] lg:mt-3 lg:text-[17px] lg:leading-7">{description}</p>
           </div>
         </article>
       ))}

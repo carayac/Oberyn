@@ -16,6 +16,7 @@ import { CompletedPage } from "../pages/onboarding/CompletedPage";
 import { DashboardPage } from "../pages/dashboard/DashboardPage";
 import { OrganizationsPage } from "../pages/organizations/OrganizationsPage";
 import { ProjectsPage } from "../pages/projects/ProjectsPage";
+import { NewProjectPage } from "../pages/projects/NewProjectPage";
 import { ProjectDetailPage } from "../pages/projects/ProjectDetailPage";
 import { ProjectSettingsPage } from "../pages/projects/ProjectSettingsPage";
 import { ProjectIntegrationsPage } from "../pages/projects/ProjectIntegrationsPage";
@@ -55,6 +56,7 @@ export function AppRoutes() {
         <Route path={appRoutes.dashboard} element={<DashboardPage />} />
         <Route path={appRoutes.organizations} element={<OrganizationsPage />} />
         <Route path={appRoutes.projects} element={<ProjectsPage />} />
+        <Route path={appRoutes.projectNew} element={<NewProjectPage />} />
         <Route path={appRoutes.projectDetail} element={<ProjectDetailPage />} />
         <Route path={appRoutes.projectSettings} element={<ProjectSettingsPage />} />
         <Route path={appRoutes.projectIntegrations} element={<ProjectIntegrationsPage />} />
