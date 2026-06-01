@@ -7,4 +7,5 @@ rulesRoutes.use(requireProjectAccess);
 rulesRoutes.get("/", asyncHandler(rulesController.list));
 rulesRoutes.post("/", asyncHandler(rulesController.create));
 rulesRoutes.patch("/:ruleId", asyncHandler(rulesController.update));
+rulesRoutes.delete("/:ruleId", asyncHandler(rulesController.remove));
 

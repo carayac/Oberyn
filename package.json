@@ -1,0 +1,25 @@
+{
+  "name": "oberyn",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "node ./backend/node_modules/typescript/bin/tsc -p tsconfig.json",
+    "dev": "node scripts/dev.mjs",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}

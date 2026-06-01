@@ -1,5 +1,6 @@
 import { useAuth } from "@clerk/react";
 import { useEffect, useMemo, useState } from "react";
+import { mockOrganizations } from "../data/mockOrganizations";
 import { apiClient } from "../lib/api/client";
 import type { CreateOrganizationInput, Organization } from "../types/organization";
 
@@ -9,8 +10,56 @@ type ApiResponse<T> = {
 };
 
 const ACTIVE_ORGANIZATION_KEY = "oberyn.activeOrganizationId";
+const hasClerkKey = Boolean(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
 
-export function useOrganizations() {
+function usePreviewOrganizations() {
+  const [organizations, setOrganizations] = useState<Organization[]>(mockOrganizations);
+  const [activeOrganizationId, setActiveOrganizationIdState] = useState<string | null>(() => localStorage.getItem(ACTIVE_ORGANIZATION_KEY) ?? mockOrganizations[0]?.id ?? null);
+
+  function setActiveOrganizationId(organizationId: string | null) {
+    setActiveOrganizationIdState(organizationId);
+    if (organizationId) localStorage.setItem(ACTIVE_ORGANIZATION_KEY, organizationId);
+    else localStorage.removeItem(ACTIVE_ORGANIZATION_KEY);
+  }
+
+  const activeOrganization = useMemo(
+    () => organizations.find((organization) => organization.id === activeOrganizationId) ?? organizations[0] ?? null,
+    [organizations, activeOrganizationId],
+  );
+
+  async function createOrganization(input: CreateOrganizationInput) {
+    const organization: Organization = {
+      id: `org_preview_${Date.now()}`,
+      clerkOrgId: "clerk_preview",
+      name: input.name,
+      slug: input.slug || input.name.toLowerCase().replace(/\s+/g, "-"),
+      organizationType: input.organizationType,
+      description: input.description,
+      region: input.region,
+      website: input.website,
+      status: "active",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    setOrganizations((current) => [organization, ...current]);
+    setActiveOrganizationId(organization.id);
+    return organization;
+  }
+
+  return {
+    organizations,
+    activeOrganization,
+    activeOrganizationId,
+    isLoading: false,
+    error: null,
+    reloadOrganizations: async () => undefined,
+    createOrganization,
+    setActiveOrganizationId,
+  };
+}
+
+function useClerkOrganizations() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [activeOrganizationId, setActiveOrganizationIdState] = useState<string | null>(() => localStorage.getItem(ACTIVE_ORGANIZATION_KEY));
@@ -78,3 +127,5 @@ export function useOrganizations() {
     setActiveOrganizationId,
   };
 }
+
+export const useOrganizations = hasClerkKey ? useClerkOrganizations : usePreviewOrganizations;

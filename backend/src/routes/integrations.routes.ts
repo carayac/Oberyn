@@ -7,6 +7,7 @@ export const integrationsRoutes = Router({ mergeParams: true });
 integrationsRoutes.use(requireProjectAccess);
 integrationsRoutes.get("/", asyncHandler(integrationsController.list));
 integrationsRoutes.post("/", asyncHandler(integrationsController.create));
+integrationsRoutes.post("/detect", asyncHandler(integrationsController.detect));
 integrationsRoutes.get("/:integrationId", asyncHandler(integrationsController.getById));
 integrationsRoutes.patch("/:integrationId", asyncHandler(integrationsController.update));
 

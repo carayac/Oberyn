@@ -13,6 +13,8 @@ import { ConnectionPage } from "../pages/onboarding/ConnectionPage";
 import { RulesPage } from "../pages/onboarding/RulesPage";
 import { SummaryPage } from "../pages/onboarding/SummaryPage";
 import { CompletedPage } from "../pages/onboarding/CompletedPage";
+import { TechnicalDocsPage } from "../pages/docs/TechnicalDocsPage";
+import { DocsRedirectPage } from "../pages/docs/DocsRedirectPage";
 import { DashboardPage } from "../pages/dashboard/DashboardPage";
 import { OrganizationsPage } from "../pages/organizations/OrganizationsPage";
 import { ProjectsPage } from "../pages/projects/ProjectsPage";
@@ -33,13 +35,15 @@ import { ProjectSDKPage } from "../pages/projects/ProjectSDKPage";
 export function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to={appRoutes.dashboard} replace />} />
+      <Route path="/" element={<Navigate to={appRoutes.login} replace />} />
       <Route element={<AuthLayout />}>
         <Route path={appRoutes.login} element={<LoginPage />} />
         <Route path={appRoutes.register} element={<RegisterPage />} />
         <Route path={appRoutes.forgotPassword} element={<ForgotPasswordPage />} />
         <Route path={appRoutes.onboardingSuccess} element={<AccountSuccessPage />} />
       </Route>
+      <Route path={appRoutes.docs} element={<TechnicalDocsPage />} />
+      <Route path={appRoutes.apiDocsFallback} element={<DocsRedirectPage />} />
       <Route
         element={
           <ProtectedRoute>

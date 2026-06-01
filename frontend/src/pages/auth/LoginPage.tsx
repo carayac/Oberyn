@@ -13,7 +13,75 @@ import { appRoutes } from "../../routes/routes";
 
 type LoginStep = "credentials" | "firstFactor" | "secondFactor";
 
+const hasClerkKey = Boolean(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
+
 export function LoginPage() {
+  if (!hasClerkKey) {
+    return <LocalPreviewLoginPage />;
+  }
+
+  return <ClerkLoginPage />;
+}
+
+function LocalPreviewLoginPage() {
+  const navigate = useNavigate();
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    navigate(appRoutes.dashboard);
+  }
+
+  return (
+    <AuthShell
+      id="auth-login-view"
+      title="Bienvenido a Oberyn"
+      description="La plataforma que asegura y controla cada accion de tu IA."
+    >
+      <AuthCard id="auth-login-card" title="Iniciar sesion" description="Preview local sin Clerk. Puedes entrar para revisar la UI.">
+        <form id="login-form" className="space-y-6" onSubmit={handleSubmit}>
+          <AuthFormMessage id="login-form-info" tone="info">
+            Falta VITE_CLERK_PUBLISHABLE_KEY. El login real se activara cuando configures Clerk.
+          </AuthFormMessage>
+
+          <AuthField id="login-email" name="email" label="Correo electronico" type="email" placeholder="ejemplo@acme.com" autoComplete="email" required />
+          <AuthPasswordField id="login-password" name="password" label="Contrasena" autoComplete="current-password" required />
+
+          <div className="flex items-center justify-between gap-4">
+            <AuthCheckbox id="login-remember-me">Recordarme</AuthCheckbox>
+            <AuthInlineLink id="login-forgot-password-link" to={appRoutes.forgotPassword}>
+              Olvidaste tu contrasena?
+            </AuthInlineLink>
+          </div>
+
+          <AuthPrimaryButton id="login-submit-button" type="submit" icon={<LockKeyhole className="h-7 w-7" strokeWidth={2.2} />}>
+            Entrar en preview
+          </AuthPrimaryButton>
+
+          <AuthDivider />
+
+          <button
+            id="login-sso-button"
+            type="button"
+            disabled
+            className="inline-flex h-[54px] w-full items-center justify-center gap-4 rounded-lg border border-[#d6dde7] bg-white px-6 text-[18px] font-extrabold text-[#6b7280] opacity-70"
+          >
+            <KeyRound className="h-6 w-6" strokeWidth={2.4} />
+            Continuar con SSO
+          </button>
+
+          <p className="pt-5 text-center text-[18px] font-medium text-[#28354a]">
+            No tienes cuenta?{" "}
+            <AuthInlineLink id="login-create-account-link" to={appRoutes.register}>
+              Crear cuenta
+            </AuthInlineLink>
+          </p>
+        </form>
+      </AuthCard>
+    </AuthShell>
+  );
+}
+
+function ClerkLoginPage() {
   const navigate = useNavigate();
   const { isLoaded, signIn, setActive } = useSignIn();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);

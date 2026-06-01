@@ -5,5 +5,6 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 export const gatewayRoutes = Router({ mergeParams: true });
 gatewayRoutes.use(requireProjectAccess);
 gatewayRoutes.get("/config", asyncHandler(gatewayController.getConfig));
+gatewayRoutes.patch("/config", asyncHandler(gatewayController.updateConfig));
 gatewayRoutes.post("/test", asyncHandler(gatewayController.test));
 
