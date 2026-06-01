@@ -264,7 +264,7 @@ export function ProjectRulesPage() {
               <span>Severidad</span>
               <span>Alcance</span>
               <span>Estado</span>
-              <span>Ultima actualizacion</span>
+              <span>Última actualización</span>
               <span className="text-right">Acciones</span>
             </div>
 
@@ -359,7 +359,7 @@ export function ProjectRulesPage() {
                 </label>
                 <label className="block">
                   <span className="text-xs font-bold text-slate-700">Justificacion</span>
-                  <textarea value={form.description} maxLength={250} onChange={(event) => updateForm("description", event.target.value)} placeholder="Explica el prop?sito de esta regla." className="mt-2 min-h-24 w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-[#008f1f]" />
+                  <textarea value={form.description} maxLength={250} onChange={(event) => updateForm("description", event.target.value)} placeholder="Explica el propósito de esta regla." className="mt-2 min-h-24 w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-[#008f1f]" />
                   <span className="mt-1 block text-right text-xs text-slate-500">{form.description.length} / 250</span>
                 </label>
                 {message ? <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">{message}</p> : null}

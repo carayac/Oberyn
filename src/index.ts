@@ -1,5 +1,5 @@
 export type OberynRiskLevel = "low" | "medium" | "high" | "critical";
-export type OberynDecision = "approved" | "blocked" | "requires_approval";
+export type OberynDecisionStatus = "approved" | "blocked" | "requires_approval";
 
 export type OberynService = {
   name?: string;
@@ -11,12 +11,35 @@ export type OberynService = {
 export type OberynEvent = {
   eventType?: string;
   actionName: string;
-  decision?: OberynDecision;
+  decision?: OberynDecisionStatus;
   riskLevel?: OberynRiskLevel;
   reason?: string;
   service?: OberynService;
   metadata?: Record<string, unknown>;
   payload?: Record<string, unknown>;
+};
+
+export type OberynDecision = {
+  id: string;
+  decision: OberynDecisionStatus;
+  reason: string;
+  riskLevel: OberynRiskLevel;
+  matchedRules: Array<{ id: string; name: string; action: string; reason: string }>;
+  sensitiveDataDetected: boolean;
+  approvalId?: string | null;
+  auditEventId?: string | null;
+  audit: { recorded: boolean };
+};
+
+export type OberynApprovalStatus = {
+  projectId: string;
+  decisionId?: string | null;
+  approvalId?: string | null;
+  status: "not_found" | "pending_approval" | "approved" | "rejected" | "context_requested" | string;
+  approved: boolean;
+  rejected: boolean;
+  reason?: string | null;
+  resolvedAt?: string | null;
 };
 
 export type OberynConfig = {
@@ -27,16 +50,41 @@ export type OberynConfig = {
   flushIntervalMs?: number;
   batchSize?: number;
   captureFetch?: boolean;
+  failMode?: "open" | "closed";
+  approvalMode?: "throw" | "poll";
+  approvalPollIntervalMs?: number;
+  approvalTimeoutMs?: number;
+  gatewayToken?: string;
+  gatewayEndpoint?: string;
   fetchRisk?: (input: RequestInfo | URL, init?: RequestInit) => OberynRiskLevel;
 };
 
 export type OberynClient = {
   capture(event: OberynEvent): void;
+  evaluate(event: OberynEvent): Promise<OberynDecision>;
+  audit(event: OberynEvent & { decisionId?: string; status?: "completed" | "failed"; response?: unknown; error?: string }): Promise<{ recorded: boolean; eventId: string; decisionId: string }>;
+  approvalStatus(input: { decisionId?: string; approvalId?: string }): Promise<OberynApprovalStatus>;
   flush(): Promise<void>;
   track<T>(actionName: string, fn: () => Promise<T> | T, options?: Omit<OberynEvent, "actionName" | "decision">): Promise<T>;
   protect<T>(actionName: string, fn: () => Promise<T> | T, options?: Omit<OberynEvent, "actionName" | "decision">): Promise<T>;
+  guard<T>(actionName: string, fn: () => Promise<T> | T, options?: Omit<OberynEvent, "actionName" | "decision">): Promise<T>;
+  gateway(path?: string): { url: string; headers: Record<string, string> };
   stop(): Promise<void>;
 };
+
+export class OberynBlockedError extends Error {
+  constructor(readonly decision: OberynDecision) {
+    super(decision.reason);
+    this.name = "OberynBlockedError";
+  }
+}
+
+export class OberynApprovalRequiredError extends Error {
+  constructor(readonly decision: OberynDecision) {
+    super(decision.reason);
+    this.name = "OberynApprovalRequiredError";
+  }
+}
 
 const defaultEndpoint = "http://localhost:4000/api/sdk/events";
 
@@ -89,13 +137,44 @@ function sanitizePayload(value: unknown): Record<string, unknown> {
   );
 }
 
+function sdkBase(endpoint: string) {
+  return endpoint.replace(/\/events$/, "");
+}
+
+function gatewayBase(endpoint: string) {
+  return endpoint.replace(/\/sdk\/events$/, "/gateway");
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export function createOberyn(config: OberynConfig): OberynClient {
   const endpoint = config.endpoint ?? defaultEndpoint;
   const queue: Array<OberynEvent & { traceparent: string; capturedAt: string }> = [];
   const batchSize = config.batchSize ?? 10;
+  const failMode = config.failMode ?? "closed";
+  const approvalMode = config.approvalMode ?? "throw";
+  const approvalPollIntervalMs = config.approvalPollIntervalMs ?? 2500;
+  const approvalTimeoutMs = config.approvalTimeoutMs ?? 120_000;
   let timer: ReturnType<typeof setInterval> | null = null;
   let originalFetch: typeof fetch | null = null;
   let stopped = false;
+
+  async function request<T>(path: string, body: unknown): Promise<T> {
+    const response = await fetch(`${sdkBase(endpoint)}${path}`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-oberyn-key": config.apiKey,
+      },
+      body: JSON.stringify(body),
+      keepalive: true,
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok || !payload?.success) throw new Error(payload?.error?.message ?? `Oberyn request failed with status ${response.status}`);
+    return payload.data as T;
+  }
 
   async function send(events: typeof queue) {
     if (!events.length) return;
@@ -149,6 +228,26 @@ export function createOberyn(config: OberynConfig): OberynClient {
     if (queue.length >= batchSize) void flush();
   }
 
+  async function evaluate(event: OberynEvent) {
+    return request<OberynDecision>("/evaluate", {
+      ...event,
+      service: { ...config.service, ...event.service },
+      metadata: { environment: config.environment, ...(event.metadata ?? {}) },
+    });
+  }
+
+  async function audit(event: OberynEvent & { decisionId?: string; status?: "completed" | "failed"; response?: unknown; error?: string }) {
+    return request<{ recorded: boolean; eventId: string; decisionId: string }>("/audit", {
+      ...event,
+      service: { ...config.service, ...event.service },
+      metadata: { environment: config.environment, ...(event.metadata ?? {}) },
+    });
+  }
+
+  async function approvalStatus(input: { decisionId?: string; approvalId?: string }) {
+    return request<OberynApprovalStatus>("/approval-status", input);
+  }
+
   async function track<T>(actionName: string, fn: () => Promise<T> | T, options: Omit<OberynEvent, "actionName" | "decision"> = {}) {
     const startedAt = performance.now();
     try {
@@ -169,7 +268,54 @@ export function createOberyn(config: OberynConfig): OberynClient {
   }
 
   async function protect<T>(actionName: string, fn: () => Promise<T> | T, options: Omit<OberynEvent, "actionName" | "decision"> = {}) {
-    return track(actionName, fn, { riskLevel: "high", ...options });
+    const event = { eventType: "sdk_guard", riskLevel: "high" as OberynRiskLevel, ...options, actionName };
+    let decision: OberynDecision;
+
+    try {
+      decision = await evaluate(event);
+    } catch (error) {
+      if (failMode === "open") return fn();
+      throw error;
+    }
+
+    if (decision.decision === "blocked") throw new OberynBlockedError(decision);
+    if (decision.decision === "requires_approval") {
+      if (approvalMode !== "poll") throw new OberynApprovalRequiredError(decision);
+
+      const startedAt = Date.now();
+      while (Date.now() - startedAt < approvalTimeoutMs) {
+        const status = await approvalStatus({ decisionId: decision.id, approvalId: decision.approvalId ?? undefined });
+        if (status.approved) break;
+        if (status.rejected) throw new OberynBlockedError({ ...decision, reason: status.reason ?? "La aprobación fue rechazada." });
+        await sleep(approvalPollIntervalMs);
+      }
+
+      const finalStatus = await approvalStatus({ decisionId: decision.id, approvalId: decision.approvalId ?? undefined });
+      if (!finalStatus.approved) throw new OberynApprovalRequiredError(decision);
+    }
+
+    try {
+      const result = await fn();
+      await audit({ ...event, decision: "approved", decisionId: decision.id, status: "completed", response: result }).catch(() => undefined);
+      return result;
+    } catch (error) {
+      await audit({ ...event, decision: "blocked", decisionId: decision.id, status: "failed", error: error instanceof Error ? error.message : "Unknown execution error" }).catch(() => undefined);
+      throw error;
+    }
+  }
+
+  function gateway(path = "") {
+    const baseUrl = config.gatewayEndpoint ?? gatewayBase(endpoint);
+    if (!config.gatewayToken) {
+      throw new Error("Missing Oberyn gatewayToken. Copy it from the project Gateway page before routing provider traffic.");
+    }
+
+    return {
+      url: `${baseUrl.replace(/\/$/, "")}${path.startsWith("/") ? path : `/${path}`}`,
+      headers: {
+        authorization: `Bearer ${config.gatewayToken}`,
+      },
+    };
   }
 
   function installFetchCapture() {
@@ -219,9 +365,14 @@ export function createOberyn(config: OberynConfig): OberynClient {
 
   return {
     capture,
+    evaluate,
+    audit,
+    approvalStatus,
     flush,
     track,
     protect,
+    guard: protect,
+    gateway,
     async stop() {
       stopped = true;
       if (timer) clearInterval(timer);

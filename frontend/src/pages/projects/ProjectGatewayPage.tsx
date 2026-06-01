@@ -19,6 +19,9 @@ type GatewayConfig = {
   blockSensitiveData: boolean;
   auditEnabled: boolean;
   applyProjectRules: boolean;
+  rateLimitPerMinute: number;
+  allowedUpstreamHosts: string[];
+  blockedUpstreamHosts: string[];
   status: string;
   storesClientSecrets: boolean;
   lastRequestAt?: string | null;
@@ -68,6 +71,9 @@ export function ProjectGatewayPage() {
     blockSensitiveData: true,
     auditEnabled: true,
     applyProjectRules: true,
+    rateLimitPerMinute: 120,
+    allowedUpstreamHosts: "",
+    blockedUpstreamHosts: "",
   });
   const [message, setMessage] = useState<string | null>(null);
   const [showGatewayToken, setShowGatewayToken] = useState(false);
@@ -89,6 +95,9 @@ export function ProjectGatewayPage() {
         blockSensitiveData: response.data.blockSensitiveData,
         auditEnabled: response.data.auditEnabled,
         applyProjectRules: response.data.applyProjectRules,
+        rateLimitPerMinute: response.data.rateLimitPerMinute,
+        allowedUpstreamHosts: response.data.allowedUpstreamHosts.join(", "),
+        blockedUpstreamHosts: response.data.blockedUpstreamHosts.join(", "),
       });
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "No se pudo cargar Gateway.");
@@ -103,7 +112,16 @@ export function ProjectGatewayPage() {
     setMessage(null);
     try {
       const token = await getAuthToken();
-      const response = await apiClient.patch<ApiResponse<GatewayConfig>>(`/projects/${projectId}/gateway/config`, form, token, activeOrganization?.id);
+      const response = await apiClient.patch<ApiResponse<GatewayConfig>>(
+        `/projects/${projectId}/gateway/config`,
+        {
+          ...form,
+          allowedUpstreamHosts: form.allowedUpstreamHosts.split(",").map((item) => item.trim()).filter(Boolean),
+          blockedUpstreamHosts: form.blockedUpstreamHosts.split(",").map((item) => item.trim()).filter(Boolean),
+        },
+        token,
+        activeOrganization?.id,
+      );
       setConfig(response.data);
       setMessage("Configuración guardada.");
     } catch (error) {
@@ -128,6 +146,8 @@ export function ProjectGatewayPage() {
   const currentEndpoint = `${form.upstreamBaseUrl.replace(/\/$/, "")}/v1/chat/completions`;
   const curl = `curl -X POST ${gatewayUrl} \\
   -H "Authorization: Bearer ${config?.gatewayToken ?? "gw_..."}" \\
+  -H "x-oberyn-approval-id: APPROVAL_ID_SI_APLICA" \\
+  -H "x-oberyn-upstream-authorization: Bearer $PROVIDER_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"model":"gpt-4o","messages":[{"role":"user","content":"Hola, como estas?"}]}'`;
 
@@ -187,6 +207,18 @@ export function ProjectGatewayPage() {
                     <option value="staging">Staging</option>
                     <option value="sandbox">Sandbox</option>
                   </select>
+                </label>
+                <label>
+                  <span className="text-sm font-bold">Límite por minuto</span>
+                  <input type="number" min={1} max={10000} value={form.rateLimitPerMinute} onChange={(event) => setForm((current) => ({ ...current, rateLimitPerMinute: Number(event.target.value) }))} className="mt-3 h-14 w-full rounded-lg border border-slate-200 bg-white px-4 text-base font-semibold outline-none focus:border-[#008f1f]" />
+                </label>
+                <label>
+                  <span className="text-sm font-bold">Hosts permitidos</span>
+                  <input value={form.allowedUpstreamHosts} onChange={(event) => setForm((current) => ({ ...current, allowedUpstreamHosts: event.target.value }))} placeholder="api.openai.com, api.anthropic.com" className="mt-3 h-14 w-full rounded-lg border border-slate-200 bg-white px-4 text-base font-semibold outline-none focus:border-[#008f1f]" />
+                </label>
+                <label>
+                  <span className="text-sm font-bold">Hosts bloqueados</span>
+                  <input value={form.blockedUpstreamHosts} onChange={(event) => setForm((current) => ({ ...current, blockedUpstreamHosts: event.target.value }))} placeholder="metadata.google.internal, 169.254.169.254" className="mt-3 h-14 w-full rounded-lg border border-slate-200 bg-white px-4 text-base font-semibold outline-none focus:border-[#008f1f]" />
                 </label>
               </div>
 
@@ -271,7 +303,7 @@ export function ProjectGatewayPage() {
             <Card className="p-5">
               <div className="flex items-center gap-3">
                 <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-[#008f1f]"><RefreshCcw className="h-6 w-6" /></span>
-                <h2 className="text-lg font-bold">Ultima solicitud detectada</h2>
+                <h2 className="text-lg font-bold">Última solicitud detectada</h2>
               </div>
               <dl className="mt-5 space-y-3 text-sm">
                 {[

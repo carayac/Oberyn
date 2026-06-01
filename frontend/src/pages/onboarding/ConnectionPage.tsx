@@ -174,7 +174,7 @@ function ManualIntegrationModal({
         <div className="mt-6 space-y-4">
           <label className="block">
             <span className="mb-2 block text-[15px] font-extrabold text-[#111827]">Nombre</span>
-            <input name="name" placeholder="Ej. OpenAI produccion" className="h-12 w-full rounded-lg border border-[#dce2ea] px-4 text-[16px] outline-none focus:border-[#00951d] focus:ring-4 focus:ring-[#00951d]/10" />
+            <input name="name" placeholder="Ej. OpenAI producción" className="h-12 w-full rounded-lg border border-[#dce2ea] px-4 text-[16px] outline-none focus:border-[#00951d] focus:ring-4 focus:ring-[#00951d]/10" />
           </label>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -592,7 +592,7 @@ export function ConnectionPage() {
             </section>
 
             <section className="mt-6">
-              <h2 className="text-[13px] font-extrabold uppercase tracking-wide text-[#6957ff]">Detección automatica asistida</h2>
+              <h2 className="text-[13px] font-extrabold uppercase tracking-wide text-[#6957ff]">Detección automática asistida</h2>
               <div
                 className={cn(
                   "mt-3 rounded-lg border bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.04)] transition sm:p-6",
@@ -698,7 +698,7 @@ export function ConnectionPage() {
             <h2 className="text-[21px] font-extrabold text-[#08090c]">¿Cómo funciona?</h2>
             <div className="mt-6 space-y-5">
               {[
-                { title: "Conectas tu proyecto", description: "Usa SDK, Gateway o detección automatica. No necesitamos tus claves API.", Icon: PlugZap },
+                { title: "Conectas tu proyecto", description: "Usa SDK, Gateway o detección automática. No necesitamos tus claves API.", Icon: PlugZap },
                 { title: "Detectamos y entendemos", description: "Identificamos agentes, servicios, APIs y acciones críticas.", Icon: Search },
                 { title: "Aplicamos protecciónes", description: "Tú defines las reglas. Oberyn evalúa cada acción en tiempo real.", Icon: ShieldCheck },
                 { title: "Auditoría y control", description: "Todo queda registrado y puedes aprobar, bloquear o alertar.", Icon: TrendingUp },

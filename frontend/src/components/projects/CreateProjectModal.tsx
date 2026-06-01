@@ -85,7 +85,7 @@ export function CreateProjectModal({ open, onClose, onCreateProject, onCreated }
 
           <label className="block" htmlFor="create-project-description">
             <span className="mb-2 block text-sm font-extrabold text-[#111827]">Descripcion</span>
-            <input id="create-project-description" name="description" className="h-12 w-full rounded-lg border border-[#dce2ea] px-4 text-[16px] outline-none focus:border-[#00951d] focus:ring-4 focus:ring-[#00951d]/10" placeholder="Que protege este proyecto" />
+            <input id="create-project-description" name="description" className="h-12 w-full rounded-lg border border-[#dce2ea] px-4 text-[16px] outline-none focus:border-[#00951d] focus:ring-4 focus:ring-[#00951d]/10" placeholder="Qué protege este proyecto" />
           </label>
 
           <div className="grid gap-4 md:grid-cols-2">

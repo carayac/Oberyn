@@ -1,6 +1,8 @@
 import crypto from "node:crypto";
 import type { Request } from "express";
 import { supabaseAdmin } from "../config/supabase.js";
+import { decisionService } from "./decision.service.js";
+import type { DecisionResult } from "./decision.service.js";
 
 type GatewayConfig = {
   projectId: string;
@@ -12,6 +14,9 @@ type GatewayConfig = {
   blockSensitiveData: boolean;
   auditEnabled: boolean;
   applyProjectRules: boolean;
+  rateLimitPerMinute: number;
+  allowedUpstreamHosts: string[];
+  blockedUpstreamHosts: string[];
   status: string;
   storesClientSecrets: boolean;
   lastRequestAt?: string | null;
@@ -24,8 +29,45 @@ type GatewayConfig = {
   };
 };
 
+type GatewayProxyResult = {
+  status: number;
+  decision?: string;
+  riskLevel?: string;
+  contentType?: string;
+  body?: unknown;
+  stream?: ReadableStream<Uint8Array> | null;
+  headers?: Record<string, string>;
+};
+
+const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
+
 function now() {
   return new Date().toISOString();
+}
+
+function rateLimitWindowMs() {
+  return 60_000;
+}
+
+function checkRateLimit(projectId: string, token: string, limit: number) {
+  const safeLimit = Math.max(1, limit || Number(process.env.OBERYN_GATEWAY_RATE_LIMIT_PER_MINUTE ?? 120));
+  const key = `${projectId}:${crypto.createHash("sha256").update(token).digest("hex").slice(0, 16)}`;
+  const currentTime = Date.now();
+  const current = rateLimitBuckets.get(key);
+
+  if (!current || current.resetAt <= currentTime) {
+    const bucket = { count: 1, resetAt: currentTime + rateLimitWindowMs() };
+    rateLimitBuckets.set(key, bucket);
+    return { allowed: true, limit: safeLimit, remaining: safeLimit - 1, resetAt: bucket.resetAt };
+  }
+
+  current.count += 1;
+  return {
+    allowed: current.count <= safeLimit,
+    limit: safeLimit,
+    remaining: Math.max(0, safeLimit - current.count),
+    resetAt: current.resetAt,
+  };
 }
 
 function getSigningSecret() {
@@ -41,7 +83,11 @@ function isMissingGatewayTable(error: unknown) {
   return details?.code === "PGRST205" || details?.code === "42P01" || /gateway_configs|schema cache|does not exist/i.test(details?.message ?? "");
 }
 
-function toConfig(row: Record<string, unknown>, extras: Omit<GatewayConfig, "projectId" | "upstreamBaseUrl" | "gatewayEndpoint" | "gatewayToken" | "environment" | "inspectPrompts" | "blockSensitiveData" | "auditEnabled" | "applyProjectRules" | "status" | "storesClientSecrets" | "lastRequestAt">): GatewayConfig {
+function asStringArray(value: unknown) {
+  return Array.isArray(value) ? value.map(String).filter(Boolean) : [];
+}
+
+function toConfig(row: Record<string, unknown>, extras: Omit<GatewayConfig, "projectId" | "upstreamBaseUrl" | "gatewayEndpoint" | "gatewayToken" | "environment" | "inspectPrompts" | "blockSensitiveData" | "auditEnabled" | "applyProjectRules" | "rateLimitPerMinute" | "allowedUpstreamHosts" | "blockedUpstreamHosts" | "status" | "storesClientSecrets" | "lastRequestAt">): GatewayConfig {
   const projectId = String(row.project_id);
   return {
     projectId,
@@ -53,6 +99,9 @@ function toConfig(row: Record<string, unknown>, extras: Omit<GatewayConfig, "pro
     blockSensitiveData: Boolean(row.block_sensitive_data ?? true),
     auditEnabled: Boolean(row.audit_enabled ?? true),
     applyProjectRules: Boolean(row.apply_project_rules ?? true),
+    rateLimitPerMinute: Number(row.rate_limit_per_minute ?? 120),
+    allowedUpstreamHosts: asStringArray(row.allowed_upstream_hosts),
+    blockedUpstreamHosts: asStringArray(row.blocked_upstream_hosts),
     status: String(row.status ?? "operative"),
     storesClientSecrets: false,
     lastRequestAt: row.last_request_at ? new Date(String(row.last_request_at)).toISOString() : null,
@@ -117,6 +166,9 @@ async function ensureConfig(projectId: string) {
         block_sensitive_data: true,
         audit_enabled: true,
         apply_project_rules: true,
+        rate_limit_per_minute: 120,
+        allowed_upstream_hosts: [],
+        blocked_upstream_hosts: [],
         status: "operative",
       },
       extras,
@@ -221,6 +273,102 @@ function extractGatewayToken(req: Request) {
   return "";
 }
 
+function buildUpstreamHeaders(req: Request) {
+  const headers = new Headers();
+  const passthrough = [
+    "content-type",
+    "accept",
+    "accept-encoding",
+    "anthropic-version",
+    "anthropic-beta",
+    "openai-organization",
+    "openai-project",
+    "openai-beta",
+    "idempotency-key",
+    "user-agent",
+  ];
+
+  for (const name of passthrough) {
+    const value = req.header(name);
+    if (value) headers.set(name, value);
+  }
+
+  const upstreamAuthorization = req.header("x-oberyn-upstream-authorization") ?? req.header("x-provider-authorization") ?? req.header("x-upstream-authorization");
+  if (upstreamAuthorization) headers.set("authorization", upstreamAuthorization);
+
+  const upstreamApiKey = req.header("x-oberyn-upstream-api-key") ?? req.header("x-provider-api-key") ?? req.header("x-upstream-api-key");
+  if (upstreamApiKey) headers.set("x-api-key", upstreamApiKey);
+
+  return headers;
+}
+
+function buildUpstreamBody(req: Request): BodyInit | undefined {
+  if (req.method === "GET" || req.method === "HEAD") return undefined;
+  if (Buffer.isBuffer(req.body)) return req.body as unknown as BodyInit;
+  if (typeof req.body === "string") return req.body;
+  return JSON.stringify(req.body ?? {});
+}
+
+async function readUpstreamBody(response: Response) {
+  const contentType = response.headers.get("content-type") ?? "application/json";
+  const text = await response.text();
+  if (contentType.includes("application/json")) {
+    try {
+      return { contentType, body: text ? JSON.parse(text) : null };
+    } catch {
+      return { contentType: "text/plain", body: text };
+    }
+  }
+  return { contentType, body: text };
+}
+
+function isStreamResponse(req: Request, response: Response) {
+  const contentType = response.headers.get("content-type") ?? "";
+  const accept = req.header("accept") ?? "";
+  return contentType.includes("text/event-stream") || accept.includes("text/event-stream") || req.header("x-oberyn-stream") === "true";
+}
+
+function isHostAllowed(config: GatewayConfig, upstreamUrl: string) {
+  const host = new URL(upstreamUrl).hostname.toLowerCase();
+  const allowed = config.allowedUpstreamHosts.map((item) => item.toLowerCase()).filter(Boolean);
+  const blocked = config.blockedUpstreamHosts.map((item) => item.toLowerCase()).filter(Boolean);
+  if (blocked.some((item) => host === item || host.endsWith(`.${item}`))) return false;
+  if (!allowed.length) return true;
+  return allowed.some((item) => host === item || host.endsWith(`.${item}`));
+}
+
+async function getApprovedGatewayOverride(projectId: string, approvalId: string | undefined, input: { actionName: string; service?: unknown }) {
+  if (!approvalId) return null;
+  const { data, error } = await supabaseAdmin.from("approval_requests").select("*").eq("project_id", projectId).eq("id", approvalId).maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error("La aprobación indicada no existe para este proyecto.");
+  if (String(data.status) !== "approved") throw new Error("La aprobación indicada todavía no está aprobada.");
+
+  const preview = (data.payload_preview as Record<string, unknown>) ?? {};
+  const originalAction = String(data.action_name ?? "");
+  if (originalAction && originalAction !== input.actionName) throw new Error("La aprobación no corresponde a esta acción.");
+
+  return {
+    approvalId,
+    payloadPreview: preview,
+    service: input.service,
+  };
+}
+
+function approvedDecisionFrom(decision: DecisionResult, approvalId: string): DecisionResult {
+  return {
+    ...decision,
+    id: crypto.randomUUID(),
+    decision: "approved",
+    reason: `Acción aprobada manualmente. approvalId=${approvalId}`,
+    matchedRules: [
+      ...decision.matchedRules,
+      { id: approvalId, name: "Aprobación humana", action: "approved", reason: "Solicitud aprobada desde Oberyn." },
+    ],
+    createdAt: now(),
+  };
+}
+
 export const gatewayService = {
   getConfig: async (projectId: string) => ensureConfig(projectId),
 
@@ -232,6 +380,9 @@ export const gatewayService = {
       block_sensitive_data: typeof payload.blockSensitiveData === "boolean" ? payload.blockSensitiveData : undefined,
       audit_enabled: typeof payload.auditEnabled === "boolean" ? payload.auditEnabled : undefined,
       apply_project_rules: typeof payload.applyProjectRules === "boolean" ? payload.applyProjectRules : undefined,
+      rate_limit_per_minute: typeof payload.rateLimitPerMinute === "number" ? Math.max(1, Math.min(10_000, Math.round(payload.rateLimitPerMinute))) : undefined,
+      allowed_upstream_hosts: Array.isArray(payload.allowedUpstreamHosts) ? payload.allowedUpstreamHosts.map(String).filter(Boolean) : undefined,
+      blocked_upstream_hosts: Array.isArray(payload.blockedUpstreamHosts) ? payload.blockedUpstreamHosts.map(String).filter(Boolean) : undefined,
       updated_at: now(),
     };
     const clean = Object.fromEntries(Object.entries(updates).filter(([, value]) => value !== undefined));
@@ -259,56 +410,122 @@ export const gatewayService = {
     return { projectId, ok: true, message: "Gateway operativo. Solicitud de prueba auditada.", config };
   },
 
-  proxy: async (req: Request) => {
+  proxy: async (req: Request): Promise<GatewayProxyResult> => {
     const started = Date.now();
     const projectId = req.params.projectId;
     const config = await ensureConfig(projectId);
     const token = extractGatewayToken(req);
-    if (token !== config.gatewayToken) return { status: 401, body: { success: false, error: { message: "Gateway token invalido." } } };
+    if (token !== config.gatewayToken) return { status: 401, body: { success: false, error: { message: "Gateway token inválido." } } };
+
+    const rateLimit = checkRateLimit(projectId, token, config.rateLimitPerMinute);
+    const rateHeaders = {
+      "x-oberyn-rate-limit": String(rateLimit.limit),
+      "x-oberyn-rate-limit-remaining": String(rateLimit.remaining),
+      "x-oberyn-rate-limit-reset": new Date(rateLimit.resetAt).toISOString(),
+    };
+    if (!rateLimit.allowed) {
+      return { status: 429, headers: rateHeaders, body: { success: false, error: { message: "Límite de solicitudes del Gateway excedido. Intenta de nuevo en unos segundos." } } };
+    }
 
     const path = `/${req.params[0] ?? ""}`;
     const service = inferProvider(path, req.body);
     const integration = await findOrCreateGatewayIntegration(projectId, service);
-    const sensitive = config.blockSensitiveData && containsSensitiveData(req.body);
-    const decision = sensitive ? "blocked" : "approved";
-    const riskLevel = sensitive ? "critical" : req.method === "GET" ? "low" : "medium";
-    const status = sensitive ? 422 : 202;
-    const durationMs = Date.now() - started;
+    const input = {
+      projectId,
+      source: "gateway" as const,
+      eventType: "gateway_request",
+      actionName: `${req.method.toUpperCase()} ${path}`,
+      riskLevel: req.method === "GET" ? "low" : "medium",
+      service: { ...service, method: "gateway" },
+      method: req.method.toUpperCase(),
+      path,
+      metadata: { upstreamBaseUrl: config.upstreamBaseUrl },
+      payload: req.body,
+      blockSensitiveData: config.blockSensitiveData,
+      ignoreProjectRules: !config.applyProjectRules,
+    };
+    let decision = await decisionService.evaluate(input);
+    const approvalOverride = await getApprovedGatewayOverride(projectId, req.header("x-oberyn-approval-id") ?? undefined, { actionName: input.actionName, service: input.service });
+    if (approvalOverride && decision.decision === "requires_approval") {
+      decision = approvedDecisionFrom(decision, approvalOverride.approvalId);
+    }
 
-    if (config.auditEnabled) {
-      await auditGatewayRequest({
-        projectId,
-        integrationId: String(integration.id),
-        path,
-        method: req.method,
-        body: req.body,
-        decision,
-        riskLevel,
-        durationMs,
+    if (decision.decision === "blocked" || decision.decision === "requires_approval") {
+      const status = decision.decision === "blocked" ? 422 : 409;
+      const auditEvent = config.auditEnabled ? await decisionService.recordAudit(input, decision, { integrationId: String(integration.id), eventType: "gateway_request", status, durationMs: Date.now() - started }) : null;
+      const approval = await decisionService.createApprovalIfNeeded(input, decision, { integrationId: String(integration.id) });
+      await supabaseAdmin.from("gateway_configs").update({ last_request_at: now(), status: "operative", updated_at: now() }).eq("project_id", projectId);
+      await supabaseAdmin.from("projects").update({ status: "active", updated_at: now() }).eq("id", projectId);
+
+      return {
         status,
-        serviceName: service.name,
+        headers: rateHeaders,
+        decision: decision.decision,
+        riskLevel: decision.riskLevel,
+        body: {
+          success: false,
+          decision: decision.decision,
+          riskLevel: decision.riskLevel,
+          reason: decision.reason,
+          approvalId: approval ? String(approval.id) : null,
+          auditEventId: auditEvent ? String(auditEvent.id) : null,
+          error: { message: decision.reason },
+        },
+      };
+    }
+
+    const upstreamUrl = `${config.upstreamBaseUrl.replace(/\/$/, "")}${path}`;
+    if (!isHostAllowed(config, upstreamUrl)) {
+      return { status: 403, headers: rateHeaders, body: { success: false, error: { message: "El host upstream no está permitido para este proyecto." } } };
+    }
+
+    let upstreamStatus = 502;
+    let responseBody: unknown = { success: false, error: { message: "No se pudo contactar el proveedor externo." } };
+    let contentType = "application/json";
+    let responseStream: ReadableStream<Uint8Array> | null = null;
+    const responseHeaders: Record<string, string> = { ...rateHeaders };
+
+    try {
+      const upstreamResponse = await fetch(upstreamUrl, {
+        method: req.method,
+        headers: buildUpstreamHeaders(req),
+        body: buildUpstreamBody(req),
+      });
+      upstreamStatus = upstreamResponse.status;
+      contentType = upstreamResponse.headers.get("content-type") ?? contentType;
+      if (isStreamResponse(req, upstreamResponse)) {
+        responseStream = upstreamResponse.body;
+      } else {
+        const upstreamPayload = await readUpstreamBody(upstreamResponse);
+        contentType = upstreamPayload.contentType;
+        responseBody = upstreamPayload.body;
+      }
+    } catch (error) {
+      responseBody = { success: false, error: { message: error instanceof Error ? error.message : "Error conectando con el proveedor externo." } };
+    }
+
+    const durationMs = Date.now() - started;
+    if (config.auditEnabled) {
+      await decisionService.recordAudit(input, decision, {
+        integrationId: String(integration.id),
+        eventType: "gateway_request",
+        status: upstreamStatus,
+        durationMs,
+        extraMetadata: { upstreamUrl, upstreamStatus, approvalId: approvalOverride?.approvalId ?? null, streamed: Boolean(responseStream) },
       });
     }
 
     await supabaseAdmin.from("gateway_configs").update({ last_request_at: now(), status: "operative", updated_at: now() }).eq("project_id", projectId);
     await supabaseAdmin.from("projects").update({ status: "active", updated_at: now() }).eq("id", projectId);
 
-    if (sensitive) {
-      return { status, body: { success: false, decision, riskLevel, error: { message: "Gateway bloqueo datos sensibles antes de salir." } } };
-    }
-
     return {
-      status,
-      body: {
-        success: true,
-        decision,
-        riskLevel,
-        proxied: true,
-        upstreamBaseUrl: config.upstreamBaseUrl,
-        upstreamPath: path,
-        service,
-        message: "Solicitud inspeccionada y auditada por Gateway.",
-      },
+      status: upstreamStatus,
+      headers: responseHeaders,
+      decision: decision.decision,
+      riskLevel: decision.riskLevel,
+      contentType,
+      stream: responseStream,
+      body: responseBody,
     };
   },
 };

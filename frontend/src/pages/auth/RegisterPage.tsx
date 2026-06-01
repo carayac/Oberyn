@@ -1,6 +1,7 @@
+import { useAuth } from "@clerk/react";
 import { useSignUp } from "@clerk/react/legacy";
 import { UserPlus } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthCard } from "../../components/auth/AuthCard";
 import { AuthCheckbox } from "../../components/auth/AuthCheckbox";
@@ -14,14 +15,25 @@ import { appRoutes } from "../../routes/routes";
 export function RegisterPage() {
   const navigate = useNavigate();
   const { isLoaded, signUp, setActive } = useSignUp();
+  const { isLoaded: isAuthLoaded, isSignedIn } = useAuth();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [isVerifyingEmail, setIsVerifyingEmail] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    if (isAuthLoaded && isSignedIn) {
+      navigate(appRoutes.dashboard, { replace: true });
+    }
+  }, [isAuthLoaded, isSignedIn, navigate]);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!isLoaded) return;
+    if (isAuthLoaded && isSignedIn) {
+      navigate(appRoutes.dashboard, { replace: true });
+      return;
+    }
 
     const formData = new FormData(event.currentTarget);
     const emailCode = String(formData.get("emailCode") ?? "");
@@ -122,7 +134,7 @@ export function RegisterPage() {
             </>
           )}
 
-          <AuthPrimaryButton id="register-submit-button" type="submit" disabled={!isLoaded || isSubmitting} icon={<UserPlus className="h-7 w-7" strokeWidth={2.3} />}>
+          <AuthPrimaryButton id="register-submit-button" type="submit" disabled={!isLoaded || !isAuthLoaded || Boolean(isSignedIn) || isSubmitting} icon={<UserPlus className="h-7 w-7" strokeWidth={2.3} />}>
             {isSubmitting ? "Procesando..." : isVerifyingEmail ? "Verificar cuenta" : "Crear cuenta"}
           </AuthPrimaryButton>
 

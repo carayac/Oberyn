@@ -1,12 +1,14 @@
 # Oberyn Gateway Technical Guide
 
-Last updated: 2026-05-31
+Last updated: 2026-06-01
 
 ## Purpose
 
-The Oberyn Gateway is the proxy-based integration path. Instead of adding instrumentation calls throughout an application, traffic to model providers, APIs, and internal services can be routed through a controlled gateway layer.
+The Oberyn Gateway is the proxy-based integration path. Applications route outbound traffic to models, APIs, and internal services through Oberyn so each request can be inspected, controlled, audited, and then forwarded to the real provider.
 
-The backend exposes project gateway configuration at:
+The Gateway does not store provider API keys. The calling application sends provider credentials per request through upstream headers, and Oberyn redacts sensitive data before storing audit metadata.
+
+## Admin Endpoints
 
 ```txt
 GET /api/projects/:projectId/gateway/config
@@ -14,15 +16,35 @@ PATCH /api/projects/:projectId/gateway/config
 POST /api/projects/:projectId/gateway/test
 ```
 
-These admin endpoints require Clerk authentication and `x-organization-id`.
+These endpoints require Clerk authentication and `x-organization-id`.
 
-Runtime gateway traffic is sent to:
+## Runtime Endpoint
 
 ```txt
 ANY /api/gateway/:projectId/*
 ```
 
 Runtime requests require the project Gateway token in `Authorization: Bearer <token>` or `x-oberyn-gateway-token`.
+
+Provider credentials are forwarded with one of these request headers:
+
+```txt
+x-oberyn-upstream-authorization: Bearer <provider_api_key>
+x-provider-authorization: Bearer <provider_api_key>
+x-upstream-authorization: Bearer <provider_api_key>
+```
+
+For providers that use `x-api-key`, send:
+
+```txt
+x-oberyn-upstream-api-key: <provider_api_key>
+```
+
+If a request returns `requires_approval`, approve it in Oberyn and retry the same request with:
+
+```txt
+x-oberyn-approval-id: <approval_id>
+```
 
 ## Database
 
@@ -32,35 +54,52 @@ Gateway configuration uses:
 database/migrations/003_gateway_configs.sql
 ```
 
-Apply this migration to persist Gateway settings. If the table is not present yet, the backend can return a signed temporary config for local development, but production should use the table.
+Production should use the persisted `gateway_configs` table so tokens, settings, and activity can be managed per project.
 
-## Recommended Flow
+## Runtime Behavior
 
-1. Create or select a project.
-2. Open the Gateway page for the project.
-3. Retrieve the gateway endpoint/configuration.
-4. Route outbound AI/API traffic through the gateway URL.
-5. The gateway should emit audit events, detect services, apply policies, and create approval requests when risk requires it.
+For every proxied request, the Gateway:
 
-## Target Runtime Behavior
+1. Validates the project Gateway token.
+2. Detects the likely service or provider from route and payload.
+3. Creates or updates the project integration record.
+4. Evaluates project rules and sensitive-data policy.
+5. Blocks or requires approval before forwarding when rules demand it.
+6. Allows approved retries when `x-oberyn-approval-id` matches an approved request.
+7. Enforces per-project Gateway rate limits.
+8. For approved requests, forwards the request to the configured upstream base URL.
+9. Streams SSE responses when the provider returns `text/event-stream`.
+10. Supports JSON and raw binary/multipart bodies for Gateway traffic.
+11. Returns the upstream provider response to the caller.
+12. Records an audit event with status, duration, risk, decision, service, route, and redacted payload preview.
 
-For every proxied request, the gateway should record:
+Gateway responses include:
 
-- Project ID.
-- Upstream provider/service.
-- Action name or route.
-- HTTP method and response status.
-- Risk level.
-- Decision: `approved`, `blocked`, or `requires_approval`.
-- Event hash and optional Stellar anchoring metadata.
-- Sanitized payload preview.
+```txt
+x-oberyn-decision
+x-oberyn-risk-level
+x-oberyn-rate-limit
+x-oberyn-rate-limit-remaining
+x-oberyn-rate-limit-reset
+```
 
-## Example Target Event
+## Example Request
+
+```bash
+curl -X POST http://localhost:4000/api/gateway/<project-id>/v1/chat/completions \
+  -H "Authorization: Bearer gw_..." \
+  -H "x-oberyn-approval-id: APPROVAL_ID_SI_APLICA" \
+  -H "x-oberyn-upstream-authorization: Bearer $OPENAI_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"gpt-4o","messages":[{"role":"user","content":"Hola"}]}'
+```
+
+## Audit Event Shape
 
 ```json
 {
   "eventType": "gateway_request",
-  "actionName": "POST api.openai.com/v1/chat/completions",
+  "actionName": "POST /v1/chat/completions",
   "decision": "approved",
   "riskLevel": "medium",
   "service": {
@@ -79,15 +118,26 @@ For every proxied request, the gateway should record:
 
 ## Security
 
-- The gateway must never store provider API keys in audit metadata.
+- The Gateway must never store provider API keys in audit metadata.
 - Authorization headers, cookies, tokens, passwords, and secrets must be redacted before storage.
-- Gateway traffic should be scoped by project.
-- Admin configuration should remain behind Clerk authentication.
+- Gateway traffic is scoped by project.
+- Admin configuration stays behind Clerk authentication.
+- If `blockSensitiveData` is enabled, requests with detected secrets or sensitive data are blocked before they reach the provider.
+- Use `allowedUpstreamHosts` and `blockedUpstreamHosts` to constrain which hosts a project can call.
+
+## Local Real-Project Test
+
+```bash
+set OBERYN_PROJECT_ID=<project-id>
+set OBERYN_GATEWAY_TOKEN=gw_...
+set PROVIDER_API_KEY=<provider-key>
+node examples/gateway-openai-demo.mjs
+```
 
 ## Current Implementation Status
 
-The Gateway module persists configuration, detects services from traffic, blocks sensitive payloads when enabled, writes `audit_events`, updates project activity, and exposes admin controls in the Gateway project page.
+The Gateway persists configuration, forwards approved traffic to the upstream provider, supports approved retries, streams SSE responses, handles JSON and raw bodies, enforces rate limits, constrains upstream hosts, detects services from traffic, applies project rules, blocks sensitive payloads when enabled, creates approval requests when required, writes `audit_events`, updates project activity, and exposes admin controls in the Gateway project page.
 
 ## Maintenance Rule
 
-Every code change that affects gateway config, proxy behavior, redaction, event ingestion, policy decisions, approvals, or audit output must update this document in the same change.
+Every code change that affects gateway config, proxy behavior, redaction, event ingestion, policy decisions, approvals, forwarding, or audit output must update this document in the same change.

@@ -95,7 +95,9 @@ export const oberyn = createOberyn({
     type: "app"
   },
   environment: "production",
-  captureFetch: true
+  captureFetch: true,
+  approvalMode: "poll",
+  approvalTimeoutMs: 120000
 });`
     : "";
 
@@ -121,7 +123,7 @@ export const oberyn = createOberyn({
           <a href={getDocsRedirectUrl("sdk")}>
             <Button variant="secondary">
               <BookOpen className="mr-2 h-4 w-4" />
-              Documentacion tecnica
+              Documentación técnica
             </Button>
           </a>
           <Button onClick={sendTestEvent} disabled={!config || isLoading}>
@@ -158,7 +160,7 @@ export const oberyn = createOberyn({
 
           <Card>
             <h2 className="text-lg font-bold text-slate-950">3. Protege acciones críticas</h2>
-            <p className="mt-2 text-sm text-slate-600">Usa `protect` para auditar acciones sensibles. Riesgos altos crean solicitudes de aprobación automáticamente.</p>
+            <p className="mt-2 text-sm text-slate-600">Usa `protect` para evaluar acciones sensibles antes de ejecutarlas. Con `approvalMode: "poll"` el SDK espera la aprobación y continúa cuando se aprueba.</p>
             <div className="mt-4">
               <CodeBlock code={actionSnippet} />
             </div>

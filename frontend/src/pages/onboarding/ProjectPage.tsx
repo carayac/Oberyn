@@ -92,7 +92,7 @@ export function ProjectPage() {
 
           <label className="block">
             <span className="mb-1.5 block text-[15px] font-extrabold text-[#111827] sm:text-[16px]">Descripcion (opcional)</span>
-            <textarea name="description" placeholder="Describe el prop?sito o alcance de tu proyecto." className="min-h-[60px] w-full rounded-lg border border-[#dce2ea] px-5 py-3 text-[16px] outline-none placeholder:text-[#8796b0] focus:border-[#00951d] focus:ring-4 focus:ring-[#00951d]/10 sm:min-h-[68px] sm:text-[17px]" />
+            <textarea name="description" placeholder="Describe el propósito o alcance de tu proyecto." className="min-h-[60px] w-full rounded-lg border border-[#dce2ea] px-5 py-3 text-[16px] outline-none placeholder:text-[#8796b0] focus:border-[#00951d] focus:ring-4 focus:ring-[#00951d]/10 sm:min-h-[68px] sm:text-[17px]" />
           </label>
 
           <section>

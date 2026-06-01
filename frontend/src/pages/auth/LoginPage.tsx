@@ -1,6 +1,7 @@
+import { useAuth } from "@clerk/react";
 import { useSignIn } from "@clerk/react/legacy";
 import { KeyRound, LockKeyhole } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthCard } from "../../components/auth/AuthCard";
 import { AuthCheckbox } from "../../components/auth/AuthCheckbox";
@@ -16,10 +17,17 @@ type LoginStep = "credentials" | "firstFactor" | "secondFactor";
 export function LoginPage() {
   const navigate = useNavigate();
   const { isLoaded, signIn, setActive } = useSignIn();
+  const { isLoaded: isAuthLoaded, isSignedIn } = useAuth();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [loginStep, setLoginStep] = useState<LoginStep>("credentials");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (isAuthLoaded && isSignedIn) {
+      navigate(appRoutes.dashboard, { replace: true });
+    }
+  }, [isAuthLoaded, isSignedIn, navigate]);
 
   async function activateSession(result: { createdSessionId?: string | null }) {
     const sessionId = result.createdSessionId;
@@ -58,6 +66,10 @@ export function LoginPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!isLoaded) return;
+    if (isAuthLoaded && isSignedIn) {
+      navigate(appRoutes.dashboard, { replace: true });
+      return;
+    }
 
     const formData = new FormData(event.currentTarget);
     const identifier = String(formData.get("email") ?? "");
@@ -142,7 +154,7 @@ export function LoginPage() {
             </div>
           )}
 
-          <AuthPrimaryButton id="login-submit-button" type="submit" disabled={!isLoaded || isSubmitting} icon={<LockKeyhole className="h-7 w-7" strokeWidth={2.2} />}>
+          <AuthPrimaryButton id="login-submit-button" type="submit" disabled={!isLoaded || !isAuthLoaded || Boolean(isSignedIn) || isSubmitting} icon={<LockKeyhole className="h-7 w-7" strokeWidth={2.2} />}>
             {isSubmitting ? "Procesando..." : loginStep === "credentials" ? "Iniciar sesión" : "Verificar código"}
           </AuthPrimaryButton>
 

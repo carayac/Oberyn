@@ -22,7 +22,7 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
       success: false,
       error: {
         message:
-          "Supabase rechazo la API key del backend. Revisa que backend/.env tenga SUPABASE_URL y una SUPABASE_SERVICE_ROLE_KEY valida; la anon/publishable key no sirve para escribir con supabaseAdmin.",
+          "Supabase rechazó la API key del backend. Revisa que backend/.env tenga SUPABASE_URL y una SUPABASE_SERVICE_ROLE_KEY válida; la anon/publishable key no sirve para escribir con supabaseAdmin.",
       },
     });
   }
@@ -32,7 +32,7 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
       success: false,
       error: {
         message:
-          "No se pudo resolver el host directo de Supabase. Usa la connection string del pooler de Supabase en DATABASE_URL o habilita IPv6 para la conexion directa.",
+          "No se pudo resolver el host directo de Supabase. Usa la connection string del pooler de Supabase en DATABASE_URL o habilita IPv6 para la conexión directa.",
       },
     });
   }

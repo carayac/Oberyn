@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { supabaseAdmin } from "../config/supabase.js";
+import { decisionService, normalizeDecision, normalizeRisk } from "./decision.service.js";
 
 type SdkEventInput = {
   eventType?: string;
@@ -36,7 +37,7 @@ const defaultRules = [
     scope: "project",
   },
   {
-    name: "Auditoria minima obligatoria",
+    name: "Auditoría mínima obligatoria",
     category: "audit",
     severity: "medium",
     condition_type: "all_actions",
@@ -96,19 +97,6 @@ function normalizeText(value: unknown, fallback: string) {
   return typeof value === "string" && value.trim() ? value.trim() : fallback;
 }
 
-function normalizeRisk(value: unknown) {
-  const risk = normalizeText(value, "low").toLowerCase();
-  return risk === "critical" || risk === "high" || risk === "medium" || risk === "low" ? risk : "low";
-}
-
-function normalizeDecision(value: unknown) {
-  const decision = normalizeText(value, "approved").toLowerCase();
-  if (["approved", "allowed", "permitida", "allow"].includes(decision)) return "approved";
-  if (["blocked", "denied", "rejected", "bloqueada"].includes(decision)) return "blocked";
-  if (["requires_approval", "pending_approval", "approval", "aprobacion"].includes(decision)) return "requires_approval";
-  return decision;
-}
-
 function eventHash(projectId: string, event: SdkEventInput) {
   return crypto.createHash("sha256").update(JSON.stringify({ projectId, event, receivedAt: now() })).digest("hex");
 }
@@ -152,17 +140,17 @@ async function ensureSdkKey(projectId: string) {
 }
 
 async function resolveSdkKey(publicKey: string) {
-  if (!publicKey) throw new Error("Falta x-oberyn-key para envíar eventos del SDK.");
+  if (!publicKey) throw new Error("Falta x-oberyn-key para enviar eventos del SDK.");
 
   const { data, error } = await supabaseAdmin.from("sdk_keys").select("*").eq("public_key", publicKey).eq("status", "active").maybeSingle();
   if (error && isMissingSdkKeysTable(error)) {
     const projectId = parseFallbackPublicKey(publicKey);
-    if (!projectId) throw new Error("La clave del SDK no es valida. Aplica la migracion sdk_keys o vuelve a copiar la clave desde la pagina SDK.");
+    if (!projectId) throw new Error("La clave del SDK no es válida. Aplica la migración sdk_keys o vuelve a copiar la clave desde la página SDK.");
     await ensureProjectExists(projectId);
     return { id: "fallback", project_id: projectId, public_key: publicKey, status: "active" } as SdkKeyRow;
   }
   if (error) throw error;
-  if (!data) throw new Error("La clave del SDK no es valida o esta inactiva.");
+  if (!data) throw new Error("La clave del SDK no es válida o está inactiva.");
 
   await supabaseAdmin.from("sdk_keys").update({ last_used_at: now(), updated_at: now() }).eq("id", String(data.id));
   return data as SdkKeyRow;
@@ -290,6 +278,20 @@ async function ingestResolvedEvent(projectId: string, event: SdkEventInput) {
   return auditEvent;
 }
 
+function sdkDecisionInput(projectId: string, payload: SdkEventInput) {
+  return {
+    projectId,
+    source: "sdk" as const,
+    eventType: payload.eventType ?? "sdk_guard",
+    actionName: normalizeText(payload.actionName, "unknown_action"),
+    riskLevel: payload.riskLevel,
+    service: payload.service,
+    metadata: payload.metadata,
+    payload: payload.payload,
+    blockSensitiveData: true,
+  };
+}
+
 export const sdkService = {
   getConfig: async (projectId: string) => {
     const key = await ensureSdkKey(projectId);
@@ -297,6 +299,8 @@ export const sdkService = {
       projectId,
       publicKey: key.public_key,
       endpoint: "/api/sdk/events",
+      evaluateEndpoint: "/api/sdk/evaluate",
+      auditEndpoint: "/api/sdk/audit",
       packageName: "oberyn",
       environment: "sandbox",
       protectsCriticalActions: true,
@@ -314,6 +318,91 @@ export const sdkService = {
       metadata: payload,
     });
     return { projectId, accepted: true, eventId: String(event.id) };
+  },
+
+  evaluate: async (publicKey: string, payload: SdkEventInput) => {
+    const key = await resolveSdkKey(publicKey);
+    const projectId = String(key.project_id);
+    await ensureDefaultRules(projectId);
+    const integration = await findOrCreateIntegration(projectId, payload);
+    await ensureFlow(projectId, String(integration.id), payload);
+
+    const input = sdkDecisionInput(projectId, payload);
+    const decision = await decisionService.evaluate(input);
+    const auditEvent = await decisionService.recordAudit(input, decision, { integrationId: String(integration.id), eventType: "sdk_decision" });
+    const approval = await decisionService.createApprovalIfNeeded(input, decision, { integrationId: String(integration.id) });
+
+    await supabaseAdmin.from("projects").update({ status: "active", updated_at: now() }).eq("id", projectId);
+    return {
+      id: decision.id,
+      decision: decision.decision,
+      reason: decision.reason,
+      riskLevel: decision.riskLevel,
+      matchedRules: decision.matchedRules,
+      sensitiveDataDetected: decision.sensitiveDataDetected,
+      approvalId: approval ? String(approval.id) : null,
+      auditEventId: String(auditEvent.id),
+      audit: { recorded: true },
+    };
+  },
+
+  audit: async (publicKey: string, payload: SdkEventInput & { decisionId?: string; status?: string; response?: unknown; error?: string }) => {
+    const key = await resolveSdkKey(publicKey);
+    const projectId = String(key.project_id);
+    const integration = await findOrCreateIntegration(projectId, payload);
+    await ensureFlow(projectId, String(integration.id), payload);
+
+    const status = normalizeText(payload.status, "completed");
+    const decision = {
+      id: payload.decisionId ?? crypto.randomUUID(),
+      projectId,
+      decision: normalizeDecision(status === "failed" ? "blocked" : payload.decision),
+      riskLevel: normalizeRisk(payload.riskLevel),
+      reason: payload.reason ?? (status === "failed" ? "La acción falló durante la ejecución." : "Resultado de ejecución registrado."),
+      matchedRules: [],
+      sensitiveDataDetected: false,
+      createdAt: now(),
+    };
+    const auditEvent = await decisionService.recordAudit(sdkDecisionInput(projectId, payload), decision, {
+      integrationId: String(integration.id),
+      eventType: "sdk_execution",
+      extraMetadata: {
+        executionStatus: status,
+        responsePreview: payload.response,
+        executionError: payload.error,
+      },
+    });
+
+    await supabaseAdmin.from("projects").update({ status: "active", updated_at: now() }).eq("id", projectId);
+    return { recorded: true, projectId, eventId: String(auditEvent.id), decisionId: decision.id };
+  },
+
+  approvalStatus: async (publicKey: string, payload: { decisionId?: string; approvalId?: string }) => {
+    const key = await resolveSdkKey(publicKey);
+    const projectId = String(key.project_id);
+    const decisionId = normalizeText(payload.decisionId, "");
+    const approvalId = normalizeText(payload.approvalId, "");
+
+    if (!decisionId && !approvalId) throw new Error("Indica decisionId o approvalId para consultar la aprobación.");
+
+    const query = supabaseAdmin.from("approval_requests").select("*").eq("project_id", projectId);
+    const { data, error } = approvalId
+      ? await query.eq("id", approvalId).maybeSingle()
+      : await query.contains("payload_preview", { decisionId }).order("requested_at", { ascending: false }).limit(1).maybeSingle();
+
+    if (error) throw error;
+    if (!data) return { projectId, decisionId, approvalId: approvalId || null, status: "not_found", approved: false, rejected: false };
+
+    return {
+      projectId,
+      decisionId: String(((data.payload_preview as Record<string, unknown>) ?? {}).decisionId ?? decisionId),
+      approvalId: String(data.id),
+      status: String(data.status),
+      approved: String(data.status) === "approved",
+      rejected: String(data.status) === "rejected",
+      reason: data.reason ? String(data.reason) : null,
+      resolvedAt: data.resolved_at ? new Date(String(data.resolved_at)).toISOString() : null,
+    };
   },
 
   ingestEvent: async (publicKey: string, payload: SdkEventInput) => {

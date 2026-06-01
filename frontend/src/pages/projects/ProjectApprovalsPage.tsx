@@ -154,7 +154,7 @@ function DetailPanel({
     return (
       <Card className="p-6">
         <h2 className="text-lg font-bold text-slate-950">Detalle de la solicitud</h2>
-        <p className="mt-3 text-sm text-slate-600">Selecciona una solicitud para revisar el contexto y tomar una decision.</p>
+        <p className="mt-3 text-sm text-slate-600">Selecciona una solicitud para revisar el contexto y tomar una decisión.</p>
       </Card>
     );
   }
@@ -352,7 +352,7 @@ export function ProjectApprovalsPage() {
             integration={selectedIntegration}
             onApprove={() => selectedApproval && void runAction(() => approve(selectedApproval.id), "Solicitud aprobada.")}
             onReject={() => selectedApproval && void runAction(() => reject(selectedApproval.id), "Solicitud rechazada.")}
-            onRequestContext={() => selectedApproval && void runAction(() => requestContext(selectedApproval.id, "Se solicito contexto adicional para tomar una decision."), "Contexto solicitado.")}
+            onRequestContext={() => selectedApproval && void runAction(() => requestContext(selectedApproval.id, "Se solicitó contexto adicional para tomar una decisión."), "Contexto solicitado.")}
             onCreateRule={() => selectedApproval && void runAction(() => createPermanentRule(selectedApproval.id), "Regla permanente creada.")}
           />
         </div>

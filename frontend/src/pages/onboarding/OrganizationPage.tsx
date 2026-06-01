@@ -9,8 +9,8 @@ import { appRoutes } from "../../routes/routes";
 const ACTIVE_ORGANIZATION_KEY = "oberyn.onboardingOrganizationId";
 
 const regionOptions = [
-  ["latam", "Am?rica Latina"],
-  ["north_america", "Norteam?rica"],
+  ["latam", "América Latina"],
+  ["north_america", "Norteamérica"],
   ["europe", "Europa"],
   ["global", "Global"],
 ];
@@ -79,16 +79,16 @@ export function OrganizationPage() {
           </label>
 
           <label className="block">
-            <span className="mb-1.5 block text-[15px] font-extrabold text-[#111827] sm:text-[16px]">Descripcion (opcional)</span>
-            <textarea name="description" placeholder="Describe el prop?sito o alcance de tu organización." className="min-h-[62px] w-full rounded-lg border border-[#dce2ea] px-5 py-3 text-[16px] outline-none placeholder:text-[#8796b0] focus:border-[#00951d] focus:ring-4 focus:ring-[#00951d]/10 sm:min-h-[72px]" />
+            <span className="mb-1.5 block text-[15px] font-extrabold text-[#111827] sm:text-[16px]">Descripción (opcional)</span>
+            <textarea name="description" placeholder="Describe el propósito o alcance de tu organización." className="min-h-[62px] w-full rounded-lg border border-[#dce2ea] px-5 py-3 text-[16px] outline-none placeholder:text-[#8796b0] focus:border-[#00951d] focus:ring-4 focus:ring-[#00951d]/10 sm:min-h-[72px]" />
           </label>
 
           <label className="block">
-            <span className="mb-1.5 block text-[15px] font-extrabold text-[#111827] sm:text-[16px]">Region operativa</span>
+            <span className="mb-1.5 block text-[15px] font-extrabold text-[#111827] sm:text-[16px]">Región operativa</span>
             <div className="relative">
               <Globe2 className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-[#52617b] sm:h-6 sm:w-6" />
               <select value={region} onChange={(event) => setRegion(event.target.value)} required className="h-12 w-full appearance-none rounded-lg border border-[#dce2ea] bg-white px-14 text-[16px] font-medium text-[#596783] outline-none focus:border-[#00951d] focus:ring-4 focus:ring-[#00951d]/10">
-                <option value="">Selecciona una region</option>
+                <option value="">Selecciona una región</option>
                 {regionOptions.map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}

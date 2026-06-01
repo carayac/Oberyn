@@ -119,7 +119,7 @@ export function NewProjectPage() {
               </label>
               <label className="block">
                 <span className="mb-2 block text-sm font-extrabold text-[#111827]">Descripcion</span>
-                <textarea name="description" placeholder="Describe brevemente el prop?sito del proyecto" className="min-h-12 w-full rounded-lg border border-[#dce2ea] px-4 py-3 outline-none focus:border-[#00951d] focus:ring-4 focus:ring-[#00951d]/10" />
+                <textarea name="description" placeholder="Describe brevemente el propósito del proyecto" className="min-h-12 w-full rounded-lg border border-[#dce2ea] px-4 py-3 outline-none focus:border-[#00951d] focus:ring-4 focus:ring-[#00951d]/10" />
               </label>
               <label className="block">
                 <span className="mb-2 block text-sm font-extrabold text-[#111827]">Tipo de proyecto *</span>

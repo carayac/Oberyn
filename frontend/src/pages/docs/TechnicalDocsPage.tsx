@@ -13,16 +13,16 @@ type DocSection = {
 const docs: Record<string, { title: string; description: string; sections: DocSection[] }> = {
   sdk: {
     title: "Oberyn SDK",
-    description: "Guía técnica para conectar una aplicación, capturar actividad y envíar eventos al dashboard del proyecto.",
+    description: "Guía técnica para conectar una aplicación, proteger acciones críticas y enviar eventos al dashboard del proyecto.",
     sections: [
       {
-        title: "Endpoint de ingesta",
-        body: ["El SDK envía eventos usando una clave publica del proyecto en el header x-oberyn-key."],
-        code: "POST /api/sdk/events\nPOST /api/sdk/events/batch\nPOST /api/sdk/heartbeat",
+        title: "Endpoints runtime",
+        body: ["El SDK evalúa acciones antes de ejecutarlas y envía eventos usando una clave pública del proyecto en el header x-oberyn-key."],
+        code: "POST /api/sdk/evaluate\nPOST /api/sdk/audit\nPOST /api/sdk/events\nPOST /api/sdk/events/batch\nPOST /api/sdk/heartbeat",
       },
       {
-        title: "Inicializacion",
-        body: ["Instala el paquete local oberyn e inicializalo con la clave del proyecto."],
+        title: "Inicialización",
+        body: ["Instala el paquete local oberyn e inicialízalo con la clave del proyecto."],
         code: `import { createOberyn } from "oberyn";
 
 export const oberyn = createOberyn({
@@ -30,12 +30,13 @@ export const oberyn = createOberyn({
   endpoint: "http://localhost:4000/api/sdk/events",
   service: { name: "mi-app", provider: "custom", type: "app" },
   environment: "production",
-  captureFetch: true
+  captureFetch: true,
+  failMode: "closed"
 });`,
       },
       {
         title: "Acciones críticas",
-        body: ["Usa protect para acciones sensibles. Los eventos de alto riesgo crean solicitudes de aprobación."],
+        body: ["Usa protect para acciones sensibles. Oberyn puede aprobar, bloquear o crear una solicitud de aprobación antes de ejecutar tu función."],
         code: `await oberyn.protect("crear_reembolso", async () => {
   return stripe.refunds.create({ payment_intent: paymentIntentId });
 }, {
@@ -45,7 +46,7 @@ export const oberyn = createOberyn({
       },
       {
         title: "Mantenimiento",
-        body: ["Cada cambio relacionado a inicialización, evento, auth, batch, fetch capture, aprobaciones o auditoría debe actualizar docs/sdk.md."],
+        body: ["Cada cambio relacionado a inicialización, evento, auth, batch, fetch capture, decisiones, aprobaciones o auditoría debe actualizar docs/sdk.md."],
       },
     ],
   },
@@ -59,18 +60,18 @@ export const oberyn = createOberyn({
         code: "GET /api/projects/:projectId/gateway/config\nPOST /api/projects/:projectId/gateway/test",
       },
       {
-        title: "Comportamiento esperado",
-        body: ["El gateway debe registrar proveedor, ruta, decision, riesgo, estado HTTP, duración, hash del evento y payload sanitizado."],
+        title: "Comportamiento runtime",
+        body: ["El gateway registra proveedor, ruta, decisión, riesgo, estado HTTP, duración, hash del evento y payload sanitizado."],
         code: `{
   "eventType": "gateway_request",
-  "actionName": "POST api.openai.com/v1/chat/completions",
+  "actionName": "POST /v1/chat/completions",
   "decision": "approved",
   "riskLevel": "medium"
 }`,
       },
       {
         title: "Seguridad",
-        body: ["No almacenar API keys de proveedores, cookies, tokens ni secretos en metadata. Todo payload debe pasar por redacción antes de auditarse."],
+        body: ["No almacenes API keys de proveedores, cookies, tokens ni secretos en metadata. Todo payload debe pasar por redacción antes de auditarse."],
       },
       {
         title: "Mantenimiento",
