@@ -22,6 +22,7 @@ function isSidebarItemActive(id: string, to: string, pathname: string) {
   if (id === "dashboard") return pathname === "/dashboard";
   if (id === "organizations") return pathname === "/organizations";
   if (id === "projects") return isProjectRoot(pathname);
+  if (to === "/projects") return false;
   return pathname === to;
 }
 

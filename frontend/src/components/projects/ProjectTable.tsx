@@ -8,6 +8,7 @@ import { ProjectTypeBadge } from "./ProjectTypeBadge";
 
 type ProjectTableProps = {
   projects: Project[];
+  organizationNamesById?: Record<string, string>;
   onPauseProject: (projectId: string) => void;
   onArchiveProject: (projectId: string) => void;
 };
@@ -23,13 +24,13 @@ function formatLastActivity(value?: string) {
   if (!value) return "Sin actividad";
   const diffMs = Date.now() - new Date(value).getTime();
   const days = Math.max(1, Math.round(diffMs / (1000 * 60 * 60 * 24)));
-  if (days === 1) return "Actualizado hace 1 dia";
-  if (days < 7) return `Actualizado hace ${days} dias`;
+  if (days === 1) return "Actualizado hace 1 día";
+  if (days < 7) return `Actualizado hace ${days} días`;
   const weeks = Math.round(days / 7);
   return weeks === 1 ? "Actualizado hace 1 semana" : `Actualizado hace ${weeks} semanas`;
 }
 
-export function ProjectTable({ projects, onPauseProject, onArchiveProject }: ProjectTableProps) {
+export function ProjectTable({ projects, organizationNamesById = {}, onPauseProject, onArchiveProject }: ProjectTableProps) {
   const [openMenuProjectId, setOpenMenuProjectId] = useState<string | null>(null);
 
   return (
@@ -62,7 +63,11 @@ export function ProjectTable({ projects, onPauseProject, onArchiveProject }: Pro
                     </span>
                     <span className="min-w-0">
                       <span className="block text-[17px] font-extrabold text-[#111827]">{project.name}</span>
-                      <span className="mt-1 block text-[15px] font-medium text-[#64708a]">{formatLastActivity(project.lastActivityAt ?? project.updatedAt)}</span>
+                      <span className="mt-1 block text-[15px] font-medium text-[#64708a]">
+                        {organizationNamesById[project.organizationId]
+                          ? `${organizationNamesById[project.organizationId]} · ${formatLastActivity(project.lastActivityAt ?? project.updatedAt)}`
+                          : formatLastActivity(project.lastActivityAt ?? project.updatedAt)}
+                      </span>
                     </span>
                   </Link>
                 </td>

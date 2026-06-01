@@ -100,7 +100,7 @@ export function OrganizationPage() {
         </div>
 
         <footer className="mt-5 flex flex-col-reverse gap-3 border-t border-[#dce2ea] pt-4 sm:flex-row sm:justify-end sm:gap-5">
-          <Link to={appRoutes.onboardingSuccess} className="inline-flex h-11 min-w-[150px] items-center justify-center rounded-lg border border-[#dce2ea] px-7 text-[16px] font-extrabold text-[#111827] hover:bg-[#f8fafc] sm:h-12">
+          <Link to={appRoutes.projects} className="inline-flex h-11 min-w-[150px] items-center justify-center rounded-lg border border-[#dce2ea] px-7 text-[16px] font-extrabold text-[#111827] hover:bg-[#f8fafc] sm:h-12">
             Cancelar
           </Link>
           <button disabled={isSubmitting} type="submit" className="inline-flex h-11 min-w-[190px] items-center justify-center gap-5 rounded-lg bg-[#00951d] px-8 text-[16px] font-extrabold text-white shadow-[0_8px_16px_rgba(0,149,29,0.18)] hover:bg-[#007f18] disabled:opacity-60 sm:h-12">
