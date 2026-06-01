@@ -42,74 +42,8 @@ create table integrations (
   status text not null default 'pending',
   coverage numeric not null default 0,
   last_activity_at timestamptz,
-  first_detected_at timestamptz,
-  last_detected_via text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
-);
-
-create table project_api_keys (
-  id uuid primary key default gen_random_uuid(),
-  project_id uuid not null references projects(id) on delete cascade,
-  name text not null,
-  key_prefix text not null,
-  key_hash text not null unique,
-  scopes text[] not null default array['sdk:evaluate', 'sdk:audit', 'gateway:proxy'],
-  status text not null default 'active' check (status in ('active', 'revoked')),
-  last_used_at timestamptz,
-  expires_at timestamptz,
-  created_at timestamptz not null default now()
-);
-
-create table policy_decisions (
-  id uuid primary key default gen_random_uuid(),
-  project_id uuid not null references projects(id) on delete cascade,
-  api_key_id uuid references project_api_keys(id) on delete set null,
-  source text not null check (source in ('sdk', 'gateway')),
-  subject text,
-  action_name text not null,
-  service text not null,
-  risk_level text not null default 'low',
-  decision text not null check (decision in ('allow', 'block', 'requires_approval')),
-  reason text not null,
-  matched_rules jsonb not null default '[]'::jsonb,
-  payload_preview jsonb not null default '{}'::jsonb,
-  request_hash text,
-  created_at timestamptz not null default now()
-);
-
-create table sdk_events (
-  id uuid primary key default gen_random_uuid(),
-  project_id uuid not null references projects(id) on delete cascade,
-  decision_id uuid references policy_decisions(id) on delete set null,
-  api_key_id uuid references project_api_keys(id) on delete set null,
-  subject text,
-  action_name text not null,
-  service text not null,
-  risk_level text not null default 'low',
-  decision text not null,
-  execution_status text not null,
-  request_payload jsonb not null default '{}'::jsonb,
-  response_payload jsonb not null default '{}'::jsonb,
-  error_message text,
-  created_at timestamptz not null default now()
-);
-
-create table gateway_events (
-  id uuid primary key default gen_random_uuid(),
-  project_id uuid not null references projects(id) on delete cascade,
-  decision_id uuid references policy_decisions(id) on delete set null,
-  api_key_id uuid references project_api_keys(id) on delete set null,
-  provider text not null,
-  upstream_path text not null,
-  method text not null,
-  decision text not null,
-  status_code int,
-  latency_ms int,
-  request_body jsonb not null default '{}'::jsonb,
-  response_body jsonb not null default '{}'::jsonb,
-  error_message text,
-  created_at timestamptz not null default now()
 );
 
 create table bots (
@@ -219,10 +153,6 @@ create table manual_services (
 
 create index idx_projects_organization_id on projects(organization_id);
 create index idx_integrations_project_id on integrations(project_id);
-create index idx_project_api_keys_project_id on project_api_keys(project_id);
-create index idx_policy_decisions_project_id on policy_decisions(project_id);
-create index idx_sdk_events_project_id on sdk_events(project_id);
-create index idx_gateway_events_project_id on gateway_events(project_id);
 create index idx_bots_project_id on bots(project_id);
 create index idx_flows_project_id on flows(project_id);
 create index idx_rules_project_id on rules(project_id);
