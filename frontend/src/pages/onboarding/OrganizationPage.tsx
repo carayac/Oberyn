@@ -6,6 +6,8 @@ import { OnboardingFrame } from "../../components/onboarding/OnboardingFrame";
 import { useOrganizations } from "../../hooks/useOrganizations";
 import { appRoutes } from "../../routes/routes";
 
+const ACTIVE_ORGANIZATION_KEY = "oberyn.onboardingOrganizationId";
+
 const regionOptions = [
   ["latam", "America Latina"],
   ["north_america", "Norteamerica"],
@@ -40,13 +42,14 @@ export function OrganizationPage() {
     const formData = new FormData(event.currentTarget);
 
     try {
-      await createOrganization({
+      const organization = await createOrganization({
         name,
         slug: generatedSlug,
         organizationType: "workspace",
         region,
         description: String(formData.get("description") ?? "").trim(),
       });
+      localStorage.setItem(ACTIVE_ORGANIZATION_KEY, organization.id);
       navigate(appRoutes.onboardingProject);
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : "No se pudo crear la organizacion.");

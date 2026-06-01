@@ -7,4 +7,6 @@ approvalsRoutes.use(requireProjectAccess);
 approvalsRoutes.get("/", asyncHandler(approvalsController.list));
 approvalsRoutes.post("/:approvalId/approve", asyncHandler(approvalsController.approve));
 approvalsRoutes.post("/:approvalId/reject", asyncHandler(approvalsController.reject));
+approvalsRoutes.post("/:approvalId/request-context", asyncHandler(approvalsController.requestContext));
+approvalsRoutes.post("/:approvalId/create-rule", asyncHandler(approvalsController.createPermanentRule));
 

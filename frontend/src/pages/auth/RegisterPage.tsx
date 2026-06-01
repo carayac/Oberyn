@@ -11,7 +11,53 @@ import { AuthShell } from "../../components/auth/AuthShell";
 import { getClerkErrorMessage } from "../../lib/clerk/errors";
 import { appRoutes } from "../../routes/routes";
 
+const hasClerkKey = Boolean(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
+
 export function RegisterPage() {
+  if (!hasClerkKey) {
+    return <LocalPreviewRegisterPage />;
+  }
+
+  return <ClerkRegisterPage />;
+}
+
+function LocalPreviewRegisterPage() {
+  const navigate = useNavigate();
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    navigate(appRoutes.onboardingSuccess);
+  }
+
+  return (
+    <AuthShell id="auth-register-view" title="Crea tu cuenta" description="Comienza a proteger y controlar cada accion de tu IA.">
+      <AuthCard id="auth-register-card" title="Crear cuenta" description="Preview local sin Clerk." className="max-w-[740px]">
+        <form id="register-form" className="space-y-5" onSubmit={handleSubmit}>
+          <AuthFormMessage id="register-form-info" tone="info">
+            Falta VITE_CLERK_PUBLISHABLE_KEY. El registro real se activara cuando configures Clerk.
+          </AuthFormMessage>
+
+          <AuthField id="register-name" name="name" label="Nombre" type="text" placeholder="Tu nombre" autoComplete="name" required />
+          <AuthField id="register-email" name="email" label="Correo electronico" type="email" placeholder="ejemplo@acme.com" required />
+          <AuthPasswordField id="register-password" name="password" label="Contrasena" placeholder="Minimo 8 caracteres" minLength={8} required />
+
+          <AuthPrimaryButton id="register-submit-button" type="submit" icon={<UserPlus className="h-7 w-7" strokeWidth={2.3} />}>
+            Crear cuenta preview
+          </AuthPrimaryButton>
+
+          <p className="pt-2 text-center text-[18px] font-medium text-[#28354a]">
+            Ya tienes cuenta?{" "}
+            <AuthInlineLink id="register-login-link" to={appRoutes.login}>
+              Iniciar sesion
+            </AuthInlineLink>
+          </p>
+        </form>
+      </AuthCard>
+    </AuthShell>
+  );
+}
+
+function ClerkRegisterPage() {
   const navigate = useNavigate();
   const { isLoaded, signUp, setActive } = useSignUp();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);

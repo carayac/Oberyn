@@ -8,17 +8,23 @@ import { evidenceRoutes } from "./evidence.routes.js";
 import { exceptionsRoutes } from "./exceptions.routes.js";
 import { flowsRoutes } from "./flows.routes.js";
 import { gatewayRoutes } from "./gateway.routes.js";
+import { docsRoutes } from "./docs.routes.js";
 import { healthRoutes } from "./health.routes.js";
 import { integrationsRoutes } from "./integrations.routes.js";
 import { manualServicesRoutes } from "./manualServices.routes.js";
 import { organizationsRoutes } from "./organizations.routes.js";
 import { projectsRoutes } from "./projects.routes.js";
+import { publicGatewayRoutes } from "./publicGateway.routes.js";
+import { publicSdkRoutes } from "./publicSdk.routes.js";
 import { rulesRoutes } from "./rules.routes.js";
 import { sdkRoutes } from "./sdk.routes.js";
 
 export const apiRoutes = Router();
 
 apiRoutes.use("/health", healthRoutes);
+apiRoutes.use("/docs", docsRoutes);
+apiRoutes.use("/sdk", publicSdkRoutes);
+apiRoutes.use("/gateway", publicGatewayRoutes);
 apiRoutes.use(requireAuth);
 apiRoutes.use("/organizations", organizationsRoutes);
 apiRoutes.use(requireOrganization);

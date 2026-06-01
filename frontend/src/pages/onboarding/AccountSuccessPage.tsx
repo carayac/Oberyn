@@ -21,7 +21,7 @@ export function AccountSuccessPage() {
             <Check className="h-11 w-11 sm:h-14 sm:w-14" strokeWidth={3.4} />
           </div>
           <h1 className="mt-5 text-[30px] font-extrabold leading-tight text-[#08090c] sm:text-[34px]">Cuenta creada con exito!</h1>
-          <p className="mt-3 text-[16px] leading-7 text-[#5a6882] sm:text-[18px]">Gracias por unirte a OBERYN. Tu cuenta ha sido creada correctamente.</p>
+          <p className="mt-3 text-[16px] leading-7 text-[#5a6882] sm:text-[18px]">Gracias por unirte a Oberyn. Tu cuenta ha sido creada correctamente.</p>
         </div>
 
         <div className="my-5 h-px bg-[#dce2ea]" />

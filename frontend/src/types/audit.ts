@@ -1,6 +1,8 @@
 export type AuditEvent = {
   id: string;
   projectId: string;
+  botId?: string | null;
+  integrationId?: string | null;
   eventType: string;
   actionName: string;
   decision: string;

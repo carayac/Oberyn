@@ -7,6 +7,8 @@ import { useOrganizations } from "../../hooks/useOrganizations";
 import { useProjects } from "../../hooks/useProjects";
 import { appRoutes } from "../../routes/routes";
 
+const ACTIVE_PROJECT_KEY = "oberyn.onboardingProjectId";
+
 const projectTypeOptions = [
   { value: "support", label: "Soporte al cliente", description: "Atencion y resolucion de consultas de clientes.", Icon: Headphones },
   { value: "ecommerce", label: "E-commerce", description: "Ventas, pedidos y gestion de clientes.", Icon: ShoppingCart },
@@ -49,7 +51,7 @@ export function ProjectPage() {
     const formData = new FormData(event.currentTarget);
 
     try {
-      await createProject({
+      const project = await createProject({
         name,
         slug: generatedSlug,
         description: String(formData.get("description") ?? "").trim(),
@@ -59,6 +61,7 @@ export function ProjectPage() {
         riskProfile: "medium",
         defaultPolicyMode: "balanced",
       });
+      localStorage.setItem(ACTIVE_PROJECT_KEY, project.id);
       navigate(appRoutes.onboardingConnection);
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : "No se pudo crear el proyecto.");

@@ -1,53 +1,31 @@
 import { UserButton } from "@clerk/react";
-import { Bot, Cloud, Code2, FileText, Folder, GitBranch, Home, Menu, Plug, Settings, ShieldCheck, UserCheck } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { Bot, Building2, Cloud, Code2, FileText, Folder, GitBranch, Home, Menu, Plug, Settings, ShieldCheck, UserCheck } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { NavLink, useLocation } from "react-router-dom";
+import { useOrganizations } from "../../hooks/useOrganizations";
+import { useProjects } from "../../hooks/useProjects";
 import { AuthBrandLogo } from "../auth/AuthBrandLogo";
+
+const hasClerkKey = Boolean(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
+const ACTIVE_PROJECT_KEY = "oberyn.activeProjectId";
+const ACTIVE_PROJECT_EVENT = "oberyn:active-project-change";
 
 type SidebarProps = {
   collapsed: boolean;
   onToggle: () => void;
 };
 
-const defaultProjectId = "project_1";
-
-const navigationGroups = [
-  {
-    id: "principal",
-    label: "Principal",
-    items: [
-      { id: "dashboard", label: "Dashboard", to: "/dashboard", Icon: Home },
-      { id: "projects", label: "Proyectos", to: "/projects", Icon: Folder },
-      { id: "integrations", label: "Integraciones", to: `/projects/${defaultProjectId}/integrations`, Icon: Plug },
-    ],
-  },
-  {
-    id: "security",
-    label: "Control y seguridad",
-    items: [
-      { id: "rules", label: "Reglas", to: `/projects/${defaultProjectId}/rules`, Icon: ShieldCheck },
-      { id: "approvals", label: "Aprobaciones", to: `/projects/${defaultProjectId}/approvals`, Icon: UserCheck },
-      { id: "audit", label: "Auditoria", to: `/projects/${defaultProjectId}/audit`, Icon: FileText },
-      { id: "evidence", label: "Evidencia", to: `/projects/${defaultProjectId}/evidence/event_1`, Icon: FileText },
-    ],
-  },
-  {
-    id: "automation",
-    label: "Automatizacion",
-    items: [
-      { id: "bots", label: "Bots", to: `/projects/${defaultProjectId}/bots`, Icon: Bot },
-      { id: "flows", label: "Flujos", to: `/projects/${defaultProjectId}/flows`, Icon: GitBranch },
-      { id: "gateway", label: "Gateway", to: `/projects/${defaultProjectId}/gateway`, Icon: Cloud },
-      { id: "sdk", label: "SDK", to: `/projects/${defaultProjectId}/sdk`, Icon: Code2 },
-    ],
-  },
-  {
-    id: "administration",
-    label: "Administracion",
-    items: [{ id: "settings", label: "Configuracion", to: `/projects/${defaultProjectId}/settings`, Icon: Settings }],
-  },
-];
-
 function SidebarUser({ collapsed }: { collapsed: boolean }) {
+  if (!hasClerkKey) {
+    return (
+      <div className={collapsed ? "flex justify-center" : "border-t border-[#e5e9ef] pt-4"}>
+        <div className={collapsed ? "flex h-10 w-10 items-center justify-center rounded-full bg-[#eaf7ee] text-sm font-bold text-[#008f1f]" : "rounded-lg bg-[#eaf7ee] px-3 py-2 text-[15px] font-semibold text-[#008f1f]"}>
+          {collapsed ? "PL" : "Preview local"}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={collapsed ? "flex justify-center" : "border-t border-[#e5e9ef] pt-4"}>
       <UserButton
@@ -70,6 +48,79 @@ function SidebarUser({ collapsed }: { collapsed: boolean }) {
 }
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
+  const location = useLocation();
+  const { organizations, activeOrganization, activeOrganizationId, setActiveOrganizationId } = useOrganizations();
+  const { projects } = useProjects(activeOrganizationId);
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(() => localStorage.getItem(ACTIVE_PROJECT_KEY));
+
+  useEffect(() => {
+    const routeProjectId = location.pathname.match(/\/projects\/([^/]+)/)?.[1];
+    const nextProjectId = routeProjectId ?? activeProjectId ?? projects[0]?.id ?? null;
+    if (!nextProjectId || nextProjectId === activeProjectId) return;
+    setActiveProjectId(nextProjectId);
+    localStorage.setItem(ACTIVE_PROJECT_KEY, nextProjectId);
+  }, [activeProjectId, location.pathname, projects]);
+
+  useEffect(() => {
+    function handleActiveProjectChange(event: Event) {
+      const projectId = (event as CustomEvent<{ projectId?: string }>).detail?.projectId;
+      if (!projectId) return;
+      setActiveProjectId(projectId);
+    }
+
+    window.addEventListener(ACTIVE_PROJECT_EVENT, handleActiveProjectChange);
+    return () => window.removeEventListener(ACTIVE_PROJECT_EVENT, handleActiveProjectChange);
+  }, []);
+
+  const selectedProject = projects.find((project) => project.id === activeProjectId) ?? projects[0] ?? null;
+  const navProjectId = selectedProject?.id ?? "project_1";
+
+  const navigationGroups = useMemo(
+    () => [
+      {
+        id: "principal",
+        label: "Principal",
+        items: [
+          { id: "dashboard", label: "Dashboard", to: "/dashboard", Icon: Home },
+          { id: "projects", label: "Proyectos", to: "/projects", Icon: Folder },
+          { id: "integrations", label: "Integraciones", to: `/projects/${navProjectId}/integrations`, Icon: Plug },
+        ],
+      },
+      {
+        id: "security",
+        label: "Control y seguridad",
+        items: [
+          { id: "rules", label: "Reglas", to: `/projects/${navProjectId}/rules`, Icon: ShieldCheck },
+          { id: "approvals", label: "Aprobaciones", to: `/projects/${navProjectId}/approvals`, Icon: UserCheck },
+          { id: "audit", label: "Auditoria", to: `/projects/${navProjectId}/audit`, Icon: FileText },
+          { id: "evidence", label: "Evidencia", to: `/projects/${navProjectId}/evidence/event_1`, Icon: FileText },
+        ],
+      },
+      {
+        id: "automation",
+        label: "Automatizacion",
+        items: [
+          { id: "bots", label: "Bots", to: `/projects/${navProjectId}/bots`, Icon: Bot },
+          { id: "flows", label: "Flujos", to: `/projects/${navProjectId}/flows`, Icon: GitBranch },
+          { id: "gateway", label: "Gateway", to: `/projects/${navProjectId}/gateway`, Icon: Cloud },
+          { id: "sdk", label: "SDK", to: `/projects/${navProjectId}/sdk`, Icon: Code2 },
+        ],
+      },
+      {
+        id: "administration",
+        label: "Administracion",
+        items: [{ id: "settings", label: "Configuracion", to: `/projects/${navProjectId}/settings`, Icon: Settings }],
+      },
+    ],
+    [navProjectId],
+  );
+
+  function handleProjectChange(projectId: string) {
+    setActiveProjectId(projectId);
+    localStorage.setItem(ACTIVE_PROJECT_KEY, projectId);
+    window.dispatchEvent(new CustomEvent(ACTIVE_PROJECT_EVENT, { detail: { projectId } }));
+  }
+
   return (
     <aside
       className={
@@ -118,6 +169,45 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           </section>
         ))}
       </nav>
+
+      {!collapsed && (
+        <div className="space-y-0 rounded-lg border border-[#dce2ea] bg-white">
+          <label className="flex items-center gap-3 border-b border-[#e5e9ef] px-3 py-3">
+            <Building2 className="h-6 w-6 text-[#111827]" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-[13px] font-medium text-[#697386]">Organizacion actual</span>
+              <select
+                value={activeOrganization?.id ?? ""}
+                onChange={(event) => setActiveOrganizationId(event.target.value || null)}
+                className="mt-0.5 w-full bg-transparent text-[15px] font-semibold text-[#111827] outline-none"
+              >
+                {organizations.map((organization) => (
+                  <option key={organization.id} value={organization.id}>
+                    {organization.name}
+                  </option>
+                ))}
+              </select>
+            </span>
+          </label>
+          <label className="flex items-center gap-3 px-3 py-3">
+            <Folder className="h-6 w-6 text-[#111827]" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-[13px] font-medium text-[#697386]">Proyecto actual</span>
+              <select
+                value={selectedProject?.id ?? ""}
+                onChange={(event) => handleProjectChange(event.target.value)}
+                className="mt-0.5 w-full bg-transparent text-[15px] font-semibold text-[#111827] outline-none"
+              >
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+            </span>
+          </label>
+        </div>
+      )}
 
       <SidebarUser collapsed={collapsed} />
     </aside>

@@ -151,6 +151,32 @@ create table manual_services (
   updated_at timestamptz not null default now()
 );
 
+create table sdk_keys (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references projects(id) on delete cascade,
+  name text not null default 'Default SDK key',
+  public_key text unique not null,
+  status text not null default 'active',
+  last_used_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table gateway_configs (
+  project_id uuid primary key references projects(id) on delete cascade,
+  upstream_base_url text not null default 'https://api.openai.com',
+  gateway_token text not null,
+  environment text not null default 'production',
+  inspect_prompts boolean not null default true,
+  block_sensitive_data boolean not null default true,
+  audit_enabled boolean not null default true,
+  apply_project_rules boolean not null default true,
+  status text not null default 'operative',
+  last_request_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create index idx_projects_organization_id on projects(organization_id);
 create index idx_integrations_project_id on integrations(project_id);
 create index idx_bots_project_id on bots(project_id);
@@ -160,3 +186,6 @@ create index idx_approval_requests_project_id on approval_requests(project_id);
 create index idx_audit_events_project_id on audit_events(project_id);
 create index idx_exceptions_project_id on exceptions(project_id);
 create index idx_manual_services_project_id on manual_services(project_id);
+create index idx_sdk_keys_project_id on sdk_keys(project_id);
+create index idx_sdk_keys_public_key on sdk_keys(public_key);
+create index idx_gateway_configs_status on gateway_configs(status);
