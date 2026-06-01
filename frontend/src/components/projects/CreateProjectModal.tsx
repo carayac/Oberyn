@@ -14,7 +14,7 @@ const riskOptions = [
   ["low", "Bajo"],
   ["medium", "Medio"],
   ["high", "Alto"],
-  ["critical", "Critico"],
+  ["critical", "Crítico"],
 ] as const;
 
 const policyOptions = [
@@ -68,7 +68,7 @@ export function CreateProjectModal({ open, onClose, onCreateProject, onCreated }
         <header className="flex items-center justify-between gap-6">
           <div>
             <h2 className="text-[28px] font-extrabold text-[#050505]">Nuevo proyecto</h2>
-            <p className="mt-2 text-[16px] font-medium text-[#64708a]">Configura una unidad independiente para reglas, integraciones y auditoria.</p>
+            <p className="mt-2 text-[16px] font-medium text-[#64708a]">Configura una unidad independiente para reglas, integraciones y auditoría.</p>
           </div>
           <button id="create-project-close" type="button" onClick={onClose} className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#dce2ea] text-[#111827] hover:bg-[#f8fafc]" aria-label="Cerrar">
             <X className="h-5 w-5" />
@@ -112,7 +112,7 @@ export function CreateProjectModal({ open, onClose, onCreateProject, onCreated }
             </label>
 
             <label className="block" htmlFor="create-project-connection">
-              <span className="mb-2 block text-sm font-extrabold text-[#111827]">Conexion</span>
+              <span className="mb-2 block text-sm font-extrabold text-[#111827]">Conexión</span>
               <select id="create-project-connection" name="connectionMode" className="h-12 w-full rounded-lg border border-[#dce2ea] px-4 text-[16px] outline-none focus:border-[#00951d] focus:ring-4 focus:ring-[#00951d]/10" defaultValue="sdk">
                 {Object.entries(connectionModeLabels).map(([value, label]) => (
                   <option key={value} value={value}>
@@ -135,7 +135,7 @@ export function CreateProjectModal({ open, onClose, onCreateProject, onCreated }
           </div>
 
           <label className="block" htmlFor="create-project-policy">
-            <span className="mb-2 block text-sm font-extrabold text-[#111827]">Politica inicial</span>
+            <span className="mb-2 block text-sm font-extrabold text-[#111827]">Política inicial</span>
             <select id="create-project-policy" name="defaultPolicyMode" className="h-12 w-full rounded-lg border border-[#dce2ea] px-4 text-[16px] outline-none focus:border-[#00951d] focus:ring-4 focus:ring-[#00951d]/10" defaultValue="balanced">
               {policyOptions.map(([value, label]) => (
                 <option key={value} value={value}>

@@ -28,18 +28,7 @@ const emptyDashboardData: DashboardData = {
   rules: [],
 };
 
-const hasClerkKey = Boolean(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
-
-function usePreviewDashboardData(_projectId?: string | null) {
-  return {
-    ...emptyDashboardData,
-    isLoading: false,
-    error: null as string | null,
-    reloadDashboardData: async () => undefined,
-  };
-}
-
-function useClerkDashboardData(projectId?: string | null, organizationId?: string | null) {
+export function useDashboardData(projectId?: string | null, organizationId?: string | null) {
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const [data, setData] = useState<DashboardData>(emptyDashboardData);
   const [isLoading, setIsLoading] = useState(false);
@@ -80,7 +69,7 @@ function useClerkDashboardData(projectId?: string | null, organizationId?: strin
         flows: flows.data,
       });
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "No se pudo cargar la informacion del dashboard.");
+      setError(loadError instanceof Error ? loadError.message : "No se pudo cargar la información del dashboard.");
       setData(emptyDashboardData);
     } finally {
       setIsLoading(false);
@@ -97,8 +86,4 @@ function useClerkDashboardData(projectId?: string | null, organizationId?: strin
     error,
     reloadDashboardData: loadDashboardData,
   };
-}
-
-export function useDashboardData(projectId?: string | null, organizationId?: string | null) {
-  return hasClerkKey ? useClerkDashboardData(projectId, organizationId) : usePreviewDashboardData(projectId);
 }

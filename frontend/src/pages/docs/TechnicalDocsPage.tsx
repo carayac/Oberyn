@@ -13,11 +13,11 @@ type DocSection = {
 const docs: Record<string, { title: string; description: string; sections: DocSection[] }> = {
   sdk: {
     title: "Oberyn SDK",
-    description: "Guia tecnica para conectar una aplicacion, capturar actividad y enviar eventos al dashboard del proyecto.",
+    description: "Guía técnica para conectar una aplicación, capturar actividad y envíar eventos al dashboard del proyecto.",
     sections: [
       {
         title: "Endpoint de ingesta",
-        body: ["El SDK envia eventos usando una clave publica del proyecto en el header x-oberyn-key."],
+        body: ["El SDK envía eventos usando una clave publica del proyecto en el header x-oberyn-key."],
         code: "POST /api/sdk/events\nPOST /api/sdk/events/batch\nPOST /api/sdk/heartbeat",
       },
       {
@@ -34,8 +34,8 @@ export const oberyn = createOberyn({
 });`,
       },
       {
-        title: "Acciones criticas",
-        body: ["Usa protect para acciones sensibles. Los eventos de alto riesgo crean solicitudes de aprobacion."],
+        title: "Acciones críticas",
+        body: ["Usa protect para acciones sensibles. Los eventos de alto riesgo crean solicitudes de aprobación."],
         code: `await oberyn.protect("crear_reembolso", async () => {
   return stripe.refunds.create({ payment_intent: paymentIntentId });
 }, {
@@ -45,22 +45,22 @@ export const oberyn = createOberyn({
       },
       {
         title: "Mantenimiento",
-        body: ["Cada cambio relacionado a inicializacion, evento, auth, batch, fetch capture, aprobaciones o auditoria debe actualizar docs/sdk.md."],
+        body: ["Cada cambio relacionado a inicialización, evento, auth, batch, fetch capture, aprobaciones o auditoría debe actualizar docs/sdk.md."],
       },
     ],
   },
   gateway: {
     title: "Oberyn Gateway",
-    description: "Guia tecnica para enrutar trafico por proxy, aplicar politicas y registrar actividad auditable.",
+    description: "Guía técnica para enrutar tráfico por proxy, aplicar políticas y registrar actividad auditable.",
     sections: [
       {
         title: "Endpoints administrativos",
-        body: ["Estos endpoints requieren Clerk y x-organization-id. Sirven para obtener configuracion y probar el gateway del proyecto."],
+        body: ["Estos endpoints requieren Clerk y x-organization-id. Sirven para obtener configuración y probar el gateway del proyecto."],
         code: "GET /api/projects/:projectId/gateway/config\nPOST /api/projects/:projectId/gateway/test",
       },
       {
         title: "Comportamiento esperado",
-        body: ["El gateway debe registrar proveedor, ruta, decision, riesgo, estado HTTP, duracion, hash del evento y payload sanitizado."],
+        body: ["El gateway debe registrar proveedor, ruta, decision, riesgo, estado HTTP, duración, hash del evento y payload sanitizado."],
         code: `{
   "eventType": "gateway_request",
   "actionName": "POST api.openai.com/v1/chat/completions",
@@ -70,11 +70,11 @@ export const oberyn = createOberyn({
       },
       {
         title: "Seguridad",
-        body: ["No almacenar API keys de proveedores, cookies, tokens ni secretos en metadata. Todo payload debe pasar por redaccion antes de auditarse."],
+        body: ["No almacenar API keys de proveedores, cookies, tokens ni secretos en metadata. Todo payload debe pasar por redacción antes de auditarse."],
       },
       {
         title: "Mantenimiento",
-        body: ["Cada cambio de config, proxy, redaccion, eventos, politicas, aprobaciones o auditoria debe actualizar docs/gateway.md."],
+        body: ["Cada cambio de config, proxy, redacción, eventos, políticas, aprobaciones o auditoría debe actualizar docs/gateway.md."],
       },
     ],
   },

@@ -62,14 +62,14 @@ export function ProjectDetailPage() {
 
       <section className="grid gap-5 lg:grid-cols-2">
         <article className="rounded-lg border border-[#dce2ea] bg-white p-7 shadow-[0_10px_28px_rgba(15,23,42,0.04)]">
-          <h2 className="text-xl font-extrabold text-[#050505]">Configuracion</h2>
+          <h2 className="text-xl font-extrabold text-[#050505]">Configuración</h2>
           <dl className="mt-5 space-y-4 text-[16px]">
             <div className="flex justify-between gap-4">
               <dt className="font-semibold text-[#596783]">Ambiente</dt>
               <dd className="font-bold text-[#111827]">{environmentLabels[project.environment] ?? project.environment}</dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="font-semibold text-[#596783]">Conexion</dt>
+              <dt className="font-semibold text-[#596783]">Conexión</dt>
               <dd className="font-bold text-[#111827]">{connectionModeLabels[project.connectionMode] ?? project.connectionMode}</dd>
             </div>
             <div className="flex justify-between gap-4">
@@ -77,7 +77,7 @@ export function ProjectDetailPage() {
               <dd className="font-bold capitalize text-[#111827]">{project.riskProfile ?? "medium"}</dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="font-semibold text-[#596783]">Politica</dt>
+              <dt className="font-semibold text-[#596783]">Política</dt>
               <dd className="font-bold capitalize text-[#111827]">{project.defaultPolicyMode ?? "balanced"}</dd>
             </div>
           </dl>

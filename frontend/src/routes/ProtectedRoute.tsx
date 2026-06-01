@@ -7,14 +7,8 @@ type ProtectedRouteProps = {
   children: ReactNode;
 };
 
-const hasClerkKey = Boolean(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
-
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const location = useLocation();
-
-  if (!hasClerkKey) {
-    return <>{children}</>;
-  }
 
   return (
     <>

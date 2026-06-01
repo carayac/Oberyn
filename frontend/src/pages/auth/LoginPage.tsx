@@ -13,75 +13,7 @@ import { appRoutes } from "../../routes/routes";
 
 type LoginStep = "credentials" | "firstFactor" | "secondFactor";
 
-const hasClerkKey = Boolean(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
-
 export function LoginPage() {
-  if (!hasClerkKey) {
-    return <LocalPreviewLoginPage />;
-  }
-
-  return <ClerkLoginPage />;
-}
-
-function LocalPreviewLoginPage() {
-  const navigate = useNavigate();
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    navigate(appRoutes.dashboard);
-  }
-
-  return (
-    <AuthShell
-      id="auth-login-view"
-      title="Bienvenido a Oberyn"
-      description="La plataforma que asegura y controla cada accion de tu IA."
-    >
-      <AuthCard id="auth-login-card" title="Iniciar sesion" description="Preview local sin Clerk. Puedes entrar para revisar la UI.">
-        <form id="login-form" className="space-y-6" onSubmit={handleSubmit}>
-          <AuthFormMessage id="login-form-info" tone="info">
-            Falta VITE_CLERK_PUBLISHABLE_KEY. El login real se activara cuando configures Clerk.
-          </AuthFormMessage>
-
-          <AuthField id="login-email" name="email" label="Correo electronico" type="email" placeholder="ejemplo@acme.com" autoComplete="email" required />
-          <AuthPasswordField id="login-password" name="password" label="Contrasena" autoComplete="current-password" required />
-
-          <div className="flex items-center justify-between gap-4">
-            <AuthCheckbox id="login-remember-me">Recordarme</AuthCheckbox>
-            <AuthInlineLink id="login-forgot-password-link" to={appRoutes.forgotPassword}>
-              Olvidaste tu contrasena?
-            </AuthInlineLink>
-          </div>
-
-          <AuthPrimaryButton id="login-submit-button" type="submit" icon={<LockKeyhole className="h-7 w-7" strokeWidth={2.2} />}>
-            Entrar en preview
-          </AuthPrimaryButton>
-
-          <AuthDivider />
-
-          <button
-            id="login-sso-button"
-            type="button"
-            disabled
-            className="inline-flex h-[54px] w-full items-center justify-center gap-4 rounded-lg border border-[#d6dde7] bg-white px-6 text-[18px] font-extrabold text-[#6b7280] opacity-70"
-          >
-            <KeyRound className="h-6 w-6" strokeWidth={2.4} />
-            Continuar con SSO
-          </button>
-
-          <p className="pt-5 text-center text-[18px] font-medium text-[#28354a]">
-            No tienes cuenta?{" "}
-            <AuthInlineLink id="login-create-account-link" to={appRoutes.register}>
-              Crear cuenta
-            </AuthInlineLink>
-          </p>
-        </form>
-      </AuthCard>
-    </AuthShell>
-  );
-}
-
-function ClerkLoginPage() {
   const navigate = useNavigate();
   const { isLoaded, signIn, setActive } = useSignIn();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -92,12 +24,12 @@ function ClerkLoginPage() {
   async function activateSession(result: { createdSessionId?: string | null }) {
     const sessionId = result.createdSessionId;
     if (!sessionId) {
-      setErrorMessage("Clerk valido tus datos, pero no devolvio una sesion activa.");
+      setErrorMessage("Clerk validó tus datos, pero no devolvió una sesión activa.");
       return;
     }
 
     if (!setActive) {
-      setErrorMessage("Clerk no esta listo para activar la sesion. Intenta nuevamente.");
+      setErrorMessage("Clerk no está listo para activar la sesión. Intenta nuevamente.");
       return;
     }
 
@@ -120,7 +52,7 @@ function ClerkLoginPage() {
     }
 
     setLoginStep(targetStep);
-    setInfoMessage("Te enviamos un codigo por correo. Ingresalo para continuar.");
+    setInfoMessage("Te envíamos un código por correo. Ingrésalo para continuar.");
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -152,7 +84,7 @@ function ClerkLoginPage() {
           return;
         }
 
-        setErrorMessage("El codigo no completo el inicio de sesion. Intenta de nuevo.");
+        setErrorMessage("El código no completó el inicio de sesión. Intenta de nuevo.");
         return;
       }
 
@@ -173,21 +105,17 @@ function ClerkLoginPage() {
         return;
       }
 
-      setErrorMessage(`Clerk devolvio el estado "${signInAttempt.status}".`);
+      setErrorMessage(`Clerk devolvió el estado "${signInAttempt.status}".`);
     } catch (error) {
-      setErrorMessage(getClerkErrorMessage(error, "No pudimos iniciar sesion con esas credenciales."));
+      setErrorMessage(getClerkErrorMessage(error, "No pudimos iniciar sesión con esas credenciales."));
     } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
-    <AuthShell
-      id="auth-login-view"
-      title="Bienvenido a Oberyn"
-      description="La plataforma que asegura y controla cada accion de tu IA."
-    >
-      <AuthCard id="auth-login-card" title="Iniciar sesion" description="Ingresa tus credenciales para continuar.">
+    <AuthShell id="auth-login-view" title="Bienvenido a Oberyn" description="La plataforma que asegura y controla cada acción de tu IA.">
+      <AuthCard id="auth-login-card" title="Iniciar sesión" description="Ingresa tus credenciales para continuar.">
         <form id="login-form" className="space-y-6" onSubmit={handleSubmit}>
           <AuthFormMessage id="login-form-error" tone="error">
             {errorMessage}
@@ -198,24 +126,24 @@ function ClerkLoginPage() {
 
           {loginStep === "credentials" ? (
             <>
-              <AuthField id="login-email" name="email" label="Correo electronico" type="email" placeholder="ejemplo@acme.com" autoComplete="email" required />
-              <AuthPasswordField id="login-password" name="password" label="Contrasena" autoComplete="current-password" required />
+              <AuthField id="login-email" name="email" label="Correo electrónico" type="email" placeholder="ejemplo@acme.com" autoComplete="email" required />
+              <AuthPasswordField id="login-password" name="password" label="Contraseña" autoComplete="current-password" required />
             </>
           ) : (
-            <AuthField id="login-email-code" name="emailCode" label="Codigo de verificacion" type="text" placeholder="123456" inputMode="numeric" autoComplete="one-time-code" required />
+            <AuthField id="login-email-code" name="emailCode" label="Código de verificación" type="text" placeholder="123456" inputMode="numeric" autoComplete="one-time-code" required />
           )}
 
           {loginStep === "credentials" && (
             <div className="flex items-center justify-between gap-4">
               <AuthCheckbox id="login-remember-me">Recordarme</AuthCheckbox>
               <AuthInlineLink id="login-forgot-password-link" to={appRoutes.forgotPassword}>
-                Olvidaste tu contrasena?
+                ¿Olvidaste tu contraseña?
               </AuthInlineLink>
             </div>
           )}
 
           <AuthPrimaryButton id="login-submit-button" type="submit" disabled={!isLoaded || isSubmitting} icon={<LockKeyhole className="h-7 w-7" strokeWidth={2.2} />}>
-            {isSubmitting ? "Procesando..." : loginStep === "credentials" ? "Iniciar sesion" : "Verificar codigo"}
+            {isSubmitting ? "Procesando..." : loginStep === "credentials" ? "Iniciar sesión" : "Verificar código"}
           </AuthPrimaryButton>
 
           <AuthDivider />
@@ -230,7 +158,7 @@ function ClerkLoginPage() {
           </button>
 
           <p className="pt-5 text-center text-[18px] font-medium text-[#28354a]">
-            No tienes cuenta?{" "}
+            ¿No tienes cuenta?{" "}
             <AuthInlineLink id="login-create-account-link" to={appRoutes.register}>
               Crear cuenta
             </AuthInlineLink>

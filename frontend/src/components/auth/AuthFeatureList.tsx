@@ -22,7 +22,7 @@ const authFeatures: AuthFeature[] = [
     Icon: ShieldCheck,
   },
   {
-    id: "auditoria-inteligente",
+    id: "auditoría-inteligente",
     title: "Auditoría inteligente",
     description: "Trazabilidad completa con el mínimo esfuerzo.",
     Icon: ClipboardCheck,

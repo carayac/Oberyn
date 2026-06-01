@@ -21,20 +21,6 @@ type SdkConfig = {
   storesClientSecrets: boolean;
 };
 
-const hasClerkKey = Boolean(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
-
-function useSdkAuth() {
-  if (!hasClerkKey) {
-    return {
-      getToken: async () => null,
-      isLoaded: true,
-      isSignedIn: false,
-    };
-  }
-
-  return useAuth();
-}
-
 function CodeBlock({ code }: { code: string }) {
   async function copyCode() {
     await navigator.clipboard?.writeText(code);
@@ -42,7 +28,7 @@ function CodeBlock({ code }: { code: string }) {
 
   return (
     <div className="relative overflow-hidden rounded-lg border border-slate-200 bg-slate-950">
-      <button type="button" onClick={copyCode} className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-md bg-white/10 text-white hover:bg-white/20" aria-label="Copiar codigo">
+      <button type="button" onClick={copyCode} className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-md bg-white/10 text-white hover:bg-white/20" aria-label="Copiar código">
         <Copy className="h-4 w-4" />
       </button>
       <pre className="overflow-x-auto p-5 pr-14 text-sm leading-6 text-slate-100">
@@ -54,7 +40,7 @@ function CodeBlock({ code }: { code: string }) {
 
 export function ProjectSDKPage() {
   const { projectId = "" } = useParams();
-  const { getToken, isLoaded, isSignedIn } = useSdkAuth();
+  const { getToken, isLoaded, isSignedIn } = useAuth();
   const { activeOrganization } = useOrganizations();
   const [config, setConfig] = useState<SdkConfig | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -65,23 +51,12 @@ export function ProjectSDKPage() {
       setIsLoading(true);
       setMessage(null);
       try {
-        if (!hasClerkKey) {
-          setConfig({
-            projectId,
-            publicKey: "ob_pk_local_preview",
-            endpoint: "/api/sdk/events",
-            packageName: "oberyn",
-            storesClientSecrets: false,
-          });
-          return;
-        }
-
         if (!isLoaded || !isSignedIn) return;
         const token = await getToken();
         const response = await apiClient.get<ApiResponse<SdkConfig>>(`/projects/${projectId}/sdk/config`, token, activeOrganization?.id);
         setConfig(response.data);
       } catch (error) {
-        setMessage(error instanceof Error ? error.message : "No se pudo cargar la configuracion del SDK.");
+        setMessage(error instanceof Error ? error.message : "No se pudo cargar la configuración del SDK.");
       } finally {
         setIsLoading(false);
       }
@@ -93,11 +68,6 @@ export function ProjectSDKPage() {
   async function sendTestEvent() {
     setMessage(null);
     try {
-      if (!hasClerkKey) {
-        setMessage("Evento de prueba simulado en preview local.");
-        return;
-      }
-
       const token = await getToken();
       const response = await apiClient.post<ApiResponse<{ accepted: boolean; eventId: string }>>(
         `/projects/${projectId}/sdk/test-event`,
@@ -107,7 +77,7 @@ export function ProjectSDKPage() {
       );
       setMessage(`Evento recibido: ${response.data.eventId}`);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "No se pudo enviar el evento de prueba.");
+      setMessage(error instanceof Error ? error.message : "No se pudo envíar el evento de prueba.");
     }
   }
 
@@ -120,7 +90,7 @@ export const oberyn = createOberyn({
   apiKey: "${config.publicKey}",
   endpoint: "${endpoint}",
   service: {
-    name: "mi-aplicacion",
+    name: "mi-aplicación",
     provider: "custom",
     type: "app"
   },
@@ -144,7 +114,7 @@ export const oberyn = createOberyn({
           <p className="text-sm font-semibold text-[#008f1f]">SDK</p>
           <h1 className="mt-1 text-3xl font-bold text-slate-950">Conecta tu proyecto con Oberyn</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-            Instala el SDK en tu aplicacion para detectar actividad, servicios usados, acciones criticas, solicitudes de aprobacion y eventos auditables.
+            Instala el SDK en tu aplicación para detectar actividad, servicios usados, acciones críticas, solicitudes de aprobación y eventos auditables.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -180,15 +150,15 @@ export const oberyn = createOberyn({
               <ShieldCheck className="h-6 w-6 text-[#008f1f]" />
               <h2 className="text-lg font-bold text-slate-950">2. Inicializa Oberyn</h2>
             </div>
-            <p className="mt-2 text-sm text-slate-600">La clave es publica y solo permite enviar eventos a este proyecto. No guarda ni expone secretos de tus proveedores.</p>
+            <p className="mt-2 text-sm text-slate-600">La clave es publica y solo permite envíar eventos a este proyecto. No guarda ni expone secretos de tus proveedores.</p>
             <div className="mt-4">
-              <CodeBlock code={isLoading ? "Cargando configuracion..." : initSnippet} />
+              <CodeBlock code={isLoading ? "Cargando configuración..." : initSnippet} />
             </div>
           </Card>
 
           <Card>
-            <h2 className="text-lg font-bold text-slate-950">3. Protege acciones criticas</h2>
-            <p className="mt-2 text-sm text-slate-600">Usa `protect` para auditar acciones sensibles. Riesgos altos crean solicitudes de aprobacion automaticamente.</p>
+            <h2 className="text-lg font-bold text-slate-950">3. Protege acciones críticas</h2>
+            <p className="mt-2 text-sm text-slate-600">Usa `protect` para auditar acciones sensibles. Riesgos altos crean solicitudes de aprobación automáticamente.</p>
             <div className="mt-4">
               <CodeBlock code={actionSnippet} />
             </div>
@@ -199,7 +169,7 @@ export const oberyn = createOberyn({
           <Card>
             <h2 className="text-lg font-bold text-slate-950">Que detecta</h2>
             <div className="mt-4 space-y-4">
-              {["HTTP fetch y APIs externas", "Acciones permitidas o bloqueadas", "Riesgo por accion", "Servicios e integraciones usadas", "Flujos por actionName", "Eventos auditables con hash"].map((item) => (
+              {["HTTP fetch y APIs externas", "Acciones permitidas o bloqueadas", "Riesgo por acción", "Servicios e integraciones usadas", "Flujos por actionName", "Eventos auditables con hash"].map((item) => (
                 <div key={item} className="flex gap-3 text-sm text-slate-700">
                   <CheckCircle2 className="h-5 w-5 shrink-0 text-[#008f1f]" />
                   {item}
@@ -211,7 +181,7 @@ export const oberyn = createOberyn({
           <Card>
             <h2 className="text-lg font-bold text-slate-950">Clave del proyecto</h2>
             <p className="mt-2 break-all rounded-lg bg-slate-50 p-3 font-mono text-sm text-slate-700">{config?.publicKey ?? "Cargando..."}</p>
-            <p className="mt-3 text-sm leading-6 text-slate-600">Esta clave identifica el proyecto y permite recibir eventos. Puedes rotarla mas adelante desde esta misma seccion.</p>
+            <p className="mt-3 text-sm leading-6 text-slate-600">Esta clave identifica el proyecto y permite recibir eventos. Puedes rotarla más adelante desde esta misma seccion.</p>
           </Card>
         </aside>
       </div>

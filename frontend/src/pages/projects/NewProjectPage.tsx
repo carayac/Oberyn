@@ -10,23 +10,23 @@ import type { CreateProjectInput } from "../../types/project";
 
 const connectionOptions = [
   { value: "sdk", label: "SDK", description: "Integra usando nuestro SDK oficial.", Icon: Box },
-  { value: "gateway", label: "Gateway", description: "Conectate a traves de nuestro Gateway.", Icon: FileText },
+  { value: "gateway", label: "Gateway", description: "Conectate a través de nuestro Gateway.", Icon: FileText },
   { value: "mixed", label: "Mixto", description: "Usa SDK y Gateway combinados.", Icon: Link2 },
   { value: "manual", label: "Manual", description: "Configura manualmente tus integraciones.", Icon: FileText },
 ];
 
 const tagOptions = [
   { value: "support", label: "Chatbot", className: "border-sky-200 bg-sky-50 text-sky-700" },
-  { value: "internal_automation", label: "Automatizacion", className: "border-violet-200 bg-violet-50 text-violet-700" },
+  { value: "internal_automation", label: "Automatización", className: "border-violet-200 bg-violet-50 text-violet-700" },
   { value: "operations", label: "Agente", className: "border-emerald-200 bg-emerald-50 text-emerald-700" },
-  { value: "finance", label: "Analisis", className: "border-amber-200 bg-amber-50 text-amber-700" },
+  { value: "finance", label: "Análisis", className: "border-amber-200 bg-amber-50 text-amber-700" },
 ];
 
 const protectionOptions: Array<{ label: string; description: string; Icon: LucideIcon }> = [
-  { label: "Auditoria habilitada", description: "Todas las acciones seran registradas.", Icon: ShieldCheck },
-  { label: "Aprobacion humana desde riesgo", description: "Requiere aprobacion humana en riesgos altos.", Icon: UserCheck },
+  { label: "Auditoría habilitada", description: "Todas las acciones serán registradas.", Icon: ShieldCheck },
+  { label: "Aprobación humana desde riesgo", description: "Requiere aprobación humana en riesgos altos.", Icon: UserCheck },
   { label: "Anclar evidencia en Stellar", description: "Almacena evidencia de acciones en Stellar.", Icon: Link2 },
-  { label: "Proteccion de datos sensibles", description: "Aplica enmascaramiento automatico de PII.", Icon: Lock },
+  { label: "Protección de datos sensibles", description: "Aplica enmáscaramiento automático de PII.", Icon: Lock },
 ];
 
 function slugify(value: string) {
@@ -82,12 +82,12 @@ export function NewProjectPage() {
 
       {!isLoadingOrganizations && !activeOrganization && (
         <section className="rounded-xl border border-amber-200 bg-amber-50 px-7 py-6">
-          <h1 className="text-[24px] font-extrabold text-[#111827]">Primero crea una organizacion</h1>
+          <h1 className="text-[24px] font-extrabold text-[#111827]">Primero crea una organización</h1>
           <p className="mt-2 max-w-3xl text-[16px] font-medium leading-7 text-[#596783]">
-            Cada proyecto debe pertenecer a una organizacion para separar permisos, configuracion y auditoria.
+            Cada proyecto debe pertenecer a una organización para separar permisos, configuración y auditoría.
           </p>
           <Link to={appRoutes.onboardingOrganization} className="mt-5 inline-flex h-11 items-center rounded-lg bg-[#00951d] px-6 text-[15px] font-extrabold text-white hover:bg-[#007f18]">
-            Crear organizacion
+            Crear organización
           </Link>
         </section>
       )}
@@ -100,7 +100,7 @@ export function NewProjectPage() {
           / Nuevo proyecto
         </div>
         <h1 className="mt-5 text-[clamp(2rem,5vw,2.625rem)] font-extrabold leading-tight text-[#050505]">Nuevo proyecto</h1>
-        <p className="mt-3 text-[clamp(1rem,2vw,1.125rem)] font-medium text-[#596783]">Configura un nuevo proyecto de forma independiente dentro de tu organizacion.</p>
+        <p className="mt-3 text-[clamp(1rem,2vw,1.125rem)] font-medium text-[#596783]">Configura un nuevo proyecto de forma independiente dentro de tu organización.</p>
       </div>
 
       <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(280px,360px)]">
@@ -119,7 +119,7 @@ export function NewProjectPage() {
               </label>
               <label className="block">
                 <span className="mb-2 block text-sm font-extrabold text-[#111827]">Descripcion</span>
-                <textarea name="description" placeholder="Describe brevemente el proposito del proyecto" className="min-h-12 w-full rounded-lg border border-[#dce2ea] px-4 py-3 outline-none focus:border-[#00951d] focus:ring-4 focus:ring-[#00951d]/10" />
+                <textarea name="description" placeholder="Describe brevemente el prop?sito del proyecto" className="min-h-12 w-full rounded-lg border border-[#dce2ea] px-4 py-3 outline-none focus:border-[#00951d] focus:ring-4 focus:ring-[#00951d]/10" />
               </label>
               <label className="block">
                 <span className="mb-2 block text-sm font-extrabold text-[#111827]">Tipo de proyecto *</span>
@@ -152,7 +152,7 @@ export function NewProjectPage() {
           <section className="border-b border-[#e5e9ef] p-4 sm:p-6">
             <h2 className="flex min-w-0 items-center gap-3 text-[17px] font-extrabold text-[#111827] sm:gap-4 sm:text-[18px]">
               <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#00951d] text-sm text-white">2</span>
-              Metodo de conexion
+              Método de conexión
             </h2>
             <p className="mt-2 text-sm font-medium text-[#596783]">Selecciona como se conectara tu proyecto con Oberyn.</p>
             <div className="mt-5 grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr))]">
@@ -172,7 +172,7 @@ export function NewProjectPage() {
           <section className="border-b border-[#e5e9ef] p-4 sm:p-6">
             <h2 className="flex min-w-0 items-center gap-3 text-[17px] font-extrabold text-[#111827] sm:gap-4 sm:text-[18px]">
               <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#00951d] text-sm text-white">3</span>
-              Configuracion inicial
+              Configuración inicial
             </h2>
             <div className="mt-5 grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr))]">
               {protectionOptions.map(({ label, description, Icon }) => (
@@ -220,7 +220,7 @@ export function NewProjectPage() {
             <dl className="mt-6 space-y-4 text-sm">
               <div className="flex justify-between gap-4">
                 <dt className="font-semibold text-[#596783]">Estado</dt>
-                <dd className="rounded-full bg-amber-50 px-3 py-1 font-bold text-amber-700">Pendiente de configuracion</dd>
+                <dd className="rounded-full bg-amber-50 px-3 py-1 font-bold text-amber-700">Pendiente de configuración</dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="font-semibold text-[#596783]">Entorno</dt>
@@ -231,13 +231,13 @@ export function NewProjectPage() {
                 <dd className="font-bold text-[#111827]">{projectTypeLabels[projectType] ?? "-"}</dd>
               </div>
               <div className="flex justify-between gap-4">
-                <dt className="font-semibold text-[#596783]">Conexion</dt>
+                <dt className="font-semibold text-[#596783]">Conexión</dt>
                 <dd className="font-bold text-[#111827]">{connectionModeLabels[connectionMode]}</dd>
               </div>
             </dl>
-            <h3 className="mt-6 text-sm font-extrabold text-[#111827]">Protecciones incluidas</h3>
+            <h3 className="mt-6 text-sm font-extrabold text-[#111827]">Protecciónes incluidas</h3>
             <ul className="mt-3 space-y-2 text-sm font-medium text-[#596783]">
-              {["Auditoria habilitada", "Aprobacion humana desde riesgo", "Anclar evidencia en Stellar", "Proteccion de datos sensibles"].map((item) => (
+              {["Auditoría habilitada", "Aprobación humana desde riesgo", "Anclar evidencia en Stellar", "Protección de datos sensibles"].map((item) => (
                 <li key={item} className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-[#00951d]" />
                   {item}
@@ -252,7 +252,7 @@ export function NewProjectPage() {
               Que se creara
             </h2>
             <ul className="mt-4 space-y-2 text-sm font-medium text-[#596783]">
-              {["Integraciones", "Reglas y politicas", "Bots y agentes", "Flujos y workflows", "Aprobaciones", "Auditoria y registros"].map((item) => (
+              {["Integraciones", "Reglas y políticas", "Bots y agentes", "Flujos y workflows", "Aprobaciones", "Auditoría y registros"].map((item) => (
                 <li key={item} className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-[#00951d]" />
                   {item}
@@ -264,9 +264,9 @@ export function NewProjectPage() {
           <section className="rounded-xl border border-sky-200 bg-sky-50 p-6">
             <h2 className="flex items-center gap-3 text-[17px] font-extrabold text-[#111827]">
               <Info className="h-7 w-7 text-sky-700" />
-              Puedes configurarlo mas adelante
+              Puedes configurarlo más adelante
             </h2>
-            <p className="mt-3 text-sm font-medium leading-6 text-[#596783]">Podras editar campos y ajustar configuracion desde los ajustes del proyecto.</p>
+            <p className="mt-3 text-sm font-medium leading-6 text-[#596783]">Podrás editar campos y ajustar configuración desde los ajustes del proyecto.</p>
           </section>
         </aside>
       </div>

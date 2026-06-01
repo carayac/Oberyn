@@ -41,7 +41,7 @@ export function ProjectTable({ projects, onPauseProject, onArchiveProject }: Pro
             <th className="px-8 py-5">Proyecto</th>
             <th className="px-6 py-5">Tipo</th>
             <th className="px-6 py-5">Ambiente</th>
-            <th className="px-6 py-5">Conexion</th>
+            <th className="px-6 py-5">Conexión</th>
             <th className="px-6 py-5">APIs</th>
             <th className="px-6 py-5">Reglas</th>
             <th className="px-6 py-5">Estado</th>

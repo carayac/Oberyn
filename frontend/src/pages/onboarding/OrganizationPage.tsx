@@ -9,8 +9,8 @@ import { appRoutes } from "../../routes/routes";
 const ACTIVE_ORGANIZATION_KEY = "oberyn.onboardingOrganizationId";
 
 const regionOptions = [
-  ["latam", "America Latina"],
-  ["north_america", "Norteamerica"],
+  ["latam", "Am?rica Latina"],
+  ["north_america", "Norteam?rica"],
   ["europe", "Europa"],
   ["global", "Global"],
 ];
@@ -52,7 +52,7 @@ export function OrganizationPage() {
       localStorage.setItem(ACTIVE_ORGANIZATION_KEY, organization.id);
       navigate(appRoutes.onboardingProject);
     } catch (createError) {
-      setError(createError instanceof Error ? createError.message : "No se pudo crear la organizacion.");
+      setError(createError instanceof Error ? createError.message : "No se pudo crear la organización.");
     } finally {
       setSubmitting(false);
     }
@@ -61,8 +61,8 @@ export function OrganizationPage() {
   return (
     <OnboardingFrame activeStep={1} backTo={appRoutes.onboardingSuccess}>
       <form onSubmit={handleSubmit} className="w-full max-w-[1030px] rounded-xl border border-[#dce2ea] bg-white px-5 py-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)] sm:px-8 lg:px-10 lg:py-6 xl:px-12">
-        <h1 className="text-[28px] font-extrabold leading-tight text-[#050505] sm:text-[32px] lg:text-[34px]">Crea tu organizacion</h1>
-        <p className="mt-1 text-[15px] font-medium text-[#596783] sm:text-[16px]">La organizacion agrupa tus proyectos, APIs y configuracion.</p>
+        <h1 className="text-[28px] font-extrabold leading-tight text-[#050505] sm:text-[32px] lg:text-[34px]">Crea tu organización</h1>
+        <p className="mt-1 text-[15px] font-medium text-[#596783] sm:text-[16px]">La organización agrupa tus proyectos, APIs y configuración.</p>
 
         {error && (
           <div className="mt-8">
@@ -74,13 +74,13 @@ export function OrganizationPage() {
 
         <div className="mt-5 space-y-3 lg:space-y-4">
           <label className="block">
-            <span className="mb-1.5 block text-[15px] font-extrabold text-[#111827] sm:text-[16px]">Nombre de la organizacion</span>
-            <input value={name} onChange={(event) => setName(event.target.value)} required placeholder="Ej. Acme Corp" className="h-12 w-full rounded-lg border border-[#dce2ea] px-5 text-[16px] outline-none placeholder:text-[#8796b0] focus:border-[#00951d] focus:ring-4 focus:ring-[#00951d]/10" />
+            <span className="mb-1.5 block text-[15px] font-extrabold text-[#111827] sm:text-[16px]">Nombre de la organización</span>
+            <input value={name} onChange={(event) => setName(event.target.value)} required placeholder="Ej. Mi empresa" className="h-12 w-full rounded-lg border border-[#dce2ea] px-5 text-[16px] outline-none placeholder:text-[#8796b0] focus:border-[#00951d] focus:ring-4 focus:ring-[#00951d]/10" />
           </label>
 
           <label className="block">
             <span className="mb-1.5 block text-[15px] font-extrabold text-[#111827] sm:text-[16px]">Descripcion (opcional)</span>
-            <textarea name="description" placeholder="Describe el proposito o alcance de tu organizacion." className="min-h-[62px] w-full rounded-lg border border-[#dce2ea] px-5 py-3 text-[16px] outline-none placeholder:text-[#8796b0] focus:border-[#00951d] focus:ring-4 focus:ring-[#00951d]/10 sm:min-h-[72px]" />
+            <textarea name="description" placeholder="Describe el prop?sito o alcance de tu organización." className="min-h-[62px] w-full rounded-lg border border-[#dce2ea] px-5 py-3 text-[16px] outline-none placeholder:text-[#8796b0] focus:border-[#00951d] focus:ring-4 focus:ring-[#00951d]/10 sm:min-h-[72px]" />
           </label>
 
           <label className="block">

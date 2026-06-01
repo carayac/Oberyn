@@ -42,7 +42,7 @@ export function AuthPasswordField(props: AuthPasswordFieldProps) {
           type="button"
           onClick={() => setIsVisible((current) => !current)}
           className="absolute right-5 top-1/2 -translate-y-1/2 text-[#24314a] transition hover:text-[#00951d]"
-          aria-label={isVisible ? "Ocultar contrasena" : "Mostrar contrasena"}
+          aria-label={isVisible ? "Ocultar contraseña" : "Mostrar contraseña"}
           aria-pressed={isVisible}
         >
           {isVisible ? <Eye className="h-6 w-6" strokeWidth={2.2} /> : <EyeOff className="h-6 w-6" strokeWidth={2.2} />}

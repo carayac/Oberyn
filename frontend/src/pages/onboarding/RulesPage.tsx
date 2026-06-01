@@ -27,7 +27,7 @@ const policyOptions = [
     title: "Estricto",
     description: "Prioriza precision, control y cumplimiento estricto.",
     Icon: Shield,
-    bullets: ["Respuestas mas conservadoras", "Se adhiere a las reglas al 100%", "Menor tolerancia a ambiguedades"],
+    bullets: ["Respuestas más conservadoras", "Se adhiere a las reglas al 100%", "Menor tolerancia a ambiguedades"],
   },
   {
     value: "balanced",
@@ -41,7 +41,7 @@ const policyOptions = [
     title: "Flexible",
     description: "Prioriza creatividad, adaptacion y fluidez en las respuestas.",
     Icon: Waves,
-    bullets: ["Mayor flexibilidad en las respuestas", "Se adapta al contexto con libertad", "Puede asumir mas riesgos"],
+    bullets: ["Mayor flexibilidad en las respuestas", "Se adapta al contexto con libertad", "Puede asumir más riesgos"],
   },
 ] satisfies Array<{
   value: PolicyMode;
@@ -55,31 +55,31 @@ const recommendedRules = [
   {
     id: "read_only_default",
     title: "Permitir solo acciones de lectura por defecto",
-    description: "La IA solo podra leer informacion. Cualquier accion de escritura estara deshabilitada.",
+    description: "La IA solo podrá leer información. Cualquier acción de escritura estará deshabilitada.",
     Icon: BookOpen,
   },
   {
     id: "critical_approval",
-    title: "Requerir aprobacion para acciones criticas",
-    description: "Acciones sensibles como cambios de configuracion o permisos requeriran aprobacion.",
+    title: "Requerir aprobación para acciones críticas",
+    description: "Acciones sensibles como cambios de configuración o permisos requerirán aprobación.",
     Icon: Shield,
   },
   {
     id: "block_delete",
-    title: "Bloquear eliminacion de datos",
-    description: "La IA no podra eliminar registros, archivos o configuraciones en ningun contexto.",
+    title: "Bloquear eliminación de datos",
+    description: "La IA no podrá eliminar registros, archivos o configuraciones en ningún contexto.",
     Icon: LockKeyhole,
   },
   {
     id: "mask_sensitive_data",
     title: "Ocultar datos sensibles antes de salir",
-    description: "Se removeran o enmascararan datos sensibles en respuestas y exportaciones.",
+    description: "Se removeran o enmáscararan datos sensibles en respuestas y exportaciones.",
     Icon: EyeOff,
   },
   {
     id: "minimum_audit",
-    title: "Auditoria minima obligatoria",
-    description: "Todas las interacciones y acciones relevantes seran registradas para auditoria.",
+    title: "Auditoría mínima obligatoria",
+    description: "Todas las interacciones y acciones relevantes serán registradas para auditoría.",
     Icon: ClipboardList,
   },
 ];
@@ -179,7 +179,7 @@ function CustomRuleCard({
     low: "Baja",
     medium: "Media",
     high: "Alta",
-    critical: "Critica",
+    critical: "Crítica",
   };
 
   return (
@@ -342,7 +342,7 @@ export function RulesPage() {
             <div className="mt-6 grid gap-5 lg:grid-cols-[360px_minmax(0,1fr)]">
               <form onSubmit={handleAddCustomRule} className="rounded-lg border border-[#dce2ea] bg-[#fbfcfd] p-5">
                 <h2 className="text-[20px] font-extrabold text-[#111827]">Nueva regla</h2>
-                <p className="mt-1 text-[14px] font-semibold leading-6 text-[#596783]">Define una condicion y la accion que Oberyn debe aplicar.</p>
+                <p className="mt-1 text-[14px] font-semibold leading-6 text-[#596783]">Define una condición y la acción que Oberyn debe aplicar.</p>
 
                 <div className="mt-5 space-y-4">
                   <label className="block">
@@ -352,14 +352,14 @@ export function RulesPage() {
 
                   <label className="block">
                     <span className="mb-2 block text-[14px] font-extrabold text-[#111827]">Condicion</span>
-                    <textarea name="condition" placeholder="Cuando la IA intente modificar roles, permisos o configuracion critica." className="min-h-[92px] w-full rounded-lg border border-[#dce2ea] px-3 py-3 text-[14px] font-semibold outline-none focus:border-[#00951d] focus:ring-4 focus:ring-[#00951d]/10" />
+                    <textarea name="condition" placeholder="Cuando la IA intente modificar roles, permisos o configuración crítica." className="min-h-[92px] w-full rounded-lg border border-[#dce2ea] px-3 py-3 text-[14px] font-semibold outline-none focus:border-[#00951d] focus:ring-4 focus:ring-[#00951d]/10" />
                   </label>
 
                   <label className="block">
-                    <span className="mb-2 block text-[14px] font-extrabold text-[#111827]">Accion</span>
+                    <span className="mb-2 block text-[14px] font-extrabold text-[#111827]">Acción</span>
                     <select name="action" className="h-11 w-full rounded-lg border border-[#dce2ea] px-3 text-[14px] font-semibold outline-none focus:border-[#00951d] focus:ring-4 focus:ring-[#00951d]/10" defaultValue="require_approval">
-                      <option value="require_approval">Requerir aprobacion</option>
-                      <option value="block">Bloquear accion</option>
+                      <option value="require_approval">Requerir aprobación</option>
+                      <option value="block">Bloquear acción</option>
                       <option value="mask_data">Ocultar datos sensibles</option>
                       <option value="audit_only">Solo auditar</option>
                       <option value="alert">Enviar alerta</option>
@@ -372,7 +372,7 @@ export function RulesPage() {
                       <option value="low">Baja</option>
                       <option value="medium">Media</option>
                       <option value="high">Alta</option>
-                      <option value="critical">Critica</option>
+                      <option value="critical">Crítica</option>
                     </select>
                   </label>
                 </div>
@@ -387,7 +387,7 @@ export function RulesPage() {
                 {customRules.length === 0 ? (
                   <div className="flex min-h-[360px] flex-col items-center justify-center rounded-lg border border-dashed border-[#b9c5d6] bg-[#fbfcfd] p-6 text-center">
                     <ClipboardList className="h-12 w-12 text-[#8a97aa]" />
-                    <h2 className="mt-4 text-[20px] font-extrabold text-[#111827]">Aun no hay reglas personalizadas</h2>
+                    <h2 className="mt-4 text-[20px] font-extrabold text-[#111827]">Aún no hay reglas personalizadas</h2>
                     <p className="mt-2 max-w-[420px] text-[14px] font-semibold leading-6 text-[#596783]">Crea reglas para flujos, servicios o riesgos particulares de tu proyecto.</p>
                   </div>
                 ) : (
@@ -419,7 +419,7 @@ export function RulesPage() {
     <OnboardingFrame activeStep={4} backTo={appRoutes.onboardingConnection}>
       <section className="w-full max-w-[1180px] rounded-lg border border-[#dce2ea] bg-white px-5 py-8 shadow-[0_20px_70px_rgba(15,23,42,0.08)] sm:px-8 lg:px-12 lg:py-12">
         <header className="mx-auto max-w-[850px] text-center">
-          <h1 className="text-[32px] font-extrabold leading-tight text-[#050505] sm:text-[42px]">Como debe comportarse la IA en este proyecto?</h1>
+          <h1 className="text-[32px] font-extrabold leading-tight text-[#050505] sm:text-[42px]">¿Cómo debe comportarse la IA en este proyecto?</h1>
           <p className="mt-4 text-[18px] font-semibold leading-7 text-[#596783]">Elige el enfoque que mejor se alinee con los objetivos y necesidades de tu proyecto.</p>
         </header>
 
@@ -431,7 +431,7 @@ export function RulesPage() {
 
         <div className="mx-auto mt-8 flex max-w-[640px] items-center justify-center gap-3 text-center text-[16px] font-semibold text-[#596783]">
           <Info className="h-5 w-5 shrink-0 text-[#63738c]" />
-          <span>Podras personalizar reglas especificas mas adelante.</span>
+          <span>Podrás personalizar reglas especificas más adelante.</span>
         </div>
 
         <footer className="mt-8 flex flex-col-reverse gap-3 border-t border-[#dce2ea] pt-6 sm:flex-row sm:justify-end sm:gap-5">

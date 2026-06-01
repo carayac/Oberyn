@@ -27,13 +27,6 @@ type GatewayConfig = {
   metrics: { latencyMs: number; processedToday: number; activeRules: number };
 };
 
-const hasClerkKey = Boolean(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
-
-function useGatewayAuth() {
-  if (!hasClerkKey) return { getToken: async () => null, isLoaded: true, isSignedIn: false };
-  return useAuth();
-}
-
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (checked: boolean) => void }) {
   return (
     <button type="button" onClick={() => onChange(!checked)} className={checked ? "flex h-7 w-12 items-center justify-end rounded-full bg-[#258c2f] px-1" : "flex h-7 w-12 items-center justify-start rounded-full bg-slate-300 px-1"} aria-pressed={checked}>
@@ -65,7 +58,7 @@ function maskToken(token: string) {
 
 export function ProjectGatewayPage() {
   const { projectId = "" } = useParams();
-  const { getToken, isLoaded, isSignedIn } = useGatewayAuth();
+  const { getToken, isLoaded, isSignedIn } = useAuth();
   const { activeOrganization } = useOrganizations();
   const [config, setConfig] = useState<GatewayConfig | null>(null);
   const [form, setForm] = useState({
@@ -80,33 +73,11 @@ export function ProjectGatewayPage() {
   const [showGatewayToken, setShowGatewayToken] = useState(false);
 
   async function getAuthToken() {
-    if (!hasClerkKey) return null;
     return getToken();
   }
 
   async function loadConfig() {
     try {
-      if (!hasClerkKey) {
-        const preview: GatewayConfig = {
-          projectId,
-          upstreamBaseUrl: form.upstreamBaseUrl,
-          gatewayEndpoint: `/api/gateway/${projectId}/v1/chat/completions`,
-          gatewayToken: `gw_${projectId}_preview`,
-          environment: form.environment,
-          inspectPrompts: form.inspectPrompts,
-          blockSensitiveData: form.blockSensitiveData,
-          auditEnabled: form.auditEnabled,
-          applyProjectRules: form.applyProjectRules,
-          status: "operative",
-          storesClientSecrets: false,
-          detectedServices: [],
-          lastRequest: null,
-          metrics: { latencyMs: 0, processedToday: 0, activeRules: 0 },
-        };
-        setConfig(preview);
-        return;
-      }
-
       if (!isLoaded || !isSignedIn) return;
       const token = await getAuthToken();
       const response = await apiClient.get<ApiResponse<GatewayConfig>>(`/projects/${projectId}/gateway/config`, token, activeOrganization?.id);
@@ -131,15 +102,10 @@ export function ProjectGatewayPage() {
   async function saveConfig() {
     setMessage(null);
     try {
-      if (!hasClerkKey) {
-        setMessage("Cambios guardados en preview local.");
-        setConfig((current) => (current ? { ...current, ...form } : current));
-        return;
-      }
       const token = await getAuthToken();
       const response = await apiClient.patch<ApiResponse<GatewayConfig>>(`/projects/${projectId}/gateway/config`, form, token, activeOrganization?.id);
       setConfig(response.data);
-      setMessage("Configuracion guardada.");
+      setMessage("Configuración guardada.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "No se pudieron guardar los cambios.");
     }
@@ -148,10 +114,6 @@ export function ProjectGatewayPage() {
   async function sendTest() {
     setMessage(null);
     try {
-      if (!hasClerkKey) {
-        setMessage("Prueba de Gateway simulada en preview local.");
-        return;
-      }
       const token = await getAuthToken();
       const response = await apiClient.post<ApiResponse<{ ok: boolean; message: string }>>(`/projects/${projectId}/gateway/test`, {}, token, activeOrganization?.id);
       setMessage(response.data.message);
@@ -174,7 +136,7 @@ export function ProjectGatewayPage() {
       <section className="rounded-lg border border-slate-200 bg-white/70 p-7 shadow-soft 2xl:p-8">
         <header>
           <h1 className="text-3xl font-bold tracking-normal text-slate-950">Gateway de Oberyn</h1>
-          <p className="mt-3 text-sm leading-6 text-slate-600">Rutea solicitudes a modelos y APIs externas a traves de Oberyn para inspeccion, control y auditoria.</p>
+          <p className="mt-3 text-sm leading-6 text-slate-600">Rutea solicitudes a modelos y APIs externas a través de Oberyn para inspección, control y auditoría.</p>
         </header>
 
         {message ? <p className="mt-5 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">{message}</p> : null}
@@ -184,7 +146,7 @@ export function ProjectGatewayPage() {
             <Card className="p-6">
               <div className="flex items-center gap-3">
                 <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-[#008f1f]"><Link2 className="h-6 w-6" /></span>
-                <h2 className="text-xl font-bold">Configuracion de conexion</h2>
+                <h2 className="text-xl font-bold">Configuración de conexión</h2>
               </div>
 
               <div className="mt-7 grid gap-6 lg:grid-cols-2">
@@ -196,7 +158,7 @@ export function ProjectGatewayPage() {
                   </div>
                 </label>
                 <label>
-                  <span className="text-sm font-bold">Nuevo endpoint via Gateway de Oberyn</span>
+                  <span className="text-sm font-bold">Nuevo endpoint vía Gateway de Oberyn</span>
                   <div className="mt-3 flex h-14 items-center rounded-lg border border-slate-200 bg-white px-4">
                     <input value={gatewayUrl} readOnly className="min-w-0 flex-1 bg-transparent text-sm outline-none" />
                     <CopyButton value={gatewayUrl} />
@@ -221,7 +183,7 @@ export function ProjectGatewayPage() {
                 <label>
                   <span className="text-sm font-bold">Entorno</span>
                   <select value={form.environment} onChange={(event) => setForm((current) => ({ ...current, environment: event.target.value }))} className="mt-3 h-14 w-full rounded-lg border border-slate-200 bg-white px-4 text-base font-semibold outline-none focus:border-[#008f1f]">
-                    <option value="production">Produccion</option>
+                    <option value="production">Producción</option>
                     <option value="staging">Staging</option>
                     <option value="sandbox">Sandbox</option>
                   </select>
@@ -233,9 +195,9 @@ export function ProjectGatewayPage() {
                 <div className="mt-5 grid gap-6 lg:grid-cols-2">
                   {[
                     { key: "inspectPrompts", title: "Inspeccionar prompts", text: "Analiza y clasifica cada solicitud.", Icon: Shield },
-                    { key: "applyProjectRules", title: "Aplicar reglas del proyecto", text: "Aplica politicas y reglas configuradas.", Icon: Network },
-                    { key: "blockSensitiveData", title: "Bloquear datos sensibles", text: "Evita el envio de PII, secretos y confidenciales.", Icon: ShieldCheck },
-                    { key: "auditEnabled", title: "Registrar auditoria", text: "Guarda solicitudes y respuestas para auditoria.", Icon: Cloud },
+                    { key: "applyProjectRules", title: "Aplicar reglas del proyecto", text: "Aplica políticas y reglas configuradas.", Icon: Network },
+                    { key: "blockSensitiveData", title: "Bloquear datos sensibles", text: "Evita el envío de PII, secretos y confidenciales.", Icon: ShieldCheck },
+                    { key: "auditEnabled", title: "Registrar auditoría", text: "Guarda solicitudes y respuestas para auditoría.", Icon: Cloud },
                   ].map(({ key, title, text, Icon }) => (
                     <div key={key} className="flex items-center justify-between gap-4">
                       <div className="flex gap-4">
@@ -256,7 +218,7 @@ export function ProjectGatewayPage() {
                   <div className="text-center">
                     <p className="font-bold">Antes: app -&gt; proveedor</p>
                     <div className="mt-4 flex items-center justify-center gap-6 text-sm">
-                      <span className="rounded-lg border border-slate-200 p-4">Tu aplicacion</span>
+                      <span className="rounded-lg border border-slate-200 p-4">Tu aplicación</span>
                       <span className="text-slate-400">-----&gt;</span>
                       <span className="rounded-lg border border-slate-200 p-4">Proveedor</span>
                     </div>
@@ -264,7 +226,7 @@ export function ProjectGatewayPage() {
                   <div className="text-center">
                     <p className="font-bold">Ahora: app -&gt; Gateway de Oberyn -&gt; proveedor</p>
                     <div className="mt-4 flex items-center justify-center gap-4 text-sm">
-                      <span className="rounded-lg border border-slate-200 p-4">Tu aplicacion</span>
+                      <span className="rounded-lg border border-slate-200 p-4">Tu aplicación</span>
                       <ArrowRight className="h-5 w-5 text-[#008f1f]" />
                       <span className="rounded-lg border border-[#258c2f] bg-emerald-50 p-4 font-bold text-[#008f1f]">Gateway de Oberyn</span>
                       <ArrowRight className="h-5 w-5 text-[#008f1f]" />
@@ -290,7 +252,7 @@ export function ProjectGatewayPage() {
             <Card className="p-5">
               <div className="flex items-center gap-3">
                 <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-[#008f1f]"><Network className="h-6 w-6" /></span>
-                <h2 className="text-lg font-bold">Servicios detectados por trafico</h2>
+                <h2 className="text-lg font-bold">Servicios detectados por tráfico</h2>
               </div>
               <div className="mt-5 space-y-2">
                 {(config?.detectedServices.length ? config.detectedServices : []).map((service) => (
@@ -301,7 +263,7 @@ export function ProjectGatewayPage() {
                     <ArrowRight className="h-4 w-4" />
                   </div>
                 ))}
-                {!config?.detectedServices.length ? <p className="rounded-lg border border-slate-200 px-3 py-5 text-sm text-slate-500">Aun no hay servicios detectados. Usa Probar conexion o envia trafico al Gateway.</p> : null}
+                {!config?.detectedServices.length ? <p className="rounded-lg border border-slate-200 px-3 py-5 text-sm text-slate-500">Aún no hay servicios detectados. Usa Probar conexión o envía tráfico al Gateway.</p> : null}
               </div>
               <button type="button" className="mt-5 flex items-center gap-2 text-sm font-bold text-[#008f1f]">Ver todos los servicios <ArrowRight className="h-4 w-4" /></button>
             </Card>
@@ -315,7 +277,7 @@ export function ProjectGatewayPage() {
                 {[
                   ["Servicio", String(config?.lastRequest?.service ?? "Sin actividad")],
                   ["Modelo", String(config?.lastRequest?.model ?? "N/A")],
-                  ["Metodo", String(config?.lastRequest?.method ?? "N/A")],
+                  ["Método", String(config?.lastRequest?.method ?? "N/A")],
                   ["Estado", String(config?.lastRequest?.decision ?? "N/A")],
                   ["Fecha y hora", config?.lastRequest?.createdAt ? new Date(String(config.lastRequest.createdAt)).toLocaleString() : "Sin actividad"],
                 ].map(([label, value]) => (
@@ -349,7 +311,7 @@ export function ProjectGatewayPage() {
             <div className="grid gap-3 sm:grid-cols-2">
               <Button variant="secondary" onClick={sendTest}>
                 <RefreshCcw className="mr-2 h-4 w-4" />
-                Probar conexion
+                Probar conexión
               </Button>
               <Button onClick={saveConfig}>
                 <Save className="mr-2 h-4 w-4" />

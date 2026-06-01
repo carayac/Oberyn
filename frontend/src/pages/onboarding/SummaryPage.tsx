@@ -21,10 +21,10 @@ const policyLabels: Record<string, string> = {
 
 const recommendedRuleLabels: Record<string, string> = {
   read_only_default: "Solo lectura por defecto",
-  critical_approval: "Aprobacion requerida para acciones criticas",
-  block_delete: "Bloqueo de eliminacion de datos",
+  critical_approval: "Aprobación requerida para acciones críticas",
+  block_delete: "Bloqueo de eliminación de datos",
   mask_sensitive_data: "Ocultar datos sensibles",
-  minimum_audit: "Auditoria minima obligatoria",
+  minimum_audit: "Auditoría mínima obligatoria",
 };
 
 function parseList(key: string) {
@@ -88,7 +88,7 @@ export function SummaryPage() {
 
         <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <div>
-            <SummaryItem icon={<Building2 className="h-8 w-8" />} label="Organizacion" value={activeOrganization?.name ?? "Organizacion"} />
+            <SummaryItem icon={<Building2 className="h-8 w-8" />} label="Organización" value={activeOrganization?.name ?? "Organización"} />
             <SummaryItem icon={<Folder className="h-8 w-8" />} label="Proyecto" value={activeProject?.name ?? "Proyecto"} />
             <SummaryItem icon={<Shapes className="h-8 w-8" />} label="Tipo de proyecto" value={activeProject?.projectType ?? "Personalizado"} />
             <SummaryItem icon={<Shield className="h-8 w-8" />} label="Modo de comportamiento" value={policyLabels[policyMode] ?? "Balanceado"} />

@@ -16,7 +16,7 @@ const categoryOptions = [
   { value: "data_security", label: "Seguridad de datos", Icon: Shield },
   { value: "approval", label: "Aprobaciones", Icon: DollarSign },
   { value: "access", label: "Accesos y permisos", Icon: LockKeyhole },
-  { value: "audit", label: "Auditoria", Icon: Box },
+  { value: "audit", label: "Auditoría", Icon: Box },
 ];
 
 const conditionOptions = [
@@ -24,14 +24,14 @@ const conditionOptions = [
   { value: "payment_amount", label: "Pagos mayores al umbral" },
   { value: "read_only", label: "Solo lectura" },
   { value: "export_data", label: "Exportacion de datos" },
-  { value: "all_actions", label: "Todas las acciones criticas" },
+  { value: "all_actions", label: "Todas las acciones críticas" },
 ];
 
 const actionOptions = [
-  { value: "block", label: "Bloquear accion" },
-  { value: "require_approval", label: "Requerir aprobacion" },
+  { value: "block", label: "Bloquear acción" },
+  { value: "require_approval", label: "Requerir aprobación" },
   { value: "allow_read_only", label: "Permitir solo lectura" },
-  { value: "audit", label: "Registrar auditoria" },
+  { value: "audit", label: "Registrar auditoría" },
 ];
 
 const scopeOptions = [
@@ -43,7 +43,7 @@ const scopeOptions = [
 ];
 
 const severityOptions = [
-  { value: "critical", label: "Critica" },
+  { value: "critical", label: "Crítica" },
   { value: "high", label: "Alta" },
   { value: "medium", label: "Media" },
   { value: "low", label: "Baja" },
@@ -126,8 +126,8 @@ function SummaryCard({ rules }: { rules: Rule[] }) {
   const items = [
     { label: "Reglas activas", value: active, detail: "+1 vs. ayer", Icon: Shield, tone: "green" },
     { label: "Acciones bloqueadas hoy", value: blocked, detail: "-12% vs. ayer", Icon: LockKeyhole, tone: "red" },
-    { label: "Reglas criticas", value: critical, detail: "Sin cambios", Icon: AlertTriangle, tone: "orange" },
-    { label: "Ultimo cambio", value: latest ? formatDate(latest.updatedAt) : "Sin cambios", detail: "Sistema Oberyn", Icon: Clock3, tone: "green" },
+    { label: "Reglas críticas", value: critical, detail: "Sin cambios", Icon: AlertTriangle, tone: "orange" },
+    { label: "?ltimo cambio", value: latest ? formatDate(latest.updatedAt) : "Sin cambios", detail: "Sistema Oberyn", Icon: Clock3, tone: "green" },
   ];
 
   return (
@@ -242,7 +242,7 @@ export function ProjectRulesPage() {
       <section className="flex min-h-[calc(100dvh-40px)] flex-col rounded-lg border border-slate-200 bg-white/70 p-7 shadow-soft 2xl:p-8">
         <header className="pb-1">
           <h1 className="text-[34px] font-bold leading-tight tracking-normal text-slate-950">Reglas del proyecto</h1>
-          <p className="mt-3 max-w-4xl text-[15px] leading-6 text-slate-600">Cada proyecto tiene politicas y reglas independientes que controlan el comportamiento de la aplicacion.</p>
+          <p className="mt-3 max-w-4xl text-[15px] leading-6 text-slate-600">Cada proyecto tiene políticas y reglas independientes que controlan el comportamiento de la aplicación.</p>
           {selectedProject ? <div className="mt-9"><ProjectSelect projects={projects} projectId={selectedProject.id} onChange={handleProjectChange} /></div> : null}
         </header>
 
@@ -303,7 +303,7 @@ export function ProjectRulesPage() {
                       <button type="button" onClick={() => void removeRule(rule)} className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 hover:bg-red-50 hover:text-red-600" aria-label="Eliminar regla">
                         <Trash2 className="h-5 w-5" />
                       </button>
-                      <button type="button" className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 hover:bg-slate-50" aria-label="Mas acciones">
+                      <button type="button" className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 hover:bg-slate-50" aria-label="Más acciones">
                         <MoreVertical className="h-5 w-5" />
                       </button>
                     </div>
@@ -333,14 +333,14 @@ export function ProjectRulesPage() {
                 <label className="block">
                   <span className="text-xs font-bold text-slate-700">Condicion</span>
                   <select value={form.conditionType} onChange={(event) => updateForm("conditionType", event.target.value)} className="mt-2 h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[#008f1f]">
-                    <option value="">Selecciona la condicion</option>
+                    <option value="">Selecciona la condición</option>
                     {conditionOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                   </select>
                 </label>
                 <label className="block">
-                  <span className="text-xs font-bold text-slate-700">Accion resultante</span>
+                  <span className="text-xs font-bold text-slate-700">Acción resultante</span>
                   <select value={form.actionResult} onChange={(event) => updateForm("actionResult", event.target.value)} className="mt-2 h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[#008f1f]">
-                    <option value="">Selecciona una accion</option>
+                    <option value="">Selecciona una acción</option>
                     {actionOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                   </select>
                 </label>
@@ -359,7 +359,7 @@ export function ProjectRulesPage() {
                 </label>
                 <label className="block">
                   <span className="text-xs font-bold text-slate-700">Justificacion</span>
-                  <textarea value={form.description} maxLength={250} onChange={(event) => updateForm("description", event.target.value)} placeholder="Explica el proposito de esta regla." className="mt-2 min-h-24 w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-[#008f1f]" />
+                  <textarea value={form.description} maxLength={250} onChange={(event) => updateForm("description", event.target.value)} placeholder="Explica el prop?sito de esta regla." className="mt-2 min-h-24 w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-[#008f1f]" />
                   <span className="mt-1 block text-right text-xs text-slate-500">{form.description.length} / 250</span>
                 </label>
                 {message ? <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">{message}</p> : null}

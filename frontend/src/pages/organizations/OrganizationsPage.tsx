@@ -16,7 +16,7 @@ export function OrganizationsPage() {
           <p className="mt-4 text-[18px] font-medium text-[#596783]">Administra los espacios donde viven tus proyectos, usuarios y permisos.</p>
         </div>
         <Link to={appRoutes.onboardingOrganization} className="inline-flex h-14 items-center justify-center gap-4 rounded-lg bg-[#00951d] px-8 text-[18px] font-extrabold text-white shadow-[0_8px_16px_rgba(0,149,29,0.18)] transition hover:bg-[#007f18]">
-          Crear organizacion
+          Crear organización
           <Plus className="h-6 w-6" />
         </Link>
       </header>
@@ -48,9 +48,9 @@ export function OrganizationsPage() {
           ))}
           {organizations.length === 0 && (
             <div className="rounded-xl border border-[#dce2ea] bg-white px-8 py-12 text-center">
-              <h2 className="text-[24px] font-extrabold text-[#111827]">Aun no tienes organizaciones</h2>
+              <h2 className="text-[24px] font-extrabold text-[#111827]">Aún no tienes organizaciones</h2>
               <Link to={appRoutes.onboardingOrganization} className="mt-5 inline-flex h-11 items-center rounded-lg bg-[#00951d] px-6 text-[15px] font-extrabold text-white hover:bg-[#007f18]">
-                Crear organizacion
+                Crear organización
               </Link>
             </div>
           )}

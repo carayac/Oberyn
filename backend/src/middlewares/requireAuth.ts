@@ -6,6 +6,6 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (!auth.userId) {
     return res.status(401).json({ success: false, error: { message: "Authentication required" } });
   }
+  res.locals.userId = auth.userId;
   return next();
 }
-

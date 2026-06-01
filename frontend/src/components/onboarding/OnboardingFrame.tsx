@@ -5,7 +5,7 @@ import { AuthBrandLogo } from "../auth/AuthBrandLogo";
 import { AuthFooter } from "../auth/AuthFooter";
 import { cn } from "../../lib/utils/cn";
 
-const steps = ["Organizacion", "Proyecto", "Integraciones", "Reglas", "Finalizar"];
+const steps = ["Organización", "Proyecto", "Integraciones", "Reglas", "Finalizar"];
 
 type OnboardingFrameProps = {
   activeStep: number;

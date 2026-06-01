@@ -10,10 +10,10 @@ import { appRoutes } from "../../routes/routes";
 const ACTIVE_PROJECT_KEY = "oberyn.onboardingProjectId";
 
 const projectTypeOptions = [
-  { value: "support", label: "Soporte al cliente", description: "Atencion y resolucion de consultas de clientes.", Icon: Headphones },
-  { value: "ecommerce", label: "E-commerce", description: "Ventas, pedidos y gestion de clientes.", Icon: ShoppingCart },
-  { value: "operations", label: "Operaciones", description: "Procesos internos y optimizacion.", Icon: Settings },
-  { value: "finance", label: "Finanzas", description: "Analisis financiero y reportes.", Icon: BarChart3 },
+  { value: "support", label: "Soporte al cliente", description: "Atención y resolución de consultas de clientes.", Icon: Headphones },
+  { value: "ecommerce", label: "E-commerce", description: "Ventas, pedidos y gestión de clientes.", Icon: ShoppingCart },
+  { value: "operations", label: "Operaciones", description: "Procesos internos y optimización.", Icon: Settings },
+  { value: "finance", label: "Finanzas", description: "Análisis financiero y reportes.", Icon: BarChart3 },
   { value: "custom", label: "Otro", description: "Otro tipo de proyecto personalizado.", Icon: Grid2X2 },
 ];
 
@@ -43,7 +43,7 @@ export function ProjectPage() {
     setError(null);
 
     if (!activeOrganization) {
-      setError("Primero crea una organizacion.");
+      setError("Primero crea una organización.");
       setSubmitting(false);
       return;
     }
@@ -74,7 +74,7 @@ export function ProjectPage() {
     <OnboardingFrame activeStep={2} backTo={appRoutes.onboardingOrganization}>
       <form onSubmit={handleSubmit} className="w-full max-w-[1030px] rounded-xl border border-[#dce2ea] bg-white px-5 py-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)] sm:px-8 lg:px-10 lg:py-6 xl:px-12">
         <h1 className="text-[28px] font-extrabold leading-tight text-[#050505] sm:text-[32px] lg:text-[34px]">Crea tu primer proyecto</h1>
-        <p className="mt-1 text-[15px] font-medium text-[#596783] sm:text-[16px]">Cada proyecto puede tener sus propias reglas, permisos y auditoria.</p>
+        <p className="mt-1 text-[15px] font-medium text-[#596783] sm:text-[16px]">Cada proyecto puede tener sus propias reglas, permisos y auditoría.</p>
 
         {error && (
           <div className="mt-7">
@@ -92,7 +92,7 @@ export function ProjectPage() {
 
           <label className="block">
             <span className="mb-1.5 block text-[15px] font-extrabold text-[#111827] sm:text-[16px]">Descripcion (opcional)</span>
-            <textarea name="description" placeholder="Describe el proposito o alcance de tu proyecto." className="min-h-[60px] w-full rounded-lg border border-[#dce2ea] px-5 py-3 text-[16px] outline-none placeholder:text-[#8796b0] focus:border-[#00951d] focus:ring-4 focus:ring-[#00951d]/10 sm:min-h-[68px] sm:text-[17px]" />
+            <textarea name="description" placeholder="Describe el prop?sito o alcance de tu proyecto." className="min-h-[60px] w-full rounded-lg border border-[#dce2ea] px-5 py-3 text-[16px] outline-none placeholder:text-[#8796b0] focus:border-[#00951d] focus:ring-4 focus:ring-[#00951d]/10 sm:min-h-[68px] sm:text-[17px]" />
           </label>
 
           <section>

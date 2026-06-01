@@ -33,7 +33,7 @@ async function updateApprovalStatus(projectId: string, approvalId: string, statu
 async function getApproval(projectId: string, approvalId: string) {
   const { data, error } = await supabaseAdmin.from("approval_requests").select("*").eq("project_id", projectId).eq("id", approvalId).maybeSingle();
   if (error) throw error;
-  if (!data) throw new Error("La solicitud de aprobacion no existe.");
+  if (!data) throw new Error("La solicitud de aprobación no existe.");
   return data;
 }
 
@@ -74,8 +74,8 @@ export const approvalsService = {
       .from("rules")
       .insert({
         project_id: projectId,
-        name: `Requerir aprobacion para ${actionName}`,
-        description: `Creada desde solicitud ${approvalId.slice(0, 8)}. ${approval.reason ?? "Accion sensible requiere revision humana."}`,
+        name: `Requerir aprobación para ${actionName}`,
+        description: `Creada desde solicitud ${approvalId.slice(0, 8)}. ${approval.reason ?? "Accion sensible requiere revisión humana."}`,
         category: "approval",
         severity: riskLevel === "critical" ? "critical" : riskLevel === "high" ? "high" : "medium",
         condition_type: "action_name",

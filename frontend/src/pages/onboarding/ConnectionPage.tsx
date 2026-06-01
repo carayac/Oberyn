@@ -138,7 +138,7 @@ function ManualIntegrationModal({
     const name = String(formData.get("name") ?? "").trim();
 
     if (!name) {
-      setError("Agrega un nombre para la integracion.");
+      setError("Agrega un nombre para la integración.");
       return;
     }
 
@@ -155,7 +155,7 @@ function ManualIntegrationModal({
       <form onSubmit={handleSubmit} className="w-full max-w-[560px] rounded-lg border border-[#dce2ea] bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.2)]">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-[24px] font-extrabold text-[#08090c]">Configurar integracion</h2>
+            <h2 className="text-[24px] font-extrabold text-[#08090c]">Configurar integración</h2>
             <p className="mt-1 text-[15px] font-semibold text-[#52617b]">Agrega un servicio para protegerlo con Oberyn.</p>
           </div>
           <button type="button" onClick={onClose} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#dce2ea] text-[#1d2738] hover:bg-[#f8fafc]" aria-label="Cerrar">
@@ -269,19 +269,19 @@ function DetectionAssistantModal({
       const sources = [];
       if (files.length > 0) sources.push(`${files.length} archivo${files.length === 1 ? "" : "s"}`);
       if (repositoryUrl.trim()) sources.push("repositorio GitHub");
-      setSourceSummary(sources.length > 0 ? `Analisis ejecutado sobre ${sources.join(" y ")}.` : "Analisis demo ejecutado sin archivos.");
+      setSourceSummary(sources.length > 0 ? `Análisis ejecutado sobre ${sources.join(" y ")}.` : "No se analizaron fuentes reales.");
       if (detectedFindings.length === 0) {
         setError("No encontramos integraciones claras. Puedes agregar una manualmente o subir archivos como package.json y .env.example.");
       }
     } catch (analyzeError) {
-      setError(analyzeError instanceof Error ? analyzeError.message : "No se pudo analizar la configuracion.");
+      setError(analyzeError instanceof Error ? analyzeError.message : "No se pudo analizar la configuración.");
     }
   }
 
   async function handleConfirm() {
     setError(null);
     if (selectedFindingIds.length === 0) {
-      setError("Selecciona al menos una integracion para proteger.");
+      setError("Selecciona al menos una integración para proteger.");
       return;
     }
 
@@ -301,9 +301,9 @@ function DetectionAssistantModal({
       <section className="my-8 w-full max-w-[920px] rounded-lg border border-[#dce2ea] bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.2)]">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-[26px] font-extrabold leading-tight text-[#08090c]">Deteccion asistida</h2>
+            <h2 className="text-[26px] font-extrabold leading-tight text-[#08090c]">Detección asistida</h2>
             <p className="mt-2 max-w-[680px] text-[15px] font-semibold leading-6 text-[#52617b]">
-              Sube varios archivos, una carpeta del proyecto o conecta un repositorio publico de GitHub. Oberyn detecta proveedores, evidencia y riesgos sin pedir ni guardar claves reales.
+              Sube varios archivos, una carpeta del proyecto o conecta un repositorio público de GitHub. Oberyn detecta proveedores, evidencia y riesgos sin pedir ni guardar claves reales.
             </p>
           </div>
           <button type="button" onClick={onClose} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#dce2ea] text-[#1d2738] hover:bg-[#f8fafc]" aria-label="Cerrar">
@@ -322,8 +322,8 @@ function DetectionAssistantModal({
         <div className="mt-6 grid gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
           <div className="rounded-lg border border-dashed border-[#b9c5d6] bg-[#fbfcfd] p-5">
             <UploadCloud className="h-9 w-9 text-[#6657f2]" strokeWidth={2.2} />
-            <h3 className="mt-4 text-[17px] font-extrabold text-[#111827]">Fuentes de analisis</h3>
-            <p className="mt-2 text-[13px] font-semibold leading-5 text-[#596783]">Usa `package.json`, `.env.example`, configs, snippets o un repo publico de GitHub.</p>
+            <h3 className="mt-4 text-[17px] font-extrabold text-[#111827]">Fuentes de análisis</h3>
+            <p className="mt-2 text-[13px] font-semibold leading-5 text-[#596783]">Usa `package.json`, `.env.example`, configs, snippets o un repo público de GitHub.</p>
 
             <label className="mt-5 block">
               <span className="mb-2 block text-[13px] font-extrabold text-[#111827]">Repositorio GitHub</span>
@@ -356,7 +356,7 @@ function DetectionAssistantModal({
                 />
               </label>
             </div>
-            <p className="mt-3 text-[12px] font-bold text-[#69758a]">Maximo 40 archivos locales. Repos GitHub publicos: se escanean archivos relevantes, no binarios.</p>
+            <p className="mt-3 text-[12px] font-bold text-[#69758a]">Máximo 40 archivos locales. Repos GitHub públicos: se escanean archivos relevantes, no binarios.</p>
 
             <button
               type="button"
@@ -365,7 +365,7 @@ function DetectionAssistantModal({
               className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-[#dce2ea] bg-white px-5 text-[14px] font-extrabold text-[#1d2738] hover:bg-[#f8fafc] disabled:opacity-60"
             >
               <Search className="h-4 w-4" />
-              {isLoading ? "Analizando..." : files.length > 0 || repositoryUrl.trim() ? "Analizar fuentes" : "Probar deteccion demo"}
+              {isLoading ? "Analizando..." : files.length > 0 || repositoryUrl.trim() ? "Analizar fuentes" : "Analizar fuentes"}
             </button>
 
             {sourceSummary && <p className="mt-3 rounded-md bg-[#efedff] px-3 py-2 text-[12px] font-bold leading-5 text-[#5b4cf0]">{sourceSummary}</p>}
@@ -391,8 +391,8 @@ function DetectionAssistantModal({
             {findings.length === 0 ? (
               <div className="mt-16 text-center">
                 <Search className="mx-auto h-10 w-10 text-[#8a97aa]" />
-                <p className="mt-4 text-[15px] font-extrabold text-[#111827]">Aun no hay hallazgos</p>
-                <p className="mx-auto mt-2 max-w-[360px] text-[13px] font-semibold leading-5 text-[#596783]">Sube archivos o ejecuta la demo para ver proveedores, evidencia y metodo sugerido.</p>
+                <p className="mt-4 text-[15px] font-extrabold text-[#111827]">Aún no hay hallazgos</p>
+                <p className="mx-auto mt-2 max-w-[360px] text-[13px] font-semibold leading-5 text-[#596783]">Sube archivos o agrega fuentes reales para ver proveedores, evidencia y método sugerido.</p>
               </div>
             ) : (
               <div className="mt-4 max-h-[460px] space-y-3 overflow-y-auto pr-1">
@@ -516,10 +516,10 @@ export function ConnectionPage() {
     try {
       await createIntegration(input);
       setSelectedMethod("manual");
-      setMessage("Integracion manual agregada.");
+      setMessage("Integración manual agregada.");
       setManualOpen(false);
     } catch (createError) {
-      setError(createError instanceof Error ? createError.message : "No se pudo guardar la integracion.");
+      setError(createError instanceof Error ? createError.message : "No se pudo guardar la integración.");
     } finally {
       setSubmittingManual(false);
     }
@@ -564,15 +564,15 @@ export function ConnectionPage() {
             )}
 
             <section className="mt-8">
-              <h2 className="text-[13px] font-extrabold uppercase tracking-wide text-[#00951d]">Metodos recomendados</h2>
+              <h2 className="text-[13px] font-extrabold uppercase tracking-wide text-[#00951d]">Métodos recomendados</h2>
               <div className="mt-3 grid gap-5 xl:grid-cols-2">
                 <MethodCard
                   method="sdk"
                   selectedMethod={selectedMethod}
                   title="SDK"
-                  badge="Maximo control"
-                  description="Instala el SDK de Oberyn en tu codigo para proteger acciones criticas desde tu aplicacion."
-                  bullets={["No requiere compartir tus API keys", "Control granular por accion y agente", "Auditoria completa en tiempo real"]}
+                  badge="Máximo control"
+                  description="Instala el SDK de Oberyn en tu código para proteger acciones críticas desde tu aplicación."
+                  bullets={["No requiere compartir tus API keys", "Control granular por acción y agente", "Auditoría completa en tiempo real"]}
                   buttonLabel="Ver instrucciones del SDK"
                   Icon={Network}
                   onSelect={selectMethod}
@@ -581,9 +581,9 @@ export function ConnectionPage() {
                   method="gateway"
                   selectedMethod={selectedMethod}
                   title="Gateway"
-                  badge="Facil de implementar"
-                  description="Enruta tus llamadas a APIs y modelos a traves del Gateway de Oberyn."
-                  bullets={["Protege datos y prompts antes de salir", "Compatible con OpenAI, Anthropic y mas", "No necesitas cambiar tu codigo salvo la URL"]}
+                  badge="Fácil de implementar"
+                  description="Enruta tus llamadas a APIs y modelos a través del Gateway de Oberyn."
+                  bullets={["Protege datos y prompts antes de salir", "Compatible con OpenAI, Anthropic y más", "No necesitas cambiar tu código salvo la URL"]}
                   buttonLabel="Ver endpoint del Gateway"
                   Icon={Globe2}
                   onSelect={selectMethod}
@@ -592,7 +592,7 @@ export function ConnectionPage() {
             </section>
 
             <section className="mt-6">
-              <h2 className="text-[13px] font-extrabold uppercase tracking-wide text-[#6957ff]">Deteccion automatica asistida</h2>
+              <h2 className="text-[13px] font-extrabold uppercase tracking-wide text-[#6957ff]">Detección automatica asistida</h2>
               <div
                 className={cn(
                   "mt-3 rounded-lg border bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.04)] transition sm:p-6",
@@ -606,14 +606,14 @@ export function ConnectionPage() {
                     </span>
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h2 className="text-[20px] font-extrabold leading-7 text-[#08090c]">Detectar integraciones automaticamente</h2>
+                        <h2 className="text-[20px] font-extrabold leading-7 text-[#08090c]">Detectar integraciones automáticamente</h2>
                         <span className="rounded-full bg-[#efedff] px-3 py-1 text-[12px] font-extrabold text-[#6957ff]">Recomendado para empezar</span>
                       </div>
                       <p className="mt-2 max-w-[720px] text-[15px] font-semibold leading-6 text-[#596783]">
-                        Analizamos tu configuracion para detectar servicios, APIs y acciones importantes. Tu solo confirmas lo que quieres proteger.
+                        Analizamos tu configuración para detectar servicios, APIs y acciones importantes. Tú solo confirmas lo que quieres proteger.
                       </p>
                       <div className="mt-4 flex flex-wrap gap-2">
-                        {["APIs y SDKs", "Servicios en la nube", "Librerias y dependencias", "Variables de entorno"].map((item) => (
+                        {["APIs y SDKs", "Servicios en la nube", "Librerías y dependencias", "Variables de entorno"].map((item) => (
                           <span key={item} className="rounded-md bg-[#edf1f7] px-3 py-1 text-[12px] font-bold text-[#69758a]">
                             {item}
                           </span>
@@ -629,7 +629,7 @@ export function ConnectionPage() {
                       className="inline-flex h-12 min-w-[190px] items-center justify-center gap-3 rounded-lg bg-[#6657f2] px-6 text-[15px] font-extrabold text-white shadow-[0_12px_22px_rgba(102,87,242,0.22)] hover:bg-[#5445d5] disabled:opacity-60"
                     >
                       <Sparkles className="h-5 w-5" />
-                      Iniciar deteccion
+                      Iniciar detección
                     </button>
                     <span className="text-[14px] font-bold text-[#596783]">Tarda 1-2 minutos</span>
                   </div>
@@ -638,7 +638,7 @@ export function ConnectionPage() {
             </section>
 
             <section className="mt-6">
-              <h2 className="text-[13px] font-extrabold uppercase tracking-wide text-[#52617b]">Configuracion manual</h2>
+              <h2 className="text-[13px] font-extrabold uppercase tracking-wide text-[#52617b]">Configuración manual</h2>
               <div className={cn("mt-3 rounded-lg border bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.04)] transition sm:p-6", selectedMethod === "manual" ? "border-[#00951d] ring-4 ring-[#00951d]/10" : "border-[#dce2ea]")}>
                 <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-5">
@@ -667,7 +667,7 @@ export function ConnectionPage() {
 
             {(selectedMethod === "sdk" || selectedMethod === "gateway" || integrations.length > 0) && (
               <section className="mt-6 rounded-lg border border-[#dce2ea] bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.04)] sm:p-6">
-                <h2 className="text-[18px] font-extrabold text-[#08090c]">Configuracion seleccionada</h2>
+                <h2 className="text-[18px] font-extrabold text-[#08090c]">Configuración seleccionada</h2>
                 {selectedMethod === "sdk" && (
                   <pre className="mt-4 overflow-x-auto rounded-lg bg-[#0f172a] p-4 text-[13px] font-semibold leading-6 text-[#dbeafe]">{sdkSnippet}</pre>
                 )}
@@ -695,13 +695,13 @@ export function ConnectionPage() {
           </div>
 
           <aside className="rounded-lg border border-[#dce2ea] bg-white p-5 shadow-[0_16px_44px_rgba(15,23,42,0.05)] lg:sticky lg:top-6 lg:self-start xl:p-6">
-            <h2 className="text-[21px] font-extrabold text-[#08090c]">Como funciona?</h2>
+            <h2 className="text-[21px] font-extrabold text-[#08090c]">¿Cómo funciona?</h2>
             <div className="mt-6 space-y-5">
               {[
-                { title: "Conectas tu proyecto", description: "Usa SDK, Gateway o deteccion automatica. No necesitamos tus claves API.", Icon: PlugZap },
-                { title: "Detectamos y entendemos", description: "Identificamos agentes, servicios, APIs y acciones criticas.", Icon: Search },
-                { title: "Aplicamos protecciones", description: "Tu defines las reglas. Oberyn evalua cada accion en tiempo real.", Icon: ShieldCheck },
-                { title: "Auditoria y control", description: "Todo queda registrado y puedes aprobar, bloquear o alertar.", Icon: TrendingUp },
+                { title: "Conectas tu proyecto", description: "Usa SDK, Gateway o detección automatica. No necesitamos tus claves API.", Icon: PlugZap },
+                { title: "Detectamos y entendemos", description: "Identificamos agentes, servicios, APIs y acciones críticas.", Icon: Search },
+                { title: "Aplicamos protecciónes", description: "Tú defines las reglas. Oberyn evalúa cada acción en tiempo real.", Icon: ShieldCheck },
+                { title: "Auditoría y control", description: "Todo queda registrado y puedes aprobar, bloquear o alertar.", Icon: TrendingUp },
               ].map(({ title, description, Icon }) => (
                 <div key={title} className="flex gap-4">
                   <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#eaf7ee] text-[#00951d]">
@@ -719,7 +719,7 @@ export function ConnectionPage() {
               <LockKeyhole className="h-7 w-7 text-[#111827]" strokeWidth={2.3} />
               <h3 className="mt-3 text-[16px] font-extrabold text-[#111827]">Seguridad ante todo</h3>
               <p className="mt-2 text-[13px] font-semibold leading-5 text-[#596783]">
-                Oberyn nunca almacena ni accede a tus claves API, variables de entorno o datos sensibles. La integracion es segura y privada.
+                Oberyn nunca almacena ni accede a tus claves API, variables de entorno o datos sensibles. La integración es segura y privada.
               </p>
             </div>
           </aside>

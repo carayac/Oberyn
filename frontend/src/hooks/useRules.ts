@@ -1,6 +1,5 @@
 import { useAuth } from "@clerk/react";
 import { useCallback, useEffect, useState } from "react";
-import { mockRules } from "../data/mockRules";
 import { apiClient } from "../lib/api/client";
 import type { Rule } from "../types/rule";
 
@@ -20,49 +19,7 @@ export type RuleInput = {
   isActive?: boolean;
 };
 
-const hasClerkKey = Boolean(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
-
-function usePreviewRules(projectId?: string | null) {
-  const [rules, setRules] = useState<Rule[]>(() => mockRules.filter((rule) => !projectId || rule.projectId === projectId));
-
-  useEffect(() => {
-    setRules(mockRules.filter((rule) => !projectId || rule.projectId === projectId));
-  }, [projectId]);
-
-  async function createRule(input: RuleInput) {
-    const rule: Rule = {
-      id: `rule_preview_${Date.now()}`,
-      projectId: projectId ?? "project_preview",
-      ...input,
-      isActive: input.isActive ?? true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    setRules((current) => [rule, ...current]);
-    return rule;
-  }
-
-  async function updateRule(ruleId: string, input: Partial<RuleInput>) {
-    let updated: Rule | null = null;
-    setRules((current) =>
-      current.map((rule) => {
-        if (rule.id !== ruleId) return rule;
-        updated = { ...rule, ...input, updatedAt: new Date().toISOString() };
-        return updated;
-      }),
-    );
-    return updated;
-  }
-
-  async function deleteRule(ruleId: string) {
-    setRules((current) => current.filter((rule) => rule.id !== ruleId));
-    return { id: ruleId, deleted: true };
-  }
-
-  return { rules, isLoading: false, error: null as string | null, reloadRules: async () => undefined, createRule, updateRule, deleteRule };
-}
-
-function useClerkRules(projectId?: string | null, organizationId?: string | null) {
+export function useRules(projectId?: string | null, organizationId?: string | null) {
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const [rules, setRules] = useState<Rule[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -118,8 +75,4 @@ function useClerkRules(projectId?: string | null, organizationId?: string | null
   }
 
   return { rules, isLoading, error, reloadRules: loadRules, createRule, updateRule, deleteRule };
-}
-
-export function useRules(projectId?: string | null, organizationId?: string | null) {
-  return hasClerkKey ? useClerkRules(projectId, organizationId) : usePreviewRules(projectId);
 }

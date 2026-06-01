@@ -25,11 +25,11 @@ function toProject(row: Record<string, unknown>, counts: Partial<Project> = {}):
 }
 
 async function ensureOrganization(organizationId?: string) {
-  if (!organizationId) throw new Error("Crea una organizacion antes de crear proyectos.");
+  if (!organizationId) throw new Error("Crea una organización antes de crear proyectos.");
 
   const { data, error } = await supabaseAdmin.from("organizations").select("id").eq("id", organizationId).maybeSingle();
   if (error) throw error;
-  if (!data) throw new Error("La organizacion seleccionada no existe.");
+  if (!data) throw new Error("La organización seleccionada no existe.");
 
   return organizationId;
 }
@@ -103,23 +103,29 @@ export const projectsService = {
     return toProject(data);
   },
 
-  getById: async (projectId: string) => {
-    const { data, error } = await supabaseAdmin.from("projects").select("*").eq("id", projectId).maybeSingle();
+  getById: async (projectId: string, organizationId?: string) => {
+    let query = supabaseAdmin.from("projects").select("*").eq("id", projectId);
+    if (organizationId) query = query.eq("organization_id", organizationId);
+    const { data, error } = await query.maybeSingle();
     if (error) throw error;
     return data ? toProject(data, await getProjectCounts(projectId)) : null;
   },
 
-  update: async (projectId: string, payload: Record<string, unknown>) => {
+  update: async (projectId: string, payload: Record<string, unknown>, organizationId?: string) => {
     const status = typeof payload.status === "string" ? payload.status : undefined;
-    if (!status) return projectsService.getById(projectId);
+    if (!status) return projectsService.getById(projectId, organizationId);
 
-    const { data, error } = await supabaseAdmin.from("projects").update({ status, updated_at: new Date().toISOString() }).eq("id", projectId).select("*").single();
+    let query = supabaseAdmin.from("projects").update({ status, updated_at: new Date().toISOString() }).eq("id", projectId);
+    if (organizationId) query = query.eq("organization_id", organizationId);
+    const { data, error } = await query.select("*").single();
     if (error) throw error;
     return toProject(data, await getProjectCounts(projectId));
   },
 
-  remove: async (projectId: string) => {
-    const { error } = await supabaseAdmin.from("projects").update({ status: "archived", updated_at: new Date().toISOString() }).eq("id", projectId);
+  remove: async (projectId: string, organizationId?: string) => {
+    let query = supabaseAdmin.from("projects").update({ status: "archived", updated_at: new Date().toISOString() }).eq("id", projectId);
+    if (organizationId) query = query.eq("organization_id", organizationId);
+    const { error } = await query;
     if (error) throw error;
     return { id: projectId, archived: true };
   },

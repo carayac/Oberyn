@@ -25,7 +25,7 @@ function formatRelativeTime(value?: string | null) {
 }
 
 function riskLabel(risk: string) {
-  if (risk === "critical") return "Critico";
+  if (risk === "critical") return "Crítico";
   if (risk === "high") return "Alto";
   if (risk === "medium") return "Medio";
   return "Bajo";
@@ -174,8 +174,8 @@ function DetailPanel({
           {[
             { Icon: Bot, label: "Agente / Bot", value: "Agente operativo (Bot)" },
             { Icon: Package, label: "Servicio", value: integration?.name ?? "Servicio detectado" },
-            { Icon: FileText, label: "Accion", value: approval.actionName },
-            { Icon: Clock3, label: "Motivo del bloqueo o revision", value: approval.reason ?? "Accion considerada de alto impacto financiero." },
+            { Icon: FileText, label: "Acción", value: approval.actionName },
+            { Icon: Clock3, label: "Motivo del bloqueo o revisión", value: approval.reason ?? "Acción considerada de alto impacto financiero." },
           ].map(({ Icon, label, value }) => (
             <div key={label} className="flex gap-4">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
@@ -208,8 +208,8 @@ function DetailPanel({
           <div>
             <p className="text-xs font-bold text-slate-500">Reglas aplicadas</p>
             <div className="mt-2 space-y-1 text-sm text-slate-700">
-              <p className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-[#008f1f]" />Regla: Riesgo alto requiere aprobacion</p>
-              <p className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-[#008f1f]" />Regla: Acciones sensibles requieren revision humana</p>
+              <p className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-[#008f1f]" />Regla: Riesgo alto requiere aprobación</p>
+              <p className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-[#008f1f]" />Regla: Acciones sensibles requieren revisión humana</p>
             </div>
           </div>
 
@@ -238,8 +238,8 @@ function DetailPanel({
         <div className="flex gap-4">
           <Package className="h-7 w-7 shrink-0 text-[#008f1f]" />
           <div>
-            <h2 className="text-lg font-bold text-slate-950">Auditoria en Stellar</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">Todas las decisiones de aprobacion seran registradas y ancladas para garantizar integridad y trazabilidad.</p>
+            <h2 className="text-lg font-bold text-slate-950">Auditoría en Stellar</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">Todas las decisiones de aprobación serán registradas y ancladas para garantizar integridad y trazabilidad.</p>
             <p className="mt-4 flex items-center gap-2 text-sm font-semibold text-[#008f1f]"><CheckCircle2 className="h-4 w-4" />Tiempo estimado de anclaje: ~1 min</p>
           </div>
         </div>
@@ -281,7 +281,7 @@ export function ProjectApprovalsPage() {
       await action();
       setMessage(success);
     } catch (actionError) {
-      setMessage(actionError instanceof Error ? actionError.message : "No se pudo completar la accion.");
+      setMessage(actionError instanceof Error ? actionError.message : "No se pudo completar la acción.");
     }
   }
 
@@ -289,13 +289,13 @@ export function ProjectApprovalsPage() {
     <div className="space-y-6">
       <section className="rounded-lg border border-slate-200 bg-white/70 p-7 shadow-soft 2xl:p-8">
         <header>
-          <h1 className="text-3xl font-bold tracking-normal text-slate-950">Aprobacion humana</h1>
-          <p className="mt-3 text-sm leading-6 text-slate-600">Revisa y aprueba acciones de alto riesgo antes de su ejecucion.</p>
+          <h1 className="text-3xl font-bold tracking-normal text-slate-950">Aprobación humana</h1>
+          <p className="mt-3 text-sm leading-6 text-slate-600">Revisa y aprueba acciones de alto riesgo antes de su ejecución.</p>
         </header>
 
         <div className="mt-6 grid gap-5 md:grid-cols-2 2xl:grid-cols-4">
           <StatCard label="Pendientes" value={pending} detail="+8 vs. ayer" Icon={Clock3} />
-          <StatCard label="Criticas" value={critical} detail="+2 vs. ayer" Icon={AlertTriangle} tone="red" />
+          <StatCard label="Críticas" value={critical} detail="+2 vs. ayer" Icon={AlertTriangle} tone="red" />
           <StatCard label="Aprobadas hoy" value={approvedToday} detail="+3 vs. ayer" Icon={UserCheck} />
           <StatCard label="Tiempo promedio" value="23 min" detail="-15% vs. ayer" Icon={Clock3} />
         </div>
@@ -312,7 +312,7 @@ export function ProjectApprovalsPage() {
               <span>Solicitud</span>
               <span>Agente / Bot</span>
               <span>Servicio</span>
-              <span>Accion</span>
+              <span>Acción</span>
               <span>Riesgo</span>
               <span>Fecha</span>
               <span>Estado</span>
@@ -320,7 +320,7 @@ export function ProjectApprovalsPage() {
             </div>
             <div className="space-y-4 px-2 pb-5">
               {isLoading ? <p className="px-4 py-10 text-sm text-slate-500">Cargando solicitudes...</p> : null}
-              {!isLoading && !approvals.length ? <p className="px-4 py-10 text-sm text-slate-500">No hay solicitudes de aprobacion pendientes.</p> : null}
+              {!isLoading && !approvals.length ? <p className="px-4 py-10 text-sm text-slate-500">No hay solicitudes de aprobación pendientes.</p> : null}
               {approvals.map((approval) => (
                 <ApprovalRow
                   key={approval.id}

@@ -49,8 +49,8 @@ const ACTIVE_PROJECT_EVENT = "oberyn:active-project-change";
 type ActivityRow = {
   source: string;
   action: string;
-  risk: "Bajo" | "Medio" | "Alto" | "Critico";
-  status: "Permitida" | "Aprobacion" | "Bloqueada";
+  risk: "Bajo" | "Medio" | "Alto" | "Crítico";
+  status: "Permitida" | "Aprobación" | "Bloqueada";
   audit: string;
   time: string;
 };
@@ -73,12 +73,12 @@ function formatRelativeTime(value?: string | null) {
 
 function getDecisionStatus(decision: string): ActivityRow["status"] {
   if (decision === "blocked" || decision === "denied" || decision === "rejected") return "Bloqueada";
-  if (decision === "requires_approval" || decision === "pending_approval") return "Aprobacion";
+  if (decision === "requires_approval" || decision === "pending_approval") return "Aprobación";
   return "Permitida";
 }
 
 function getRiskLabel(risk: string): ActivityRow["risk"] {
-  if (risk === "critical") return "Critico";
+  if (risk === "critical") return "Crítico";
   if (risk === "high") return "Alto";
   if (risk === "medium") return "Medio";
   return "Bajo";
@@ -103,7 +103,7 @@ function getDashboardMetrics(project: Project, data: DashboardSnapshot) {
   return [
     { label: "Acciones protegidas", value: protectedActions, detail: "Total permitido", Icon: Shield },
     { label: "Bloqueadas", value: blockedActions, detail: "Reglas aplicadas", Icon: Ban },
-    { label: "Pendientes de aprobacion", value: pendingApprovals, detail: "Requieren revision", Icon: Clock3 },
+    { label: "Pendientes de aprobación", value: pendingApprovals, detail: "Requieren revisión", Icon: Clock3 },
     { label: "Eventos auditados", value: auditedEvents, detail: "Evidencia generada", Icon: FileCheck2 },
   ];
 }
@@ -124,12 +124,12 @@ function buildActivities(data: DashboardSnapshot): ActivityRow[] {
 
 function statusClass(status: string) {
   if (status === "Bloqueada") return "bg-slate-200 text-slate-800";
-  if (status === "Aprobacion") return "bg-amber-50 text-amber-700";
+  if (status === "Aprobación") return "bg-amber-50 text-amber-700";
   return "bg-emerald-50 text-emerald-700";
 }
 
 function riskDot(risk: string) {
-  if (risk === "Critico") return "bg-red-700";
+  if (risk === "Crítico") return "bg-red-700";
   if (risk === "Alto") return "bg-red-500";
   if (risk === "Medio") return "bg-amber-500";
   return "bg-emerald-600";
@@ -171,10 +171,10 @@ function ActivityTable({ rows }: { rows: ActivityRow[] }) {
           <thead className="bg-slate-50 text-xs font-bold text-slate-500">
             <tr>
               <th className="px-5 py-3">Fuente</th>
-              <th className="px-5 py-3">Accion</th>
+              <th className="px-5 py-3">Acción</th>
               <th className="px-5 py-3">Riesgo</th>
               <th className="px-5 py-3">Estado</th>
-              <th className="px-5 py-3">Prueba de auditoria</th>
+              <th className="px-5 py-3">Prueba de auditoría</th>
               <th className="px-5 py-3 text-right">Tiempo</th>
             </tr>
           </thead>
@@ -204,7 +204,7 @@ function ActivityTable({ rows }: { rows: ActivityRow[] }) {
           </tbody>
         </table>
       </div>
-      {!rows.length ? <p className="px-5 py-6 text-sm text-slate-500">Aun no hay eventos auditados para este proyecto.</p> : null}
+      {!rows.length ? <p className="px-5 py-6 text-sm text-slate-500">Aún no hay eventos auditados para este proyecto.</p> : null}
     </Card>
   );
 }
@@ -215,7 +215,7 @@ function PoliciesPanel({ projectId, rules }: { projectId: string; rules: Rule[] 
   return (
     <Card className="p-0">
       <div className="border-b border-slate-200 px-5 py-4">
-        <h2 className="font-bold text-slate-950">Politicas activas</h2>
+        <h2 className="font-bold text-slate-950">Políticas activas</h2>
       </div>
       <div className="divide-y divide-slate-100 px-4">
         {activeRules.map((rule) => (
@@ -233,10 +233,10 @@ function PoliciesPanel({ projectId, rules }: { projectId: string; rules: Rule[] 
           </div>
         ))}
       </div>
-      {!activeRules.length ? <p className="px-5 py-6 text-sm text-slate-500">No hay politicas activas configuradas.</p> : null}
+      {!activeRules.length ? <p className="px-5 py-6 text-sm text-slate-500">No hay políticas activas configuradas.</p> : null}
       <div className="border-t border-slate-100 px-5 py-3 text-center">
         <Link className="inline-flex items-center gap-2 text-sm font-bold text-[#008f1f]" to={getProjectRulesRoute(projectId)}>
-          Ver todas las politicas
+          Ver todas las políticas
           <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
@@ -256,7 +256,7 @@ function RiskPanel({ events }: { events: AuditEvent[] }) {
     { label: "Bajo", value: counts.low, color: "bg-slate-200" },
     { label: "Medio", value: counts.medium, color: "bg-slate-300" },
     { label: "Alto", value: counts.high, color: "bg-slate-500" },
-    { label: "Critico", value: counts.critical, color: "bg-[#258c2f]" },
+    { label: "Crítico", value: counts.critical, color: "bg-[#258c2f]" },
   ];
   const currentRisk = bars.reduce((current, next) => (next.value >= current.value ? next : current), bars[0]);
 
@@ -301,7 +301,7 @@ function RequestsPanel({ approvals }: { approvals: ApprovalRequest[] }) {
           <thead className="bg-slate-50 text-xs font-bold text-slate-500">
             <tr>
               <th className="px-5 py-3">ID</th>
-              <th className="px-5 py-3">Accion</th>
+              <th className="px-5 py-3">Acción</th>
               <th className="px-5 py-3">Riesgo</th>
               <th className="px-5 py-3">Estado</th>
               <th className="px-5 py-3">Motivo</th>
@@ -320,9 +320,9 @@ function RequestsPanel({ approvals }: { approvals: ApprovalRequest[] }) {
                   </span>
                 </td>
                 <td className="whitespace-nowrap px-5 py-4">
-                  <StatusPill status={approval.status === "pending_approval" ? "Aprobacion" : approval.status} />
+                  <StatusPill status={approval.status === "pending_approval" ? "Aprobación" : approval.status} />
                 </td>
-                <td className="whitespace-nowrap px-5 py-4">{approval.reason ?? "Revision requerida"}</td>
+                <td className="whitespace-nowrap px-5 py-4">{approval.reason ?? "Revisión requerida"}</td>
                 <td className="whitespace-nowrap px-5 py-4 text-right">{formatRelativeTime(approval.requestedAt)}</td>
               </tr>
             ))}
@@ -463,37 +463,37 @@ function EmptyDashboard({
               </div>
             </div>
 
-            <h1 className="mt-7 text-4xl font-bold tracking-normal text-slate-950">Aun no hay actividad en este proyecto</h1>
+            <h1 className="mt-7 text-4xl font-bold tracking-normal text-slate-950">Aún no hay actividad en este proyecto</h1>
             <p className="mx-auto mt-4 max-w-4xl text-lg leading-8 text-slate-600">
-              Bienvenido a Oberyn. Para comenzar a proteger tu aplicacion y auditar operaciones, conecta tu entorno instalando el SDK o configurando un Gateway.
+              Bienvenido a Oberyn. Para comenzar a proteger tu aplicación y auditar operaciones, conecta tu entorno instalando el SDK o configurando un Gateway.
             </p>
 
             <div className="mt-10 grid gap-6 md:grid-cols-2 2xl:grid-cols-4">
-              <SetupAction Icon={Code2} title="Instalar SDK" text="Integra el SDK en tu aplicacion para capturar eventos, proteger datos y validar acciones." label="Ver guia" to={`/projects/${project.id}/sdk`} />
-              <SetupAction Icon={Cloud} title="Configurar Gateway" text="Conecta tu infraestructura via Gateway para inspeccionar y controlar trafico y solicitudes." label="Ver guia" to={`/projects/${project.id}/gateway`} />
-              <SetupAction Icon={ShieldCheck} title="Crear reglas iniciales" text="Define reglas basicas de proteccion y control para empezar a bloquear acciones de riesgo." label="Crear reglas" to={`/projects/${project.id}/rules`} />
+              <SetupAction Icon={Code2} title="Instalar SDK" text="Integra el SDK en tu aplicación para capturar eventos, proteger datos y validar acciones." label="Ver guía" to={`/projects/${project.id}/sdk`} />
+              <SetupAction Icon={Cloud} title="Configurar Gateway" text="Conecta tu infraestructura vía Gateway para inspeccionar y controlar tráfico y solicitudes." label="Ver guía" to={`/projects/${project.id}/gateway`} />
+              <SetupAction Icon={ShieldCheck} title="Crear reglas iniciales" text="Define reglas básicas de protección y control para empezar a bloquear acciones de riesgo." label="Crear reglas" to={`/projects/${project.id}/rules`} />
               <SetupAction Icon={Plus} title="Agregar un servicio manualmente" text="Registra un servicio externo que utilizas para empezar a monitorear sus interacciones." label="Agregar servicio" to={`/projects/${project.id}/integrations`} />
             </div>
 
             <Link to={`/projects/${project.id}/integrations`} className="mt-7 inline-flex">
               <Button className="min-w-72">
                 <Plus className="mr-2 h-4 w-4" />
-                Empezar configuracion
+                Empezar configuración
               </Button>
             </Link>
             <p className="mx-auto mt-4 max-w-md text-sm leading-6 text-slate-500">
-              Tu configuracion se guarda automaticamente y podras completarla en cualquier momento.
+              Tu configuración se guarda automáticamente y podrás completarla en cualquier momento.
             </p>
           </Card>
 
           <div className="space-y-6">
             <Card className="p-8">
-              <h2 className="text-xl font-bold text-slate-950">Que veras aqui</h2>
+              <h2 className="text-xl font-bold text-slate-950">Qué verás aquí</h2>
               <p className="mt-4 text-base leading-7 text-slate-600">Una vez conectado tu entorno, este panel mostrara el estado y la actividad de tu proyecto en tiempo real.</p>
               <div className="mt-5 divide-y divide-slate-100">
-                <EmptyFeature Icon={Activity} title="Acciones interceptadas" text="Acciones de riesgo bloqueadas por las reglas de proteccion." />
+                <EmptyFeature Icon={Activity} title="Acciones interceptadas" text="Acciones de riesgo bloqueadas por las reglas de protección." />
                 <EmptyFeature Icon={FileText} title="Eventos auditados" text="Eventos registrados y validados en tu entorno." />
-                <EmptyFeature Icon={Clock3} title="Solicitudes pendientes" text="Aprobaciones y revisiones que requieren atencion." />
+                <EmptyFeature Icon={Clock3} title="Solicitudes pendientes" text="Aprobaciones y revisiones que requieren atención." />
                 <EmptyFeature Icon={Box} title="Servicios detectados" text="Servicios e integraciones conectados a tu proyecto." />
               </div>
             </Card>
@@ -517,12 +517,12 @@ function EmptyDashboard({
             <CircleHelp className="h-7 w-7" />
           </span>
           <div>
-            <h2 className="font-bold text-slate-950">Necesitas ayuda para comenzar?</h2>
-            <p className="mt-1 text-sm text-slate-600">Consulta nuestra documentacion o agenda una demo con nuestro equipo.</p>
+            <h2 className="font-bold text-slate-950">¿Necesitas ayuda para comenzar?</h2>
+            <p className="mt-1 text-sm text-slate-600">Consulta la documentación o contacta soporte para revisar tu configuración real.</p>
           </div>
         </div>
         <div className="flex flex-wrap gap-3">
-          <Button variant="secondary">Ver documentacion</Button>
+          <Button variant="secondary">Ver documentación</Button>
           <Button variant="secondary">
             Contactar soporte
             <MessageCircle className="ml-2 h-4 w-4" />
@@ -581,7 +581,7 @@ export function DashboardPage() {
       <Card className="p-8 text-center">
         <Shield className="mx-auto h-12 w-12 text-[#008f1f]" />
         <h1 className="mt-4 text-2xl font-bold text-slate-950">No hay proyectos para monitorear</h1>
-        <p className="mt-2 text-slate-600">Crea un proyecto para activar controles, politicas y auditoria verificable.</p>
+        <p className="mt-2 text-slate-600">Crea un proyecto para activar controles, políticas y auditoría verificable.</p>
         <Link to="/onboarding/organization" className="mt-6 inline-flex">
           <Button>
             <Plus className="mr-2 h-4 w-4" />
@@ -602,7 +602,7 @@ export function DashboardPage() {
         <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-normal text-slate-950">Panel principal</h1>
-            <p className="mt-2 text-base text-slate-600">Control total sobre las acciones de IA, proteccion de datos y auditoria verificable.</p>
+            <p className="mt-2 text-base text-slate-600">Control total sobre las acciones de IA, protección de datos y auditoría verificable.</p>
           </div>
           <ProjectDashboardSelect projects={projects} selectedProjectId={selectedProject.id} onChange={handleProjectChange} />
         </div>
@@ -632,7 +632,7 @@ export function DashboardPage() {
             Revisar aprobaciones
           </Link>
           <Link className="font-semibold text-[#008f1f]" to={getProjectAuditRoute(selectedProject.id)}>
-            Abrir auditoria
+            Abrir auditoría
           </Link>
         </div>
       </footer>

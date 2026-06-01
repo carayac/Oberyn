@@ -33,7 +33,7 @@ export function CompletedPage() {
           <div className="mx-auto mt-8 max-w-[520px] border-y border-[#dce2ea] py-7 text-left">
             <h2 className="text-[18px] font-extrabold text-[#111827]">Que puedes hacer ahora?</h2>
             <ul className="mt-5 space-y-4">
-              {["Configurar reglas y politicas", "Crear flujos permitidos", "Gestionar agentes y permisos", "Revisar auditoria y actividad"].map((item) => (
+              {["Configurar reglas y políticas", "Crear flujos permitidos", "Gestionar agentes y permisos", "Revisar auditoría y actividad"].map((item) => (
                 <li key={item} className="flex items-center gap-4 text-[18px] font-semibold text-[#596783]">
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#eaf7ee] text-[#00951d]">
                     <Check className="h-5 w-5" strokeWidth={2.6} />

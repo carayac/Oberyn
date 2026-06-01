@@ -1,6 +1,5 @@
 import { useAuth } from "@clerk/react";
 import { useEffect, useMemo, useState } from "react";
-import { mockProjects } from "../data/mockProjects";
 import { apiClient } from "../lib/api/client";
 import type { CreateProjectInput, Project } from "../types/project";
 
@@ -8,8 +7,6 @@ type ApiResponse<T> = {
   success: boolean;
   data: T;
 };
-
-const hasClerkKey = Boolean(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
 
 function normalizeStatus(status: string): Project["status"] {
   if (status === "pending") return "pending_setup";
@@ -37,70 +34,7 @@ function useProjectStats(projects: Project[]) {
   }, [projects]);
 }
 
-function usePreviewProjects(organizationId?: string | null) {
-  const [projects, setProjects] = useState<Project[]>(() => mockProjects.filter((project) => !organizationId || project.organizationId === organizationId));
-  const stats = useProjectStats(projects);
-
-  useEffect(() => {
-    setProjects(mockProjects.filter((project) => !organizationId || project.organizationId === organizationId));
-  }, [organizationId]);
-
-  async function createProject(input: CreateProjectInput) {
-    if (!organizationId) throw new Error("Crea una organizacion antes de crear proyectos.");
-
-    const project: Project = {
-      id: `project_preview_${Date.now()}`,
-      organizationId,
-      name: input.name,
-      slug: input.slug,
-      description: input.description,
-      projectType: input.projectType,
-      environment: input.environment,
-      connectionMode: input.connectionMode,
-      status: "active",
-      riskProfile: input.riskProfile,
-      defaultPolicyMode: input.defaultPolicyMode,
-      auditEnabled: true,
-      stellarAnchorEnabled: false,
-      protectedServicesCount: 0,
-      integrationsCount: 0,
-      rulesCount: 0,
-      botsCount: 0,
-      flowsCount: 0,
-      pendingApprovalsCount: 0,
-      allowedActionsCount: 0,
-      blockedActionsCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    setProjects((current) => [project, ...current]);
-    return project;
-  }
-
-  async function pauseProject(projectId: string) {
-    setProjects((current) =>
-      current.map((project) => (project.id === projectId ? { ...project, status: project.status === "paused" ? "active" : "paused", updatedAt: new Date().toISOString() } : project)),
-    );
-  }
-
-  async function archiveProject(projectId: string) {
-    setProjects((current) => current.map((project) => (project.id === projectId ? { ...project, status: "archived", updatedAt: new Date().toISOString() } : project)));
-  }
-
-  return {
-    projects,
-    stats,
-    isLoading: false,
-    error: null,
-    reloadProjects: async () => undefined,
-    createProject,
-    pauseProject,
-    archiveProject,
-  };
-}
-
-function useClerkProjects(organizationId?: string | null) {
+export function useProjects(organizationId?: string | null) {
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setLoading] = useState(true);
@@ -141,7 +75,7 @@ function useClerkProjects(organizationId?: string | null) {
   const stats = useProjectStats(projects);
 
   async function createProject(input: CreateProjectInput) {
-    if (!organizationId) throw new Error("Crea una organizacion antes de crear proyectos.");
+    if (!organizationId) throw new Error("Crea una organización antes de crear proyectos.");
 
     const token = await getAuthToken();
     const response = await apiClient.post<ApiResponse<Project>>(
@@ -158,7 +92,7 @@ function useClerkProjects(organizationId?: string | null) {
       organizationId,
     );
     const project = normalizeProject(response.data);
-    setProjects((current) => [project, ...current]);
+    setProjects((current) => [project, ...current.filter((item) => item.id !== project.id)]);
     return project;
   }
 
@@ -190,5 +124,3 @@ function useClerkProjects(organizationId?: string | null) {
     archiveProject,
   };
 }
-
-export const useProjects = hasClerkKey ? useClerkProjects : usePreviewProjects;

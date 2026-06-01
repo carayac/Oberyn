@@ -121,7 +121,7 @@ function normalizeRepositoryUrl(rawUrl: unknown) {
   }
 
   if (url.protocol !== "https:" || url.hostname !== "github.com") {
-    throw new Error("Por seguridad, la deteccion por repositorio acepta URLs publicas de GitHub en HTTPS.");
+    throw new Error("Por seguridad, la detección por repositorio acepta URLs publicas de GitHub en HTTPS.");
   }
 
   const [owner, repo] = url.pathname.replace(/^\/|\/$/g, "").split("/");
@@ -202,7 +202,7 @@ const providerRules: ProviderRule[] = [
     envPatterns: [/FIREBASE_/i, /GOOGLE_APPLICATION_CREDENTIALS/i],
     codePatterns: [/initializeApp\s*\(/i, /getFirestore\s*\(/i],
     endpointPatterns: [/firebaseio\.com/i, /firestore\.googleapis\.com/i],
-    riskSignals: ["Base de datos", "Autenticacion", "Datos de usuarios"],
+    riskSignals: ["Base de datos", "Autenticación", "Datos de usuarios"],
   },
   {
     name: "AWS",
@@ -337,7 +337,7 @@ function detectFromFiles(files: DetectionFile[]): IntegrationFinding[] {
 
       if (hasMatch(rule.codePatterns, file.content)) {
         score += fileType === "code" ? 25 : 18;
-        addEvidence(evidence, file.name, "uso en codigo detectado");
+        addEvidence(evidence, file.name, "uso en código detectado");
       }
 
       if (hasMatch(rule.endpointPatterns, file.content)) {
@@ -367,25 +367,6 @@ function detectFromFiles(files: DetectionFile[]): IntegrationFinding[] {
   }
 
   return [...findings.values()].sort((a, b) => b.confidence - a.confidence);
-}
-
-function defaultFindings(): IntegrationFinding[] {
-  return ["openai:llm", "anthropic:llm", "supabase:database"]
-    .map((key) => {
-      const rule = providerRules.find((item) => `${item.provider}:${item.serviceType}` === key);
-      if (!rule) return null;
-      return {
-        id: key,
-        name: rule.name,
-        provider: rule.provider,
-        serviceType: rule.serviceType,
-        suggestedMethod: rule.suggestedMethod,
-        confidence: 0.62,
-        evidence: ["Demo asistida: no se subieron archivos"],
-        riskSignals: rule.riskSignals,
-      };
-    })
-    .filter(Boolean) as IntegrationFinding[];
 }
 
 async function createDetectedIntegrations(projectId: string, findings: IntegrationFinding[]) {
@@ -421,7 +402,7 @@ export const integrationsService = {
   },
 
   create: async (projectId: string, payload: Record<string, unknown>) => {
-    const name = cleanText(payload.name, "Integracion manual");
+    const name = cleanText(payload.name, "Integración manual");
     const provider = cleanText(payload.provider, "custom");
     const serviceType = cleanText(payload.serviceType ?? payload.service_type, "custom_api");
     const connectionMethod = cleanText(payload.connectionMethod ?? payload.connection_method, "manual");
@@ -453,7 +434,7 @@ export const integrationsService = {
     const files = [...uploadedFiles, ...repoScan.files].slice(0, MAX_REPO_FILES);
     const selectedFindingIds = Array.isArray(payload.selectedFindingIds) ? payload.selectedFindingIds.map(String) : null;
     const commit = payload.commit !== false;
-    const analyzedFindings = files.length > 0 ? detectFromFiles(files) : defaultFindings();
+    const analyzedFindings = files.length > 0 ? detectFromFiles(files) : [];
     const findings = selectedFindingIds ? analyzedFindings.filter((finding) => selectedFindingIds.includes(finding.id)) : analyzedFindings;
     const integrations = commit ? await createDetectedIntegrations(projectId, findings) : [];
 
@@ -485,4 +466,3 @@ export const integrationsService = {
     return toIntegration(data);
   },
 };
-

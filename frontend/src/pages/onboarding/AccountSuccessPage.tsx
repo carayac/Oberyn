@@ -4,7 +4,7 @@ import { AuthSuccessShell } from "../../components/auth/AuthSuccessShell";
 import { appRoutes } from "../../routes/routes";
 
 const nextSteps = [
-  "Crea tu organizacion para agrupar tus proyectos, APIs y configuracion.",
+  "Crea tu organización para agrupar tus proyectos, APIs y configuración.",
   "Luego, crea proyectos y conecta tus APIs.",
   "Define reglas para proteger y gobernar tus integraciones.",
 ];
@@ -46,7 +46,7 @@ export function AccountSuccessPage() {
             to={appRoutes.onboardingOrganization}
             className="inline-flex h-12 w-full max-w-[340px] items-center justify-center gap-6 rounded-lg bg-[#00951d] px-8 text-[16px] font-extrabold text-white shadow-[0_8px_16px_rgba(0,149,29,0.18)] transition hover:bg-[#007f18] sm:h-[54px] sm:text-[18px]"
           >
-            Crear mi organizacion
+            Crear mi organización
             <ArrowRight className="h-7 w-7" strokeWidth={2.3} />
           </Link>
         </div>

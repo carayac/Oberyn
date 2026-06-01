@@ -11,53 +11,7 @@ import { AuthShell } from "../../components/auth/AuthShell";
 import { getClerkErrorMessage } from "../../lib/clerk/errors";
 import { appRoutes } from "../../routes/routes";
 
-const hasClerkKey = Boolean(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
-
 export function RegisterPage() {
-  if (!hasClerkKey) {
-    return <LocalPreviewRegisterPage />;
-  }
-
-  return <ClerkRegisterPage />;
-}
-
-function LocalPreviewRegisterPage() {
-  const navigate = useNavigate();
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    navigate(appRoutes.onboardingSuccess);
-  }
-
-  return (
-    <AuthShell id="auth-register-view" title="Crea tu cuenta" description="Comienza a proteger y controlar cada accion de tu IA.">
-      <AuthCard id="auth-register-card" title="Crear cuenta" description="Preview local sin Clerk." className="max-w-[740px]">
-        <form id="register-form" className="space-y-5" onSubmit={handleSubmit}>
-          <AuthFormMessage id="register-form-info" tone="info">
-            Falta VITE_CLERK_PUBLISHABLE_KEY. El registro real se activara cuando configures Clerk.
-          </AuthFormMessage>
-
-          <AuthField id="register-name" name="name" label="Nombre" type="text" placeholder="Tu nombre" autoComplete="name" required />
-          <AuthField id="register-email" name="email" label="Correo electronico" type="email" placeholder="ejemplo@acme.com" required />
-          <AuthPasswordField id="register-password" name="password" label="Contrasena" placeholder="Minimo 8 caracteres" minLength={8} required />
-
-          <AuthPrimaryButton id="register-submit-button" type="submit" icon={<UserPlus className="h-7 w-7" strokeWidth={2.3} />}>
-            Crear cuenta preview
-          </AuthPrimaryButton>
-
-          <p className="pt-2 text-center text-[18px] font-medium text-[#28354a]">
-            Ya tienes cuenta?{" "}
-            <AuthInlineLink id="register-login-link" to={appRoutes.login}>
-              Iniciar sesion
-            </AuthInlineLink>
-          </p>
-        </form>
-      </AuthCard>
-    </AuthShell>
-  );
-}
-
-function ClerkRegisterPage() {
   const navigate = useNavigate();
   const { isLoaded, signUp, setActive } = useSignUp();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -87,7 +41,7 @@ function ClerkRegisterPage() {
 
         setInfoMessage("Tu cuenta necesita un paso adicional en Clerk antes de continuar.");
       } catch (error) {
-        setErrorMessage(getClerkErrorMessage(error, "No pudimos verificar el codigo. Intenta nuevamente."));
+        setErrorMessage(getClerkErrorMessage(error, "No pudimos verificar el código. Intenta nuevamente."));
       } finally {
         setIsSubmitting(false);
       }
@@ -104,7 +58,7 @@ function ClerkRegisterPage() {
     setInfoMessage(null);
 
     if (password !== confirmPassword) {
-      setErrorMessage("Las contrasenas no coinciden.");
+      setErrorMessage("Las contraseñas no coinciden.");
       return;
     }
 
@@ -127,7 +81,7 @@ function ClerkRegisterPage() {
 
       await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
       setIsVerifyingEmail(true);
-      setInfoMessage("Te enviamos un codigo de verificacion por correo. Ingresalo para activar tu cuenta.");
+      setInfoMessage("Te envíamos un código de verificación por correo. Ingrésalo para activar tu cuenta.");
     } catch (error) {
       setErrorMessage(getClerkErrorMessage(error, "No pudimos crear tu cuenta. Revisa los datos e intenta de nuevo."));
     } finally {
@@ -136,7 +90,7 @@ function ClerkRegisterPage() {
   }
 
   return (
-    <AuthShell id="auth-register-view" title="Crea tu cuenta" description="Comienza a proteger y controlar cada accion de tu IA.">
+    <AuthShell id="auth-register-view" title="Crea tu cuenta" description="Comienza a proteger y controlar cada acción de tu IA.">
       <AuthCard id="auth-register-card" title="Crear cuenta" description="Completa tus datos para empezar." className="max-w-[740px]">
         <form id="register-form" className="space-y-5" onSubmit={handleSubmit}>
           <AuthFormMessage id="register-form-error" tone="error">
@@ -147,22 +101,22 @@ function ClerkRegisterPage() {
           </AuthFormMessage>
 
           {isVerifyingEmail ? (
-            <AuthField id="register-email-code" name="emailCode" label="Codigo de verificacion" type="text" placeholder="123456" inputMode="numeric" autoComplete="one-time-code" required />
+            <AuthField id="register-email-code" name="emailCode" label="Código de verificación" type="text" placeholder="123456" inputMode="numeric" autoComplete="one-time-code" required />
           ) : (
             <>
               <AuthField id="register-name" name="name" label="Nombre" type="text" placeholder="Tu nombre" autoComplete="name" required />
-              <AuthField id="register-email" name="email" label="Correo electronico" type="email" placeholder="ejemplo@acme.com" autoComplete="email" required />
-              <AuthPasswordField id="register-password" name="password" label="Contrasena" placeholder="Minimo 8 caracteres" autoComplete="new-password" minLength={8} required />
-              <AuthPasswordField id="register-confirm-password" name="confirmPassword" label="Confirmar contrasena" placeholder="Repite tu contrasena" autoComplete="new-password" minLength={8} required />
+              <AuthField id="register-email" name="email" label="Correo electrónico" type="email" placeholder="ejemplo@acme.com" autoComplete="email" required />
+              <AuthPasswordField id="register-password" name="password" label="Contraseña" placeholder="Mínimo 8 caracteres" autoComplete="new-password" minLength={8} required />
+              <AuthPasswordField id="register-confirm-password" name="confirmPassword" label="Confirmar contraseña" placeholder="Repite tu contraseña" autoComplete="new-password" minLength={8} required />
 
               <AuthCheckbox id="register-accept-terms" name="acceptTerms" required>
                 Acepto los{" "}
                 <AuthInlineLink id="register-terms-link" to="/terms">
-                  Terminos de servicio
+                  Términos de servicio
                 </AuthInlineLink>{" "}
                 y la{" "}
                 <AuthInlineLink id="register-privacy-link" to="/privacy">
-                  Politica de privacidad
+                  Política de privacidad
                 </AuthInlineLink>
               </AuthCheckbox>
             </>
@@ -173,9 +127,9 @@ function ClerkRegisterPage() {
           </AuthPrimaryButton>
 
           <p className="pt-2 text-center text-[18px] font-medium text-[#28354a]">
-            Ya tienes cuenta?{" "}
+            ¿Ya tienes cuenta?{" "}
             <AuthInlineLink id="register-login-link" to={appRoutes.login}>
-              Iniciar sesion
+              Iniciar sesión
             </AuthInlineLink>
           </p>
         </form>

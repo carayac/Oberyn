@@ -70,7 +70,7 @@ export const organizationsService = {
 
   create: async (payload: CreateOrganizationInput, ownerUserId: string) => {
     const name = payload.name?.trim();
-    if (!name) throw new Error("El nombre de la organizacion es obligatorio.");
+    if (!name) throw new Error("El nombre de la organización es obligatorio.");
 
     const requestedSlug = slugify(payload.slug?.trim() || name);
     const existingOrganization = await findOrganizationBySlug(requestedSlug);

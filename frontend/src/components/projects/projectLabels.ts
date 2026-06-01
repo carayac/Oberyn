@@ -4,14 +4,14 @@ export const projectTypeLabels: Record<string, string> = {
   finance: "Finanzas",
   operations: "Operaciones",
   crm: "CRM",
-  internal_automation: "Automatizacion",
+  internal_automation: "Automatización",
   custom: "Personalizado",
 };
 
 export const environmentLabels: Record<string, string> = {
   development: "Desarrollo",
   staging: "Pruebas",
-  production: "Produccion",
+  production: "Producción",
 };
 
 export const connectionModeLabels: Record<string, string> = {
@@ -24,7 +24,7 @@ export const connectionModeLabels: Record<string, string> = {
 export const statusLabels: Record<string, string> = {
   active: "Activo",
   inactive: "Inactivo",
-  pending_setup: "Configuracion",
+  pending_setup: "Configuración",
   no_activity: "Sin actividad",
   paused: "Pausado",
   requires_configuration: "Requiere config.",

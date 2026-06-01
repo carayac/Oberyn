@@ -31,7 +31,7 @@ export const auditService = {
   getById: async (projectId: string, eventId: string) => {
     const { data, error } = await supabaseAdmin.from("audit_events").select("*").eq("project_id", projectId).eq("id", eventId).maybeSingle();
     if (error) throw error;
-    if (!data) throw new Error("El evento de auditoria no existe.");
+    if (!data) throw new Error("El evento de auditoría no existe.");
     return toAuditEvent(data);
   },
 };

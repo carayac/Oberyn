@@ -40,7 +40,7 @@ export function ProjectsPage() {
       <header className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
         <div className="min-w-0">
           <h1 className="text-[clamp(2rem,5vw,2.625rem)] font-extrabold leading-tight text-[#050505]">Mis proyectos</h1>
-          <p className="mt-3 text-[clamp(1rem,2vw,1.1875rem)] font-medium text-[#596783]">Administra proyectos independientes con reglas, integraciones y auditoria separadas.</p>
+          <p className="mt-3 text-[clamp(1rem,2vw,1.1875rem)] font-medium text-[#596783]">Administra proyectos independientes con reglas, integraciones y auditoría separadas.</p>
         </div>
         <Link
           id="new-project-button"
@@ -54,12 +54,12 @@ export function ProjectsPage() {
 
       {!isLoadingOrganizations && !activeOrganization && (
         <section className="rounded-xl border border-amber-200 bg-amber-50 px-7 py-6">
-          <h2 className="text-[22px] font-extrabold text-[#111827]">Crea una organizacion antes de crear proyectos</h2>
+          <h2 className="text-[22px] font-extrabold text-[#111827]">Crea una organización antes de crear proyectos</h2>
           <p className="mt-2 max-w-3xl text-[16px] font-medium leading-7 text-[#596783]">
-            La organizacion es el espacio principal donde se agrupan tus proyectos, usuarios, permisos y configuracion general.
+            La organización es el espacio principal donde se agrupan tus proyectos, usuarios, permisos y configuración general.
           </p>
           <Link to={appRoutes.onboardingOrganization} className="mt-5 inline-flex h-11 items-center rounded-lg bg-[#00951d] px-6 text-[15px] font-extrabold text-white hover:bg-[#007f18]">
-            Crear organizacion
+            Crear organización
           </Link>
         </section>
       )}

@@ -28,7 +28,7 @@ type SdkKeyRow = {
 const riskRank: Record<string, number> = { low: 1, medium: 2, high: 3, critical: 4 };
 const defaultRules = [
   {
-    name: "Requerir aprobacion para acciones criticas",
+    name: "Requerir aprobación para acciones críticas",
     category: "approval",
     severity: "high",
     condition_type: "risk_level",
@@ -152,7 +152,7 @@ async function ensureSdkKey(projectId: string) {
 }
 
 async function resolveSdkKey(publicKey: string) {
-  if (!publicKey) throw new Error("Falta x-oberyn-key para enviar eventos del SDK.");
+  if (!publicKey) throw new Error("Falta x-oberyn-key para envíar eventos del SDK.");
 
   const { data, error } = await supabaseAdmin.from("sdk_keys").select("*").eq("public_key", publicKey).eq("status", "active").maybeSingle();
   if (error && isMissingSdkKeysTable(error)) {
@@ -279,7 +279,7 @@ async function ingestResolvedEvent(projectId: string, event: SdkEventInput) {
       action_name: actionName,
       risk_level: riskLevel,
       status: "pending_approval",
-      reason: event.reason ?? (riskRank[riskLevel] >= riskRank.high ? "Accion de alto riesgo detectada por SDK." : "Aprobacion requerida por politica."),
+      reason: event.reason ?? (riskRank[riskLevel] >= riskRank.high ? "Acción de alto riesgo detectada por SDK." : "Aprobación requerida por política."),
       payload_preview: event.payload ?? {},
       requested_at: now(),
     });
