@@ -5,5 +5,6 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 export const sdkRoutes = Router({ mergeParams: true });
 sdkRoutes.use(requireProjectAccess);
 sdkRoutes.get("/config", asyncHandler(sdkController.getConfig));
+sdkRoutes.post("/keys", asyncHandler(sdkController.createKey));
+sdkRoutes.delete("/keys/:keyId", asyncHandler(sdkController.revokeKey));
 sdkRoutes.post("/test-event", asyncHandler(sdkController.testEvent));
-

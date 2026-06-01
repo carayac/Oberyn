@@ -8,6 +8,10 @@ alter table approval_requests enable row level security;
 alter table audit_events enable row level security;
 alter table exceptions enable row level security;
 alter table manual_services enable row level security;
+alter table project_api_keys enable row level security;
+alter table policy_decisions enable row level security;
+alter table sdk_events enable row level security;
+alter table gateway_events enable row level security;
 
 -- Oberyn routes sensitive reads and writes through the backend, using Clerk
 -- session validation and the Supabase service role where appropriate.
@@ -43,3 +47,14 @@ create policy "Backend service role can manage exceptions" on exceptions
 create policy "Backend service role can manage manual services" on manual_services
   for all using (auth.role() = 'service_role') with check (auth.role() = 'service_role');
 
+create policy "Backend service role can manage project api keys" on project_api_keys
+  for all using (auth.role() = 'service_role') with check (auth.role() = 'service_role');
+
+create policy "Backend service role can manage policy decisions" on policy_decisions
+  for all using (auth.role() = 'service_role') with check (auth.role() = 'service_role');
+
+create policy "Backend service role can manage sdk events" on sdk_events
+  for all using (auth.role() = 'service_role') with check (auth.role() = 'service_role');
+
+create policy "Backend service role can manage gateway events" on gateway_events
+  for all using (auth.role() = 'service_role') with check (auth.role() = 'service_role');
