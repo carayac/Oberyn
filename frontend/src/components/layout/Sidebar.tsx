@@ -1,7 +1,7 @@
 import { UserButton } from "@clerk/react";
-import { Bot, Cloud, Code2, FileText, Folder, GitBranch, Home, Menu, Plug, Settings, ShieldCheck, UserCheck } from "lucide-react";
+import { Bot, Building2, Cloud, Code2, FileText, Folder, GitBranch, Home, Menu, Plug, Settings, ShieldCheck, UserCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useOrganizations } from "../../hooks/useOrganizations";
 import { useProjects } from "../../hooks/useProjects";
 import { AuthBrandLogo } from "../auth/AuthBrandLogo";
@@ -13,6 +13,17 @@ type SidebarProps = {
   collapsed: boolean;
   onToggle: () => void;
 };
+
+function isProjectRoot(pathname: string) {
+  return pathname === "/projects" || pathname === "/projects/new" || /^\/projects\/[^/]+$/.test(pathname);
+}
+
+function isSidebarItemActive(id: string, to: string, pathname: string) {
+  if (id === "dashboard") return pathname === "/dashboard";
+  if (id === "organizations") return pathname === "/organizations";
+  if (id === "projects") return isProjectRoot(pathname);
+  return pathname === to;
+}
 
 function SidebarUser({ collapsed }: { collapsed: boolean }) {
   return (
@@ -72,6 +83,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         label: "Principal",
         items: [
           { id: "dashboard", label: "Dashboard", to: "/dashboard", Icon: Home },
+          { id: "organizations", label: "Organizaciones", to: "/organizations", Icon: Building2 },
           { id: "projects", label: "Proyectos", to: "/projects", Icon: Folder },
           { id: "integrations", label: "Integraciones", to: projectRoute("integrations"), Icon: Plug },
         ],
@@ -119,7 +131,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           type="button"
           onClick={onToggle}
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[#dce2ea] bg-white text-[#111827] shadow-sm transition hover:bg-[#f8fafc]"
-          aria-label={collapsed ? "Expandir menu" : "Comprimir menu"}
+          aria-label={collapsed ? "Expandir menú" : "Comprimir menú"}
         >
           <Menu className="h-6 w-6" strokeWidth={2.2} />
         </button>
@@ -130,24 +142,27 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           <section key={group.id} className="border-b border-[#e5e9ef] py-5 first:pt-0 last:border-b-0">
             {!collapsed && <h2 className="mb-3 px-3 text-[15px] font-bold text-[#4b5565]">{group.label}</h2>}
             <div className="space-y-1">
-              {group.items.map(({ id, label, to, Icon }) => (
-                <NavLink
-                  id={`sidebar-nav-${id}`}
-                  key={id}
-                  to={to}
-                  title={collapsed ? label : undefined}
-                  className={({ isActive }) =>
-                    [
+              {group.items.map(({ id, label, to, Icon }) => {
+                const isActive = isSidebarItemActive(id, to, location.pathname);
+
+                return (
+                  <Link
+                    id={`sidebar-nav-${id}`}
+                    key={id}
+                    to={to}
+                    title={collapsed ? label : undefined}
+                    aria-current={isActive ? "page" : undefined}
+                    className={[
                       "flex h-12 items-center rounded-lg text-[17px] font-medium transition",
                       collapsed ? "justify-center px-0" : "gap-6 px-3",
                       isActive ? "bg-[#eaf7ee] text-[#008f1f]" : "text-[#111827] hover:bg-[#f8fafc]",
-                    ].join(" ")
-                  }
-                >
-                  <Icon className="h-6 w-6 shrink-0" strokeWidth={2.2} />
-                  {!collapsed && <span>{label}</span>}
-                </NavLink>
-              ))}
+                    ].join(" ")}
+                  >
+                    <Icon className="h-6 w-6 shrink-0" strokeWidth={2.2} />
+                    {!collapsed && <span>{label}</span>}
+                  </Link>
+                );
+              })}
             </div>
           </section>
         ))}

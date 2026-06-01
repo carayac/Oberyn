@@ -8,6 +8,7 @@ export function AppShell() {
   const isOnboarding = location.pathname.startsWith("/onboarding/");
   const isWideSystemView =
     location.pathname === "/dashboard" ||
+    location.pathname === "/organizations" ||
     /^\/projects\/[^/]+\/(approvals|gateway|rules|sdk)$/.test(location.pathname);
 
   if (isOnboarding) {
