@@ -31,11 +31,12 @@ import { ProjectBotsPage } from "../pages/projects/ProjectBotsPage";
 import { ProjectFlowsPage } from "../pages/projects/ProjectFlowsPage";
 import { ProjectGatewayPage } from "../pages/projects/ProjectGatewayPage";
 import { ProjectSDKPage } from "../pages/projects/ProjectSDKPage";
+import { LandingPage } from "../pages/landing/LandingPage";
 
 export function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to={appRoutes.login} replace />} />
+      <Route path="/" element={<LandingPage />} />
       <Route element={<AuthLayout />}>
         <Route path={appRoutes.login} element={<LoginPage />} />
         <Route path={appRoutes.register} element={<RegisterPage />} />
