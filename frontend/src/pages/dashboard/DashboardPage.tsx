@@ -21,7 +21,6 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { AuthBrandLogo } from "../../components/auth/AuthBrandLogo";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { useDashboardData } from "../../hooks/useDashboardData";
@@ -215,7 +214,7 @@ function PoliciesPanel({ projectId, rules }: { projectId: string; rules: Rule[] 
   return (
     <Card className="p-0">
       <div className="border-b border-slate-200 px-5 py-4">
-        <h2 className="font-bold text-slate-950">Políticas activas</h2>
+        <h2 className="font-bold text-slate-950">Reglas activas</h2>
       </div>
       <div className="divide-y divide-slate-100 px-4">
         {activeRules.map((rule) => (
@@ -226,17 +225,17 @@ function PoliciesPanel({ projectId, rules }: { projectId: string; rules: Rule[] 
             <div className="min-w-0 flex-1">
               <div className="flex items-start justify-between gap-3">
                 <p className="font-bold text-slate-950">{rule.name}</p>
-                <span className="rounded-md bg-emerald-50 px-2.5 py-1 text-xs font-bold text-[#008f1f]">Activa</span>
+                <span className="inline-flex min-w-[64px] shrink-0 justify-center whitespace-nowrap rounded-md bg-emerald-50 px-2.5 py-1 text-xs font-bold leading-none text-[#008f1f]">Activa</span>
               </div>
               <p className="mt-1 text-sm text-slate-500">{rule.description ?? `${rule.category} / ${rule.actionResult}`}</p>
             </div>
           </div>
         ))}
       </div>
-      {!activeRules.length ? <p className="px-5 py-6 text-sm text-slate-500">No hay políticas activas configuradas.</p> : null}
+      {!activeRules.length ? <p className="px-5 py-6 text-sm text-slate-500">No hay reglas activas configuradas.</p> : null}
       <div className="border-t border-slate-100 px-5 py-3 text-center">
         <Link className="inline-flex items-center gap-2 text-sm font-bold text-[#008f1f]" to={getProjectRulesRoute(projectId)}>
-          Ver todas las políticas
+          Ver todas las reglas
           <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
@@ -276,19 +275,19 @@ function RiskPanel({ events }: { events: AuditEvent[] }) {
         {latestEvent ? <span className="whitespace-nowrap rounded-md bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">{formatRelativeTime(latestEvent.createdAt)}</span> : null}
       </div>
 
-      <div className="mt-6 flex h-44 items-end gap-4 border-b border-l border-slate-200 px-4 pt-6">
+      <div className="mt-6 flex h-52 items-end gap-4 border-b border-l border-slate-200 px-4 pb-2 pt-8">
         {bars.map((bar) => (
-          <div key={bar.key} className="flex min-w-0 flex-1 flex-col items-center gap-2">
-            <span className={`text-xs font-bold ${bar.value ? bar.text : "text-slate-400"}`}>{formatNumber(bar.value)}</span>
-            <div className="flex h-32 w-full items-end justify-center">
+          <div key={bar.key} className="flex min-w-0 flex-1 flex-col items-center gap-3">
+            <span className={`min-h-5 text-xs font-bold leading-5 ${bar.value ? bar.text : "text-slate-400"}`}>{formatNumber(bar.value)}</span>
+            <div className="flex h-28 w-full items-end justify-center">
               <div
                 className={`w-full max-w-14 rounded-t-md transition-all ${bar.value ? bar.color : "bg-slate-100"}`}
                 style={{ height: bar.value ? `${Math.max(12, (bar.value / max) * 100)}%` : "4px" }}
                 title={`${bar.label}: ${formatNumber(bar.value)} eventos (${bar.percentage}%)`}
               />
             </div>
-            <span className="text-sm font-semibold text-slate-700">{bar.label}</span>
-            <span className="text-xs font-semibold text-slate-400">{bar.percentage}%</span>
+            <span className="whitespace-nowrap text-sm font-semibold leading-none text-slate-700">{bar.label}</span>
+            <span className="text-xs font-semibold leading-none text-slate-400">{bar.percentage}%</span>
           </div>
         ))}
       </div>
@@ -476,8 +475,7 @@ function EmptyDashboard({
 }) {
   return (
     <div className="space-y-7">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <AuthBrandLogo className="justify-center lg:justify-start" />
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-end">
         <ProjectDashboardSelect projects={projects} selectedProjectId={project.id} onChange={onProjectChange} />
       </div>
       <section className="rounded-lg border border-slate-200 bg-white/70 p-8 shadow-soft 2xl:p-9">
@@ -619,7 +617,7 @@ export function DashboardPage() {
       <Card className="p-8 text-center">
         <Shield className="mx-auto h-12 w-12 text-[#008f1f]" />
         <h1 className="mt-4 text-2xl font-bold text-slate-950">No hay proyectos para monitorear</h1>
-        <p className="mt-2 text-slate-600">Crea un proyecto para activar controles, políticas y auditoría verificable.</p>
+        <p className="mt-2 text-slate-600">Crea un proyecto para activar controles, reglas y auditoría verificable.</p>
         <Link to="/onboarding/organization" className="mt-6 inline-flex">
           <Button>
             <Plus className="mr-2 h-4 w-4" />

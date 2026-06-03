@@ -71,7 +71,7 @@ export const oberyn = createOberyn({
       },
       {
         title: "Que se habilitara",
-        body: ["El Gateway se planea como un proxy seguro para modelos y APIs externas, con inspeccion de trafico, politicas centralizadas y auditoria de requests."],
+        body: ["El Gateway se planea como un proxy seguro para modelos y APIs externas, con inspección de tráfico, reglas centralizadas y auditoría de requests."],
       },
       {
         title: "Mientras tanto",

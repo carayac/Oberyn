@@ -54,6 +54,50 @@ async function getProjectCounts(projectId: string) {
   return { integrationsCount, rulesCount, botsCount, flowsCount, pendingApprovalsCount };
 }
 
+function countByProject(rows: Array<Record<string, unknown>> | null, projectIds: string[]) {
+  const counts = Object.fromEntries(projectIds.map((projectId) => [projectId, 0]));
+  for (const row of rows ?? []) {
+    const projectId = String(row.project_id);
+    counts[projectId] = (counts[projectId] ?? 0) + 1;
+  }
+  return counts;
+}
+
+async function getProjectsCounts(projectIds: string[]) {
+  if (!projectIds.length) return {};
+
+  const [integrations, rules, bots, flows, approvals] = await Promise.all([
+    supabaseAdmin.from("integrations").select("project_id").in("project_id", projectIds),
+    supabaseAdmin.from("rules").select("project_id").in("project_id", projectIds).eq("is_active", true),
+    supabaseAdmin.from("bots").select("project_id").in("project_id", projectIds),
+    supabaseAdmin.from("flows").select("project_id").in("project_id", projectIds),
+    supabaseAdmin.from("approval_requests").select("project_id").in("project_id", projectIds).eq("status", "pending_approval"),
+  ]);
+
+  for (const result of [integrations, rules, bots, flows, approvals]) {
+    if (result.error) throw result.error;
+  }
+
+  const integrationsByProject = countByProject(integrations.data, projectIds);
+  const rulesByProject = countByProject(rules.data, projectIds);
+  const botsByProject = countByProject(bots.data, projectIds);
+  const flowsByProject = countByProject(flows.data, projectIds);
+  const approvalsByProject = countByProject(approvals.data, projectIds);
+
+  return Object.fromEntries(
+    projectIds.map((projectId) => [
+      projectId,
+      {
+        integrationsCount: integrationsByProject[projectId] ?? 0,
+        rulesCount: rulesByProject[projectId] ?? 0,
+        botsCount: botsByProject[projectId] ?? 0,
+        flowsCount: flowsByProject[projectId] ?? 0,
+        pendingApprovalsCount: approvalsByProject[projectId] ?? 0,
+      },
+    ]),
+  );
+}
+
 async function findProjectBySlug(organizationId: string, slug: string) {
   const { data, error } = await supabaseAdmin.from("projects").select("*").eq("organization_id", organizationId).eq("slug", slug).maybeSingle();
   if (error) throw error;
@@ -61,12 +105,29 @@ async function findProjectBySlug(organizationId: string, slug: string) {
 }
 
 export const projectsService = {
+  listAllForUser: async (ownerUserId: string) => {
+    const { data: organizations, error: organizationsError } = await supabaseAdmin.from("organizations").select("id").eq("owner_user_id", ownerUserId);
+    if (organizationsError) throw organizationsError;
+
+    const organizationIds = (organizations ?? []).map((row) => String(row.id));
+    if (!organizationIds.length) return [];
+
+    const { data, error } = await supabaseAdmin.from("projects").select("*").in("organization_id", organizationIds).order("updated_at", { ascending: false });
+    if (error) throw error;
+
+    const rows = data ?? [];
+    const countsByProject = await getProjectsCounts(rows.map((row) => String(row.id)));
+    return rows.map((row) => toProject(row, countsByProject[String(row.id)]));
+  },
+
   list: async (organizationId?: string) => {
     const resolvedOrganizationId = await ensureOrganization(organizationId);
     const { data, error } = await supabaseAdmin.from("projects").select("*").eq("organization_id", resolvedOrganizationId).order("updated_at", { ascending: false });
     if (error) throw error;
 
-    const projects = await Promise.all((data ?? []).map(async (row) => toProject(row, await getProjectCounts(String(row.id)))));
+    const rows = data ?? [];
+    const countsByProject = await getProjectsCounts(rows.map((row) => String(row.id)));
+    const projects = rows.map((row) => toProject(row, countsByProject[String(row.id)]));
     return projects;
   },
 
@@ -112,10 +173,17 @@ export const projectsService = {
   },
 
   update: async (projectId: string, payload: Record<string, unknown>, organizationId?: string) => {
-    const status = typeof payload.status === "string" ? payload.status : undefined;
-    if (!status) return projectsService.getById(projectId, organizationId);
+    const updates: Record<string, unknown> = {};
+    if (typeof payload.name === "string" && payload.name.trim()) updates.name = payload.name.trim();
+    if (typeof payload.slug === "string" && payload.slug.trim()) updates.slug = slugify(payload.slug);
+    if (typeof payload.description === "string") updates.description = payload.description.trim() || null;
+    if (typeof payload.projectType === "string") updates.project_type = payload.projectType;
+    if (typeof payload.environment === "string") updates.environment = payload.environment === "development" ? "sandbox" : payload.environment;
+    if (typeof payload.connectionMode === "string") updates.connection_mode = payload.connectionMode === "mixed" ? "detected" : payload.connectionMode;
+    if (typeof payload.status === "string") updates.status = payload.status;
+    if (!Object.keys(updates).length) return projectsService.getById(projectId, organizationId);
 
-    let query = supabaseAdmin.from("projects").update({ status, updated_at: new Date().toISOString() }).eq("id", projectId);
+    let query = supabaseAdmin.from("projects").update({ ...updates, updated_at: new Date().toISOString() }).eq("id", projectId);
     if (organizationId) query = query.eq("organization_id", organizationId);
     const { data, error } = await query.select("*").single();
     if (error) throw error;

@@ -17,7 +17,7 @@ const riskOptions = [
   ["critical", "Crítico"],
 ] as const;
 
-const policyOptions = [
+const ruleModeOptions = [
   ["strict", "Estricto"],
   ["balanced", "Balanceado"],
   ["flexible", "Flexible"],
@@ -135,9 +135,9 @@ export function CreateProjectModal({ open, onClose, onCreateProject, onCreated }
           </div>
 
           <label className="block" htmlFor="create-project-policy">
-            <span className="mb-2 block text-sm font-extrabold text-[#111827]">Política inicial</span>
+            <span className="mb-2 block text-sm font-extrabold text-[#111827]">Reglas iniciales</span>
             <select id="create-project-policy" name="defaultPolicyMode" className="h-12 w-full rounded-lg border border-[#dce2ea] px-4 text-[16px] outline-none focus:border-[#00951d] focus:ring-4 focus:ring-[#00951d]/10" defaultValue="balanced">
-              {policyOptions.map(([value, label]) => (
+              {ruleModeOptions.map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
                 </option>

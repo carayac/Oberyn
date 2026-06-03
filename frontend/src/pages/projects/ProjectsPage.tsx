@@ -1,7 +1,6 @@
 import { Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { AuthBrandLogo } from "../../components/auth/AuthBrandLogo";
 import { ProjectStatsGrid } from "../../components/projects/ProjectStatsGrid";
 import { ProjectTable } from "../../components/projects/ProjectTable";
 import { ProjectToolbar } from "../../components/projects/ProjectToolbar";
@@ -49,7 +48,6 @@ export function ProjectsPage() {
 
   return (
     <div className="min-w-0 space-y-6 pb-10 sm:space-y-8">
-      <AuthBrandLogo className="justify-center" markSize="sm" />
       <header className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
         <div className="min-w-0">
           <h1 className="text-[clamp(2rem,5vw,2.625rem)] font-extrabold leading-tight text-[#050505]">Mis proyectos</h1>

@@ -6,10 +6,6 @@ export function AppShell() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const location = useLocation();
   const isOnboarding = location.pathname.startsWith("/onboarding/");
-  const isWideSystemView =
-    location.pathname === "/dashboard" ||
-    location.pathname === "/organizations" ||
-    /^\/projects\/[^/]+\/(approvals|gateway|rules|sdk)$/.test(location.pathname);
 
   if (isOnboarding) {
     return <Outlet />;
@@ -25,7 +21,7 @@ export function AppShell() {
             : "min-w-0 px-4 py-5 transition-all duration-300 sm:px-6 lg:pl-[324px]"
         }
       >
-        <div className={isWideSystemView ? "min-w-0 w-full" : "mx-auto min-w-0 max-w-7xl"}>
+        <div className="min-w-0 w-full">
           <Outlet />
         </div>
       </main>

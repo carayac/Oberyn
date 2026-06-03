@@ -16,8 +16,8 @@ import { CompletedPage } from "../pages/onboarding/CompletedPage";
 import { TechnicalDocsPage } from "../pages/docs/TechnicalDocsPage";
 import { DocsRedirectPage } from "../pages/docs/DocsRedirectPage";
 import { DashboardPage } from "../pages/dashboard/DashboardPage";
+import { GeneralSettingsPage } from "../pages/settings/GeneralSettingsPage";
 import { OrganizationsPage } from "../pages/organizations/OrganizationsPage";
-import { ProjectsPage } from "../pages/projects/ProjectsPage";
 import { NewProjectPage } from "../pages/projects/NewProjectPage";
 import { ProjectDetailPage } from "../pages/projects/ProjectDetailPage";
 import { ProjectSettingsPage } from "../pages/projects/ProjectSettingsPage";
@@ -59,8 +59,9 @@ export function AppRoutes() {
         <Route path={appRoutes.onboardingSummary} element={<SummaryPage />} />
         <Route path={appRoutes.onboardingCompleted} element={<CompletedPage />} />
         <Route path={appRoutes.dashboard} element={<DashboardPage />} />
-        <Route path={appRoutes.organizations} element={<OrganizationsPage />} />
-        <Route path={appRoutes.projects} element={<ProjectsPage />} />
+        <Route path={appRoutes.settings} element={<GeneralSettingsPage />} />
+        <Route path={appRoutes.organizations} element={<Navigate to={appRoutes.projects} replace />} />
+        <Route path={appRoutes.projects} element={<OrganizationsPage />} />
         <Route path={appRoutes.projectNew} element={<NewProjectPage />} />
         <Route path={appRoutes.projectDetail} element={<ProjectDetailPage />} />
         <Route path={appRoutes.projectSettings} element={<ProjectSettingsPage />} />

@@ -10,6 +10,7 @@ export const appRoutes = {
   onboardingSummary: "/onboarding/summary",
   onboardingCompleted: "/onboarding/completed",
   dashboard: "/dashboard",
+  settings: "/settings",
   docs: "/docs/:topic",
   apiDocsFallback: "/api/docs/:topic",
   organizations: "/organizations",

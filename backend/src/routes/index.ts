@@ -14,10 +14,12 @@ import { integrationsRoutes } from "./integrations.routes.js";
 import { manualServicesRoutes } from "./manualServices.routes.js";
 import { organizationsRoutes } from "./organizations.routes.js";
 import { projectsRoutes } from "./projects.routes.js";
+import { projectsController } from "../controllers/projects.controller.js";
 import { publicGatewayRoutes } from "./publicGateway.routes.js";
 import { publicSdkRoutes } from "./publicSdk.routes.js";
 import { rulesRoutes } from "./rules.routes.js";
 import { sdkRoutes } from "./sdk.routes.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 
 export const apiRoutes = Router();
 
@@ -27,6 +29,7 @@ apiRoutes.use("/sdk", publicSdkRoutes);
 apiRoutes.use("/gateway", publicGatewayRoutes);
 apiRoutes.use(requireAuth);
 apiRoutes.use("/organizations", organizationsRoutes);
+apiRoutes.get("/projects/all", asyncHandler(projectsController.listAll));
 apiRoutes.use(requireOrganization);
 apiRoutes.use("/projects", projectsRoutes);
 apiRoutes.use("/projects/:projectId/integrations", integrationsRoutes);

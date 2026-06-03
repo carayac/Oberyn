@@ -9,6 +9,8 @@ type ApiResponse<T> = {
 };
 
 const ACTIVE_ORGANIZATION_KEY = "oberyn.activeOrganizationId";
+let organizationsCache: Organization[] | null = null;
+let organizationsRequest: Promise<Organization[]> | null = null;
 
 export function useOrganizations() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
@@ -28,18 +30,46 @@ export function useOrganizations() {
     else localStorage.removeItem(ACTIVE_ORGANIZATION_KEY);
   }
 
-  async function loadOrganizations() {
+  async function fetchOrganizations() {
+    if (organizationsCache) return organizationsCache;
+    if (organizationsRequest) return organizationsRequest;
+
+    organizationsRequest = (async () => {
+      const token = await getAuthToken();
+      const response = await apiClient.get<ApiResponse<Organization[]>>("/organizations", token);
+      organizationsCache = response.data;
+      organizationsRequest = null;
+      return response.data;
+    })().catch((requestError) => {
+      organizationsRequest = null;
+      throw requestError;
+    });
+
+    return organizationsRequest;
+  }
+
+  async function loadOrganizations({ force = false } = {}) {
     if (!isLoaded) return;
+    if (organizationsCache && !force) {
+      setOrganizations(organizationsCache);
+      const storedId = localStorage.getItem(ACTIVE_ORGANIZATION_KEY);
+      const nextActive = organizationsCache.find((organization) => organization.id === storedId)?.id ?? organizationsCache[0]?.id ?? null;
+      setActiveOrganizationId(nextActive);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      const token = await getAuthToken();
-      const response = await apiClient.get<ApiResponse<Organization[]>>("/organizations", token);
-      setOrganizations(response.data);
+      if (force) organizationsCache = null;
+      const organizationsData = await fetchOrganizations();
+      setOrganizations(organizationsData);
 
       const storedId = localStorage.getItem(ACTIVE_ORGANIZATION_KEY);
-      const nextActive = response.data.find((organization) => organization.id === storedId)?.id ?? response.data[0]?.id ?? null;
+      const nextActive = organizationsData.find((organization) => organization.id === storedId)?.id ?? organizationsData[0]?.id ?? null;
       setActiveOrganizationId(nextActive);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "No se pudieron cargar las organizaciones.");
@@ -62,7 +92,8 @@ export function useOrganizations() {
   async function createOrganization(input: CreateOrganizationInput) {
     const token = await getAuthToken();
     const response = await apiClient.post<ApiResponse<Organization>>("/organizations", input, token);
-    setOrganizations((current) => [response.data, ...current.filter((organization) => organization.id !== response.data.id)]);
+    organizationsCache = [response.data, ...(organizationsCache ?? organizations).filter((organization) => organization.id !== response.data.id)];
+    setOrganizations(organizationsCache);
     setActiveOrganizationId(response.data.id);
     return response.data;
   }
@@ -73,7 +104,7 @@ export function useOrganizations() {
     activeOrganizationId,
     isLoading,
     error,
-    reloadOrganizations: loadOrganizations,
+    reloadOrganizations: () => loadOrganizations({ force: true }),
     createOrganization,
     setActiveOrganizationId,
   };

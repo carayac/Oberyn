@@ -53,7 +53,7 @@ const pillars = [
   {
     icon: Shield,
     title: "Control de acciones",
-    description: "Define reglas granulares para cada tipo de operación. Bloquea, permite o escala según el contexto y nivel de riesgo.",
+    description: "Define reglas granulares y personalizables para cada tipo de operación. Bloquea, permite o escala según el contexto y nivel de riesgo.",
   },
   {
     icon: Lock,
@@ -121,10 +121,10 @@ const auditEvents = [
 ];
 
 const auditStats = [
-  { label: "Eventos auditados", value: "9,842", change: "+23% vs. ayer" },
-  { label: "Bloqueadas", value: "1,376", change: "+18% vs. ayer" },
-  { label: "Aprobadas", value: "8,232", change: "+22% vs. ayer" },
-  { label: "Anclajes en Stellar", value: "9,842", change: "+23% vs. ayer" },
+  { label: "Eventos auditados", value: "9,842", change: "Trazabilidad completa" },
+  { label: "Bloqueadas", value: "1,376", change: "Acciones de riesgo" },
+  { label: "Aprobadas", value: "8,232", change: "Con reglas aplicadas" },
+  { label: "Anclajes en Stellar", value: "9,842", change: "Evidencia verificable" },
 ];
 
 const useCases = [
@@ -462,6 +462,13 @@ function Solution() {
               </div>
             </div>
           ))}
+        </div>
+
+        <div className="mt-10 rounded-2xl border border-primary/20 bg-primary/5 p-6 text-center">
+          <h3 className="text-xl font-semibold text-foreground">Personalizable con reglas por proyecto</h3>
+          <p className="mx-auto mt-3 max-w-3xl leading-relaxed text-muted-foreground">
+            Cada proyecto puede tener sus propias reglas de riesgo, aprobación, datos sensibles, servicios permitidos y acciones bloqueadas. Oberyn no obliga un comportamiento único: se adapta al contexto de tu agente, bot o integración.
+          </p>
         </div>
       </div>
     </section>

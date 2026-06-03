@@ -15,7 +15,7 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
   try {
     response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
   } catch {
-    throw new Error("No se pudo conectar con la API. Revisa que el backend este corriendo en http://localhost:4000.");
+    throw new Error("No se pudo conectar con la API. Revisa que el backend esté corriendo en http://localhost:4000.");
   }
 
   if (!response.ok) {

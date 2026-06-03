@@ -96,6 +96,9 @@ export function ProjectTable({ projects, organizationNamesById = {}, onPauseProj
                       <Link className="block px-4 py-2 text-sm font-semibold text-[#111827] hover:bg-[#f8fafc]" to={`/projects/${project.id}`}>
                         Entrar al proyecto
                       </Link>
+                      <Link className="block px-4 py-2 text-sm font-semibold text-[#111827] hover:bg-[#f8fafc]" to={`/projects/${project.id}/settings`}>
+                        Editar proyecto
+                      </Link>
                       <button className="block w-full px-4 py-2 text-left text-sm font-semibold text-[#111827] hover:bg-[#f8fafc]" type="button" onClick={() => onPauseProject(project.id)}>
                         {project.status === "paused" ? "Reactivar" : "Pausar"}
                       </button>

@@ -9,6 +9,9 @@ type ApiResponse<T> = {
   data: T;
 };
 
+const allProjectsCache = new Map<string, Project[]>();
+const allProjectsRequests = new Map<string, Promise<Project[]>>();
+
 function normalizeStatus(status: string): Project["status"] {
   if (status === "pending") return "pending_setup";
   if (status === "manual") return "no_activity";
@@ -49,19 +52,34 @@ export function useAllProjects(organizations: Organization[], isOrganizationsLoa
       return;
     }
 
+    const cacheKey = organizations.map((organization) => organization.id).sort().join("|");
+    const cached = allProjectsCache.get(cacheKey);
+    if (cached) {
+      setProjects(cached);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      const token = await getToken();
-      const responses = await Promise.all(
-        organizations.map((organization) => apiClient.get<ApiResponse<Project[]>>("/projects", token, organization.id)),
-      );
+      let request = allProjectsRequests.get(cacheKey);
+      if (!request) {
+        request = (async () => {
+          const token = await getToken();
+          const response = await apiClient.get<ApiResponse<Project[]>>("/projects/all", token);
 
-      const nextProjects = responses
-        .flatMap((response) => response.data.map(normalizeProject))
-        .sort((first, second) => new Date(second.updatedAt).getTime() - new Date(first.updatedAt).getTime());
+          return response.data
+            .map(normalizeProject)
+            .sort((first, second) => new Date(second.updatedAt).getTime() - new Date(first.updatedAt).getTime());
+        })().finally(() => allProjectsRequests.delete(cacheKey));
+        allProjectsRequests.set(cacheKey, request);
+      }
 
+      const nextProjects = await request;
+      allProjectsCache.set(cacheKey, nextProjects);
       setProjects(nextProjects);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "No se pudieron cargar los proyectos.");
@@ -85,7 +103,39 @@ export function useAllProjects(organizations: Organization[], isOrganizationsLoa
     const nextStatus = project.status === "paused" ? "active" : "paused";
     const response = await apiClient.patch<ApiResponse<Project>>(`/projects/${projectId}`, { status: nextStatus }, token, project.organizationId);
     const updated = normalizeProject(response.data);
-    setProjects((current) => current.map((item) => (item.id === projectId ? updated : item)));
+    setProjects((current) => {
+      const nextProjects = current.map((item) => (item.id === projectId ? updated : item));
+      allProjectsCache.clear();
+      return nextProjects;
+    });
+  }
+
+  async function updateProject(projectId: string, input: Partial<Project>) {
+    const project = projects.find((item) => item.id === projectId);
+    if (!project) throw new Error("No se encontró el proyecto para modificar.");
+
+    const token = isLoaded && isSignedIn ? await getToken() : null;
+    const response = await apiClient.patch<ApiResponse<Project>>(
+      `/projects/${projectId}`,
+      {
+        name: input.name,
+        slug: input.slug,
+        description: input.description,
+        projectType: input.projectType,
+        environment: input.environment === "development" ? "sandbox" : input.environment,
+        connectionMode: input.connectionMode === "mixed" ? "detected" : input.connectionMode,
+        status: input.status,
+      },
+      token,
+      project.organizationId,
+    );
+    const updated = normalizeProject(response.data);
+    setProjects((current) => {
+      const nextProjects = current.map((item) => (item.id === projectId ? updated : item));
+      allProjectsCache.clear();
+      return nextProjects;
+    });
+    return updated;
   }
 
   async function archiveProject(projectId: string) {
@@ -94,7 +144,11 @@ export function useAllProjects(organizations: Organization[], isOrganizationsLoa
 
     const token = isLoaded && isSignedIn ? await getToken() : null;
     await apiClient.delete<ApiResponse<{ id: string; archived: boolean }>>(`/projects/${projectId}`, token, project.organizationId);
-    setProjects((current) => current.map((item) => (item.id === projectId ? { ...item, status: "archived" } : item)));
+    setProjects((current) => {
+      const nextProjects = current.map((item) => (item.id === projectId ? { ...item, status: "archived" as const } : item));
+      allProjectsCache.clear();
+      return nextProjects;
+    });
   }
 
   return {
@@ -103,6 +157,7 @@ export function useAllProjects(organizations: Organization[], isOrganizationsLoa
     isLoading,
     error,
     reloadProjects: loadProjects,
+    updateProject,
     pauseProject,
     archiveProject,
   };

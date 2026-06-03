@@ -1,7 +1,6 @@
 import { Box, CheckCircle2, FileText, Info, Link2, Lock, ShieldCheck, Sparkles, UserCheck, type LucideIcon } from "lucide-react";
 import { useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { AuthBrandLogo } from "../../components/auth/AuthBrandLogo";
 import { connectionModeLabels, environmentLabels, projectTypeLabels } from "../../components/projects/projectLabels";
 import { useOrganizations } from "../../hooks/useOrganizations";
 import { useProjects } from "../../hooks/useProjects";
@@ -76,8 +75,6 @@ export function NewProjectPage() {
 
   return (
     <div className="min-w-0 space-y-6 pb-10 sm:space-y-8">
-      <AuthBrandLogo className="justify-center" markSize="sm" />
-
       {!isLoadingOrganizations && !activeOrganization && (
         <section className="rounded-xl border border-amber-200 bg-amber-50 px-7 py-6">
           <h1 className="text-[24px] font-extrabold text-[#111827]">Primero crea una organización</h1>
@@ -250,7 +247,7 @@ export function NewProjectPage() {
               Que se creara
             </h2>
             <ul className="mt-4 space-y-2 text-sm font-medium text-[#596783]">
-              {["Integraciones", "Reglas y políticas", "Bots y agentes", "Flujos y workflows", "Aprobaciones", "Auditoría y registros"].map((item) => (
+              {["Integraciones", "Reglas", "Bots y agentes", "Flujos y workflows", "Aprobaciones", "Auditoría y registros"].map((item) => (
                 <li key={item} className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-[#00951d]" />
                   {item}

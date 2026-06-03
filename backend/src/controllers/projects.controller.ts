@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { projectsService } from "../services/projects.service.js";
 import { created, ok } from "../utils/apiResponse.js";
 export const projectsController = {
+  listAll: async (_req: Request, res: Response) => res.json(ok(await projectsService.listAllForUser(String(res.locals.userId)))),
   list: async (req: Request, res: Response) => res.json(ok(await projectsService.list(res.locals.organizationId ?? req.header("x-organization-id")))),
   create: async (req: Request, res: Response) => res.status(201).json(created(await projectsService.create({ ...req.body, organizationId: res.locals.organizationId ?? req.header("x-organization-id") }))),
   getById: async (req: Request, res: Response) => res.json(ok(await projectsService.getById(req.params.projectId, res.locals.organizationId))),

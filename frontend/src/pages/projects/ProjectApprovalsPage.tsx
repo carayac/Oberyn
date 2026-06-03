@@ -66,7 +66,7 @@ function StatCard({ label, value, detail, Icon, tone = "green" }: { label: strin
         <div>
           <p className="text-sm text-slate-500">{label}</p>
           <p className="text-2xl font-bold text-slate-950">{value}</p>
-          <p className="text-sm font-semibold text-[#008f1f]">{detail}</p>
+          <p className="text-sm font-semibold text-slate-500">{detail}</p>
         </div>
       </div>
     </Card>
@@ -294,10 +294,10 @@ export function ProjectApprovalsPage() {
         </header>
 
         <div className="mt-6 grid gap-5 md:grid-cols-2 2xl:grid-cols-4">
-          <StatCard label="Pendientes" value={pending} detail="+8 vs. ayer" Icon={Clock3} />
-          <StatCard label="Críticas" value={critical} detail="+2 vs. ayer" Icon={AlertTriangle} tone="red" />
-          <StatCard label="Aprobadas hoy" value={approvedToday} detail="+3 vs. ayer" Icon={UserCheck} />
-          <StatCard label="Tiempo promedio" value="23 min" detail="-15% vs. ayer" Icon={Clock3} />
+          <StatCard label="Pendientes" value={pending} detail="Solicitudes por revisar" Icon={Clock3} />
+          <StatCard label="Críticas" value={critical} detail="Riesgo crítico detectado" Icon={AlertTriangle} tone="red" />
+          <StatCard label="Aprobadas" value={approvedToday} detail="Solicitudes aprobadas" Icon={UserCheck} />
+          <StatCard label="Tiempo promedio" value="-" detail="Sin datos suficientes" Icon={Clock3} />
         </div>
 
         {message ? <p className="mt-5 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">{message}</p> : null}

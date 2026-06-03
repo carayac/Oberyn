@@ -21,7 +21,7 @@ export function ProjectGatewayPage() {
             {
               Icon: Cloud,
               title: "Proxy seguro para proveedores",
-              text: "Permitira enrutar solicitudes a modelos y APIs externas pasando primero por las politicas de Oberyn.",
+              text: "Permitirá enrutar solicitudes a modelos y APIs externas pasando primero por las reglas de Oberyn.",
             },
             {
               Icon: ShieldCheck,

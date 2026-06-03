@@ -12,7 +12,7 @@ const authFeatures: AuthFeature[] = [
   {
     id: "control-total",
     title: "Control total",
-    description: "Define reglas y políticas sin fricción.",
+    description: "Define reglas sin fricción.",
     Icon: Settings,
   },
   {

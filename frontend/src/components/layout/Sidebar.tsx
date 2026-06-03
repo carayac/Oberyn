@@ -1,5 +1,5 @@
 import { UserButton } from "@clerk/react";
-import { Bot, Building2, Code2, FileText, Folder, GitBranch, Home, Menu, Plug, Settings, ShieldCheck, UserCheck } from "lucide-react";
+import { Bot, Building2, Code2, FileText, GitBranch, Home, Menu, Plug, Settings, ShieldCheck, UserCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useOrganizations } from "../../hooks/useOrganizations";
@@ -14,13 +14,18 @@ type SidebarProps = {
   onToggle: () => void;
 };
 
+function isWorkspaceRoot(pathname: string) {
+  return pathname === "/projects" || pathname === "/organizations";
+}
+
 function isProjectRoot(pathname: string) {
-  return pathname === "/projects" || pathname === "/projects/new" || /^\/projects\/[^/]+$/.test(pathname);
+  return pathname === "/projects/new" || /^\/projects\/[^/]+$/.test(pathname);
 }
 
 function isSidebarItemActive(id: string, to: string, pathname: string) {
   if (id === "dashboard") return pathname === "/dashboard";
-  if (id === "organizations") return pathname === "/organizations";
+  if (id === "settings") return pathname === "/settings";
+  if (id === "workspace") return isWorkspaceRoot(pathname);
   if (id === "projects") return isProjectRoot(pathname);
   if (to === "/projects") return false;
   return pathname === to;
@@ -84,8 +89,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         label: "Principal",
         items: [
           { id: "dashboard", label: "Dashboard", to: "/dashboard", Icon: Home },
-          { id: "organizations", label: "Organizaciones", to: "/organizations", Icon: Building2 },
-          { id: "projects", label: "Proyectos", to: "/projects", Icon: Folder },
+          { id: "workspace", label: "Proyectos", to: "/projects", Icon: Building2 },
           { id: "integrations", label: "Integraciones", to: projectRoute("integrations"), Icon: Plug },
         ],
       },
@@ -110,7 +114,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       {
         id: "administration",
         label: "Administración",
-        items: [{ id: "settings", label: "Configuración", to: projectRoute("settings"), Icon: Settings }],
+        items: [{ id: "settings", label: "Configuración", to: "/settings", Icon: Settings }],
       },
     ],
     [navProjectId],

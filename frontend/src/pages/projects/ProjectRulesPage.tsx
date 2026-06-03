@@ -124,10 +124,10 @@ function SummaryCard({ rules }: { rules: Rule[] }) {
   const latest = rules[0];
 
   const items = [
-    { label: "Reglas activas", value: active, detail: "+1 vs. ayer", Icon: Shield, tone: "green" },
-    { label: "Acciones bloqueadas hoy", value: blocked, detail: "-12% vs. ayer", Icon: LockKeyhole, tone: "red" },
+    { label: "Reglas activas", value: active, detail: "Configuradas en este proyecto", Icon: Shield, tone: "green" },
+    { label: "Acciones bloqueadas", value: blocked, detail: "Reglas con bloqueo activo", Icon: LockKeyhole, tone: "red" },
     { label: "Reglas críticas", value: critical, detail: "Sin cambios", Icon: AlertTriangle, tone: "orange" },
-    { label: "?ltimo cambio", value: latest ? formatDate(latest.updatedAt) : "Sin cambios", detail: "Sistema Oberyn", Icon: Clock3, tone: "green" },
+    { label: "Último cambio", value: latest ? formatDate(latest.updatedAt) : "Sin cambios", detail: "Sistema Oberyn", Icon: Clock3, tone: "green" },
   ];
 
   return (
@@ -242,7 +242,7 @@ export function ProjectRulesPage() {
       <section className="flex min-h-[calc(100dvh-40px)] flex-col rounded-lg border border-slate-200 bg-white/70 p-7 shadow-soft 2xl:p-8">
         <header className="pb-1">
           <h1 className="text-[34px] font-bold leading-tight tracking-normal text-slate-950">Reglas del proyecto</h1>
-          <p className="mt-3 max-w-4xl text-[15px] leading-6 text-slate-600">Cada proyecto tiene políticas y reglas independientes que controlan el comportamiento de la aplicación.</p>
+          <p className="mt-3 max-w-4xl text-[15px] leading-6 text-slate-600">Cada proyecto tiene reglas independientes que controlan el comportamiento de la aplicación.</p>
           {selectedProject ? <div className="mt-9"><ProjectSelect projects={projects} projectId={selectedProject.id} onChange={handleProjectChange} /></div> : null}
         </header>
 

@@ -2,7 +2,6 @@ import { useUser } from "@clerk/react";
 import { ArrowRight, Building2, CheckCircle2, Clock3, FolderKanban, Info, Plus, ShieldCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { AuthBrandLogo } from "../../components/auth/AuthBrandLogo";
 import { connectionModeLabels, environmentLabels, statusLabels } from "../../components/projects/projectLabels";
 import { useDashboardData } from "../../hooks/useDashboardData";
 import { useOrganizations } from "../../hooks/useOrganizations";
@@ -177,9 +176,7 @@ export function OrganizationsPage() {
   const recentEvents = dashboardData.auditEvents.slice(0, 3);
 
   return (
-    <div className="mx-auto flex min-h-[calc(100dvh-40px)] w-full max-w-[1480px] flex-col gap-5 pb-6">
-      <AuthBrandLogo className="justify-center" markSize="sm" />
-
+    <div className="flex min-h-[calc(100dvh-40px)] w-full flex-col gap-5 pb-6">
       <section className="rounded-xl border border-[#dce2ea] bg-white p-4 shadow-[0_18px_48px_rgba(15,23,42,0.04)] sm:p-6 lg:p-8">
         <div className="grid gap-4 xl:grid-cols-[minmax(320px,0.78fr)_minmax(420px,1.05fr)]">
           <div className="rounded-lg border border-[#dce2ea] bg-white p-5">
