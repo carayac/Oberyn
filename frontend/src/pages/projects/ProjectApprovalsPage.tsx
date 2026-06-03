@@ -95,42 +95,52 @@ function ApprovalRow({
 }) {
   const source = integration?.name ?? String(approval.payloadPreview?.serviceName ?? "Servicio");
   const category = integration?.serviceType ?? String(approval.payloadPreview?.category ?? "Operacion");
+  const metadata = String(approval.payloadPreview?.amount ?? approval.payloadPreview?.rows ?? "");
 
   return (
     <button
       type="button"
       onClick={onSelect}
       className={[
-        "grid w-full gap-4 rounded-lg border bg-white px-4 py-5 text-left transition xl:grid-cols-[minmax(240px,1.35fr)_150px_130px_160px_110px_130px_110px_24px] xl:items-center",
+        "grid w-full min-w-0 gap-4 rounded-lg border bg-white px-4 py-4 text-left transition md:grid-cols-[minmax(220px,1fr)_minmax(130px,0.7fr)_96px_108px_96px] md:items-center",
         selected ? "border-[#008f1f] shadow-[0_0_0_1px_rgba(0,143,31,0.16)]" : "border-slate-200 hover:border-emerald-200",
       ].join(" ")}
     >
-      <div className="flex gap-4">
+      <div className="flex min-w-0 gap-4">
         <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-xl font-bold text-indigo-700">{initials(source)}</span>
-        <div>
-          <p className="font-bold text-slate-950">{approval.actionName}</p>
+        <div className="min-w-0">
+          <p className="truncate font-bold leading-6 text-slate-950" title={approval.actionName}>{approval.actionName}</p>
           <p className="mt-1 text-sm text-slate-500">ID: {approval.id.slice(0, 18)}</p>
         </div>
       </div>
-      <div>
+      <div className="hidden">
+        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Agente / Bot</p>
         <p className="font-semibold text-slate-900">Agente</p>
         <p className="mt-1 flex items-center gap-2 text-sm text-slate-500"><span className="h-2 w-2 rounded-full bg-[#008f1f]" />Bot</p>
       </div>
-      <div>
-        <p className="font-semibold text-slate-900">{source}</p>
-        <p className="mt-1 text-sm text-slate-500">{category}</p>
+      <div className="min-w-0 border-t border-slate-100 pt-3 md:border-t-0 md:pt-0">
+        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Servicio</p>
+        <p className="truncate font-semibold text-slate-900" title={source}>{source}</p>
+        <p className="mt-1 truncate text-sm text-slate-500" title={category}>{category}</p>
       </div>
-      <div>
-        <p className="font-semibold text-slate-900">{approval.actionName}</p>
-        <p className="mt-1 text-sm text-slate-500">{String(approval.payloadPreview?.amount ?? approval.payloadPreview?.rows ?? "")}</p>
+      <div className="hidden">
+        <p className="text-xs font-bold uppercase tracking-wide text-slate-400 2xl:hidden">Acción</p>
+        <p className="break-words font-semibold leading-6 text-slate-900">{approval.actionName}</p>
+        {metadata ? <p className="mt-1 break-words text-sm text-slate-500">{metadata}</p> : null}
       </div>
-      <span className={`w-fit rounded-md px-3 py-1 text-sm font-bold ${riskClass(approval.riskLevel)}`}>{riskLabel(approval.riskLevel)}</span>
-      <div className="text-sm text-slate-600">
-        <p>Hoy</p>
+      <div className="min-w-0 border-t border-slate-100 pt-3 md:border-t-0 md:pt-0">
+        <p className="mb-1 text-xs font-bold uppercase tracking-wide text-slate-400">Riesgo</p>
+        <span className={`inline-flex w-fit whitespace-nowrap rounded-md px-3 py-1 text-sm font-bold leading-none ${riskClass(approval.riskLevel)}`}>{riskLabel(approval.riskLevel)}</span>
+      </div>
+      <div className="min-w-0 border-t border-slate-100 pt-3 text-sm text-slate-600 md:border-t-0 md:pt-0">
+        <p className="mb-1 text-xs font-bold uppercase tracking-wide text-slate-400">Fecha</p>
         <p>{formatRelativeTime(approval.requestedAt)}</p>
       </div>
-      <span className={`w-fit rounded-md px-3 py-1 text-sm font-bold ${statusClass(approval.status)}`}>{statusLabel(approval.status)}</span>
-      <ArrowRight className="h-5 w-5 text-slate-700" />
+      <div className="min-w-0 border-t border-slate-100 pt-3 md:border-t-0 md:pt-0">
+        <p className="mb-1 text-xs font-bold uppercase tracking-wide text-slate-400">Estado</p>
+        <span className={`inline-flex w-fit whitespace-nowrap rounded-md px-3 py-1 text-sm font-bold leading-none ${statusClass(approval.status)}`}>{statusLabel(approval.status)}</span>
+      </div>
+      <ArrowRight className="hidden h-5 w-5 text-slate-700" />
     </button>
   );
 }
@@ -308,7 +318,7 @@ export function ProjectApprovalsPage() {
             <div className="border-b border-slate-200 px-5 py-5">
               <h2 className="text-lg font-bold text-slate-950">Solicitudes pendientes</h2>
             </div>
-            <div className="grid grid-cols-[minmax(240px,1.35fr)_150px_130px_160px_110px_130px_110px_24px] gap-4 px-5 py-4 text-xs font-bold text-slate-600 max-xl:hidden">
+            <div className="hidden">
               <span>Solicitud</span>
               <span>Agente / Bot</span>
               <span>Servicio</span>

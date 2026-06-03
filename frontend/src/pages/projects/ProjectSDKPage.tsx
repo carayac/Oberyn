@@ -41,19 +41,26 @@ function CodeBlock({ code }: { code: string }) {
 export function ProjectSDKPage() {
   const { projectId = "" } = useParams();
   const { getToken, isLoaded, isSignedIn } = useAuth();
-  const { activeOrganization } = useOrganizations();
+  const { activeOrganizationId, isLoading: isLoadingOrganizations } = useOrganizations();
   const [config, setConfig] = useState<SdkConfig | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadConfig() {
+      if (!isLoaded || !isSignedIn || isLoadingOrganizations) return;
+      if (!activeOrganizationId) {
+        setConfig(null);
+        setIsLoading(false);
+        setMessage("Selecciona o crea una organización para consultar la configuración del SDK.");
+        return;
+      }
+
       setIsLoading(true);
       setMessage(null);
       try {
-        if (!isLoaded || !isSignedIn) return;
         const token = await getToken();
-        const response = await apiClient.get<ApiResponse<SdkConfig>>(`/projects/${projectId}/sdk/config`, token, activeOrganization?.id);
+        const response = await apiClient.get<ApiResponse<SdkConfig>>(`/projects/${projectId}/sdk/config`, token, activeOrganizationId);
         setConfig(response.data);
       } catch (error) {
         setMessage(error instanceof Error ? error.message : "No se pudo cargar la configuración del SDK.");
@@ -63,9 +70,14 @@ export function ProjectSDKPage() {
     }
 
     void loadConfig();
-  }, [activeOrganization?.id, getToken, isLoaded, isSignedIn, projectId]);
+  }, [activeOrganizationId, getToken, isLoaded, isLoadingOrganizations, isSignedIn, projectId]);
 
   async function sendTestEvent() {
+    if (!activeOrganizationId) {
+      setMessage("Selecciona o crea una organización para enviar eventos de prueba.");
+      return;
+    }
+
     setMessage(null);
     try {
       const token = await getToken();
@@ -73,11 +85,11 @@ export function ProjectSDKPage() {
         `/projects/${projectId}/sdk/test-event`,
         { source: "sdk-page", sentAt: new Date().toISOString() },
         token,
-        activeOrganization?.id,
+        activeOrganizationId,
       );
       setMessage(`Evento recibido: ${response.data.eventId}`);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "No se pudo envíar el evento de prueba.");
+      setMessage(error instanceof Error ? error.message : "No se pudo enviar el evento de prueba.");
     }
   }
 
@@ -152,7 +164,7 @@ export const oberyn = createOberyn({
               <ShieldCheck className="h-6 w-6 text-[#008f1f]" />
               <h2 className="text-lg font-bold text-slate-950">2. Inicializa Oberyn</h2>
             </div>
-            <p className="mt-2 text-sm text-slate-600">La clave es publica y solo permite envíar eventos a este proyecto. No guarda ni expone secretos de tus proveedores.</p>
+            <p className="mt-2 text-sm text-slate-600">La clave es pública y solo permite enviar eventos a este proyecto. No guarda ni expone secretos de tus proveedores.</p>
             <div className="mt-4">
               <CodeBlock code={isLoading ? "Cargando configuración..." : initSnippet} />
             </div>
@@ -169,7 +181,7 @@ export const oberyn = createOberyn({
 
         <aside className="space-y-5">
           <Card>
-            <h2 className="text-lg font-bold text-slate-950">Que detecta</h2>
+            <h2 className="text-lg font-bold text-slate-950">Qué detecta</h2>
             <div className="mt-4 space-y-4">
               {["HTTP fetch y APIs externas", "Acciones permitidas o bloqueadas", "Riesgo por acción", "Servicios e integraciones usadas", "Flujos por actionName", "Eventos auditables con hash"].map((item) => (
                 <div key={item} className="flex gap-3 text-sm text-slate-700">
@@ -183,7 +195,7 @@ export const oberyn = createOberyn({
           <Card>
             <h2 className="text-lg font-bold text-slate-950">Clave del proyecto</h2>
             <p className="mt-2 break-all rounded-lg bg-slate-50 p-3 font-mono text-sm text-slate-700">{config?.publicKey ?? "Cargando..."}</p>
-            <p className="mt-3 text-sm leading-6 text-slate-600">Esta clave identifica el proyecto y permite recibir eventos. Puedes rotarla más adelante desde esta misma seccion.</p>
+            <p className="mt-3 text-sm leading-6 text-slate-600">Esta clave identifica el proyecto y permite recibir eventos. Puedes rotarla más adelante desde esta misma sección.</p>
           </Card>
         </aside>
       </div>

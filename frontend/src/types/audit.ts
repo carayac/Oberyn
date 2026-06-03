@@ -10,6 +10,8 @@ export type AuditEvent = {
   eventHash?: string | null;
   merkleRoot?: string | null;
   stellarTxHash?: string | null;
+  stellarNetwork?: string | null;
+  anchoredAt?: string | null;
   metadata?: Record<string, unknown>;
   createdAt: string;
 };

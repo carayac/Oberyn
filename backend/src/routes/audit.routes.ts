@@ -5,5 +5,6 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 export const auditRoutes = Router({ mergeParams: true });
 auditRoutes.use(requireProjectAccess);
 auditRoutes.get("/", asyncHandler(auditController.list));
+auditRoutes.get("/anchors", asyncHandler(auditController.listAnchors));
+auditRoutes.post("/anchors/run", asyncHandler(auditController.runAnchorBatch));
 auditRoutes.get("/:eventId", asyncHandler(auditController.getById));
-
