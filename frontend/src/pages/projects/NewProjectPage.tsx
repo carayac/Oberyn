@@ -10,8 +10,6 @@ import type { CreateProjectInput } from "../../types/project";
 
 const connectionOptions = [
   { value: "sdk", label: "SDK", description: "Integra usando nuestro SDK oficial.", Icon: Box },
-  { value: "gateway", label: "Gateway", description: "Conectate a través de nuestro Gateway.", Icon: FileText },
-  { value: "mixed", label: "Mixto", description: "Usa SDK y Gateway combinados.", Icon: Link2 },
   { value: "manual", label: "Manual", description: "Configura manualmente tus integraciones.", Icon: FileText },
 ];
 
@@ -273,3 +271,4 @@ export function NewProjectPage() {
     </div>
   );
 }
+

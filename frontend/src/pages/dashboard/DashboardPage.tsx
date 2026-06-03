@@ -245,49 +245,87 @@ function PoliciesPanel({ projectId, rules }: { projectId: string; rules: Rule[] 
 }
 
 function RiskPanel({ events }: { events: AuditEvent[] }) {
-  const counts = {
-    low: events.filter((event) => event.riskLevel === "low").length,
-    medium: events.filter((event) => event.riskLevel === "medium").length,
-    high: events.filter((event) => event.riskLevel === "high").length,
-    critical: events.filter((event) => event.riskLevel === "critical").length,
-  };
-  const max = Math.max(1, counts.low, counts.medium, counts.high, counts.critical);
-  const bars = [
-    { label: "Bajo", value: counts.low, color: "bg-slate-200" },
-    { label: "Medio", value: counts.medium, color: "bg-slate-300" },
-    { label: "Alto", value: counts.high, color: "bg-slate-500" },
-    { label: "Crítico", value: counts.critical, color: "bg-[#258c2f]" },
+  const normalizedEvents = events.map((event) => ({ ...event, riskLevel: event.riskLevel.toLowerCase() }));
+  const totalEvents = normalizedEvents.length;
+  const latestEvent = normalizedEvents[0] ?? null;
+  const risks = [
+    { key: "low", label: "Bajo", color: "bg-emerald-500", text: "text-emerald-700", soft: "bg-emerald-50" },
+    { key: "medium", label: "Medio", color: "bg-amber-500", text: "text-amber-700", soft: "bg-amber-50" },
+    { key: "high", label: "Alto", color: "bg-red-500", text: "text-red-700", soft: "bg-red-50" },
+    { key: "critical", label: "Critico", color: "bg-red-800", text: "text-red-800", soft: "bg-red-100" },
   ];
-  const currentRisk = bars.reduce((current, next) => (next.value >= current.value ? next : current), bars[0]);
+  const bars = risks.map((risk) => {
+    const value = normalizedEvents.filter((event) => event.riskLevel === risk.key).length;
+    return {
+      ...risk,
+      value,
+      percentage: totalEvents ? Math.round((value / totalEvents) * 100) : 0,
+    };
+  });
+  const max = Math.max(1, ...bars.map((bar) => bar.value));
+  const currentRisk = bars.find((bar) => bar.key === latestEvent?.riskLevel) ?? null;
+  const highestVolumeRisk = bars.reduce((current, next) => (next.value > current.value ? next : current), bars[0]);
 
   return (
     <Card className="p-5">
-      <h2 className="font-bold text-slate-950">Riesgo en tiempo real</h2>
-      <div className="mt-6 flex h-44 items-end gap-6 border-b border-l border-slate-200 px-4">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="font-bold text-slate-950">Riesgo en tiempo real</h2>
+          <p className="mt-1 text-xs font-semibold text-slate-500">Basado en los ultimos {formatNumber(totalEvents)} eventos auditados</p>
+        </div>
+        {latestEvent ? <span className="whitespace-nowrap rounded-md bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">{formatRelativeTime(latestEvent.createdAt)}</span> : null}
+      </div>
+
+      <div className="mt-6 flex h-44 items-end gap-4 border-b border-l border-slate-200 px-4 pt-6">
         {bars.map((bar) => (
-          <div key={bar.label} className="flex flex-1 flex-col items-center gap-2">
-            <div className={`w-full max-w-14 rounded-t-md ${bar.color}`} style={{ height: `${Math.max(6, (bar.value / max) * 100)}%` }} />
+          <div key={bar.key} className="flex min-w-0 flex-1 flex-col items-center gap-2">
+            <span className={`text-xs font-bold ${bar.value ? bar.text : "text-slate-400"}`}>{formatNumber(bar.value)}</span>
+            <div className="flex h-32 w-full items-end justify-center">
+              <div
+                className={`w-full max-w-14 rounded-t-md transition-all ${bar.value ? bar.color : "bg-slate-100"}`}
+                style={{ height: bar.value ? `${Math.max(12, (bar.value / max) * 100)}%` : "4px" }}
+                title={`${bar.label}: ${formatNumber(bar.value)} eventos (${bar.percentage}%)`}
+              />
+            </div>
             <span className="text-sm font-semibold text-slate-700">{bar.label}</span>
+            <span className="text-xs font-semibold text-slate-400">{bar.percentage}%</span>
           </div>
         ))}
       </div>
-      <div className="mt-5 grid grid-cols-2 rounded-lg border border-slate-200 text-sm">
-        <div className="border-r border-slate-200 p-4">
+
+      <div className="mt-5 grid overflow-hidden rounded-lg border border-slate-200 text-sm sm:grid-cols-3">
+        <div className="border-b border-slate-200 p-4 sm:border-b-0 sm:border-r">
           <p className="text-slate-500">Nivel de riesgo actual</p>
           <p className="mt-2 flex items-center gap-2 font-bold text-slate-950">
-            <span className="h-2 w-2 rounded-full bg-[#008f1f]" />
-            {events.length ? currentRisk.label : "Sin actividad"}
+            <span className={`h-2 w-2 rounded-full ${currentRisk?.color ?? "bg-slate-300"}`} />
+            {currentRisk?.label ?? "Sin actividad"}
           </p>
         </div>
-        <div className="p-4">
+        <div className="border-b border-slate-200 p-4 sm:border-b-0 sm:border-r">
           <p className="text-slate-500">Eventos analizados</p>
-          <p className="mt-2 font-bold text-[#008f1f]">{formatNumber(events.length)}</p>
+          <p className="mt-2 font-bold text-[#008f1f]">{formatNumber(totalEvents)}</p>
+        </div>
+        <div className="p-4">
+          <p className="text-slate-500">Mayor volumen</p>
+          <p className="mt-2 flex items-center gap-2 font-bold text-slate-950">
+            <span className={`h-2 w-2 rounded-full ${totalEvents ? highestVolumeRisk.color : "bg-slate-300"}`} />
+            {totalEvents ? highestVolumeRisk.label : "Sin datos"}
+          </p>
         </div>
       </div>
+
+      {latestEvent ? (
+        <div className={`mt-4 rounded-lg px-4 py-3 ${currentRisk?.soft ?? "bg-slate-50"}`}>
+          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Ultimo evento</p>
+          <p className="mt-1 truncate text-sm font-bold text-slate-900">{latestEvent.actionName}</p>
+          <p className="mt-1 text-xs font-semibold text-slate-500">{latestEvent.eventType}</p>
+        </div>
+      ) : (
+        <p className="mt-4 rounded-lg bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-500">Cuando el SDK registre eventos, esta grafica se actualizara automaticamente.</p>
+      )}
     </Card>
   );
 }
-
 function RequestsPanel({ approvals }: { approvals: ApprovalRequest[] }) {
   const rows = approvals.slice(0, 6);
 
@@ -465,12 +503,12 @@ function EmptyDashboard({
 
             <h1 className="mt-7 text-4xl font-bold tracking-normal text-slate-950">Aún no hay actividad en este proyecto</h1>
             <p className="mx-auto mt-4 max-w-4xl text-lg leading-8 text-slate-600">
-              Bienvenido a Oberyn. Para comenzar a proteger tu aplicación y auditar operaciones, conecta tu entorno instalando el SDK o configurando un Gateway.
+              Bienvenido a Oberyn. Para comenzar a proteger tu aplicación y auditar operaciones, conecta tu entorno instalando el SDK.
             </p>
 
             <div className="mt-10 grid gap-6 md:grid-cols-2 2xl:grid-cols-4">
               <SetupAction Icon={Code2} title="Instalar SDK" text="Integra el SDK en tu aplicación para capturar eventos, proteger datos y validar acciones." label="Ver guía" to={`/projects/${project.id}/sdk`} />
-              <SetupAction Icon={Cloud} title="Configurar Gateway" text="Conecta tu infraestructura vía Gateway para inspeccionar y controlar tráfico y solicitudes." label="Ver guía" to={`/projects/${project.id}/gateway`} />
+              <SetupAction Icon={Cloud} title="Gateway en desarrollo" text="El Gateway estara disponible en futuras versiones. Por ahora usa el SDK para proteger acciones y prompts." label="Ver estado" to={`/projects/${project.id}/gateway`} />
               <SetupAction Icon={ShieldCheck} title="Crear reglas iniciales" text="Define reglas básicas de protección y control para empezar a bloquear acciones de riesgo." label="Crear reglas" to={`/projects/${project.id}/rules`} />
               <SetupAction Icon={Plus} title="Agregar un servicio manualmente" text="Registra un servicio externo que utilizas para empezar a monitorear sus interacciones." label="Agregar servicio" to={`/projects/${project.id}/integrations`} />
             </div>
@@ -639,3 +677,6 @@ export function DashboardPage() {
     </div>
   );
 }
+
+
+

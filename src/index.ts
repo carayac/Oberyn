@@ -1,5 +1,6 @@
 export type OberynRiskLevel = "low" | "medium" | "high" | "critical";
 export type OberynDecisionStatus = "approved" | "blocked" | "requires_approval";
+export type OberynRiskScore = number;
 
 export type OberynService = {
   name?: string;
@@ -17,6 +18,45 @@ export type OberynEvent = {
   service?: OberynService;
   metadata?: Record<string, unknown>;
   payload?: Record<string, unknown>;
+};
+
+export type OberynProtectOptions = Omit<OberynEvent, "actionName" | "decision"> & {
+  actor?: Record<string, unknown>;
+  resource?: Record<string, unknown>;
+  permissions?: string[];
+  dryRun?: () => Promise<unknown> | unknown;
+};
+
+export type OberynPromptInput = {
+  prompt: string;
+  actionName?: string;
+  sessionId?: string;
+  model?: string;
+  provider?: string;
+  riskLevel?: OberynRiskLevel;
+  metadata?: Record<string, unknown>;
+  payload?: Record<string, unknown>;
+  maskSensitiveData?: boolean;
+};
+
+export type OberynPromptResult = {
+  prompt: string;
+  maskedPrompt: string;
+  maskedDataDetected: boolean;
+  riskScore: OberynRiskScore;
+  riskLevel: OberynRiskLevel;
+  decision: OberynDecision;
+};
+
+export type OberynToolCall = {
+  name: string;
+  arguments?: Record<string, unknown>;
+  category?: string;
+  target?: string;
+  riskLevel?: OberynRiskLevel;
+  actor?: Record<string, unknown>;
+  resource?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
 };
 
 export type OberynDecision = {
@@ -66,8 +106,19 @@ export type OberynClient = {
   approvalStatus(input: { decisionId?: string; approvalId?: string }): Promise<OberynApprovalStatus>;
   flush(): Promise<void>;
   track<T>(actionName: string, fn: () => Promise<T> | T, options?: Omit<OberynEvent, "actionName" | "decision">): Promise<T>;
-  protect<T>(actionName: string, fn: () => Promise<T> | T, options?: Omit<OberynEvent, "actionName" | "decision">): Promise<T>;
-  guard<T>(actionName: string, fn: () => Promise<T> | T, options?: Omit<OberynEvent, "actionName" | "decision">): Promise<T>;
+  protect<T>(actionName: string, fn: () => Promise<T> | T, options?: OberynProtectOptions): Promise<T>;
+  guard<T>(actionName: string, fn: () => Promise<T> | T, options?: OberynProtectOptions): Promise<T>;
+  inspectPrompt(input: OberynPromptInput): Promise<OberynPromptResult>;
+  protectPrompt<T>(input: OberynPromptInput, fn: (safePrompt: string) => Promise<T> | T): Promise<T>;
+  guardTool<T>(toolCall: OberynToolCall, fn: () => Promise<T> | T, options?: Omit<OberynProtectOptions, "payload" | "riskLevel" | "metadata">): Promise<T>;
+  shield: {
+    inspect(input: OberynPromptInput): Promise<OberynPromptResult>;
+    protect<T>(input: OberynPromptInput, fn: (safePrompt: string) => Promise<T> | T): Promise<T>;
+  };
+  proof: {
+    guard<T>(toolCall: OberynToolCall, fn: () => Promise<T> | T, options?: Omit<OberynProtectOptions, "payload" | "riskLevel" | "metadata">): Promise<T>;
+    protect<T>(actionName: string, fn: () => Promise<T> | T, options?: OberynProtectOptions): Promise<T>;
+  };
   gateway(path?: string): { url: string; headers: Record<string, string> };
   stop(): Promise<void>;
 };
@@ -147,6 +198,43 @@ function gatewayBase(endpoint: string) {
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function riskScoreToLevel(score: number): OberynRiskLevel {
+  if (score >= 76) return "critical";
+  if (score >= 51) return "high";
+  if (score >= 26) return "medium";
+  return "low";
+}
+
+function levelToRiskScore(level: OberynRiskLevel) {
+  return ({ low: 15, medium: 40, high: 65, critical: 85 })[level];
+}
+
+function scorePromptRisk(prompt: string) {
+  const patterns = [
+    /ignore (all )?(previous|prior|above) instructions/i,
+    /jailbreak|DAN|developer mode|roleplay/i,
+    /base64|decode this|system prompt/i,
+    /api[_-]?key|secret|password|token|authorization|cookie/i,
+    /\b\d{13,19}\b/,
+    /(?:\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b)/i,
+  ];
+  const hits = patterns.filter((pattern) => pattern.test(prompt)).length;
+  return Math.min(100, hits * 18 + (prompt.length > 4000 ? 10 : 0));
+}
+
+function maskSensitiveText(prompt: string) {
+  const replacements: Array<[RegExp, string]> = [
+    [/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "[EMAIL]"],
+    [/\b(?:\+?\d[\d\s().-]{7,}\d)\b/g, "[PHONE]"],
+    [/\b\d{13,19}\b/g, "[CARD_OR_ID]"],
+    [/(sk-[a-z0-9_-]{12,})/gi, "[API_KEY]"],
+    [/\b(api[_-]?key|secret|password|token)\s*[:=]\s*["']?[^"'\s,;]+/gi, "$1=[REDACTED]"],
+  ];
+  let masked = prompt;
+  for (const [pattern, replacement] of replacements) masked = masked.replace(pattern, replacement);
+  return { masked, detected: masked !== prompt };
 }
 
 export function createOberyn(config: OberynConfig): OberynClient {
@@ -267,8 +355,15 @@ export function createOberyn(config: OberynConfig): OberynClient {
     }
   }
 
-  async function protect<T>(actionName: string, fn: () => Promise<T> | T, options: Omit<OberynEvent, "actionName" | "decision"> = {}) {
-    const event = { eventType: "sdk_guard", riskLevel: "high" as OberynRiskLevel, ...options, actionName };
+  async function protect<T>(actionName: string, fn: () => Promise<T> | T, options: OberynProtectOptions = {}) {
+    const { dryRun, actor, resource, permissions, metadata, ...eventOptions } = options;
+    const event = {
+      eventType: "sdk_guard",
+      riskLevel: "high" as OberynRiskLevel,
+      ...eventOptions,
+      actionName,
+      metadata: { ...(metadata ?? {}), actor, resource, permissions },
+    };
     let decision: OberynDecision;
 
     try {
@@ -295,13 +390,87 @@ export function createOberyn(config: OberynConfig): OberynClient {
     }
 
     try {
+      let dryRunResult: unknown;
+      if (dryRun) {
+        dryRunResult = await dryRun();
+        await audit({ ...event, decision: "approved", decisionId: decision.id, status: "completed", metadata: { ...event.metadata, dryRun: true }, response: dryRunResult }).catch(() => undefined);
+      }
+
       const result = await fn();
-      await audit({ ...event, decision: "approved", decisionId: decision.id, status: "completed", response: result }).catch(() => undefined);
+      await audit({ ...event, decision: "approved", decisionId: decision.id, status: "completed", response: result, metadata: { ...event.metadata, dryRunExecuted: Boolean(dryRun), dryRunResult } }).catch(() => undefined);
       return result;
     } catch (error) {
       await audit({ ...event, decision: "blocked", decisionId: decision.id, status: "failed", error: error instanceof Error ? error.message : "Unknown execution error" }).catch(() => undefined);
       throw error;
     }
+  }
+
+  async function inspectPrompt(input: OberynPromptInput): Promise<OberynPromptResult> {
+    const mask = input.maskSensitiveData ?? true;
+    const masked = mask ? maskSensitiveText(input.prompt) : { masked: input.prompt, detected: false };
+    const localScore = scorePromptRisk(input.prompt);
+    const riskLevel = input.riskLevel ?? riskScoreToLevel(localScore);
+    const decision = await evaluate({
+      eventType: "oberyn_prompt",
+      actionName: input.actionName ?? "prompt.inspect",
+      riskLevel,
+      service: { name: input.model ?? "LLM", provider: input.provider ?? "custom", type: "llm", method: "sdk" },
+      metadata: { sessionId: input.sessionId, model: input.model, riskScore: localScore, maskedDataDetected: masked.detected, ...(input.metadata ?? {}) },
+      payload: { prompt: masked.masked, ...(input.payload ?? {}) },
+    });
+
+    return {
+      prompt: input.prompt,
+      maskedPrompt: masked.masked,
+      maskedDataDetected: masked.detected || decision.sensitiveDataDetected,
+      riskScore: Math.max(localScore, levelToRiskScore(decision.riskLevel)),
+      riskLevel: decision.riskLevel,
+      decision,
+    };
+  }
+
+  async function protectPrompt<T>(input: OberynPromptInput, fn: (safePrompt: string) => Promise<T> | T) {
+    const inspection = await inspectPrompt(input);
+    if (inspection.decision.decision === "blocked") throw new OberynBlockedError(inspection.decision);
+    if (inspection.decision.decision === "requires_approval") throw new OberynApprovalRequiredError(inspection.decision);
+
+    try {
+      const result = await fn(inspection.maskedPrompt);
+      await audit({
+        eventType: "oberyn_prompt_result",
+        actionName: input.actionName ?? "prompt.protect",
+        decision: "approved",
+        riskLevel: inspection.riskLevel,
+        decisionId: inspection.decision.id,
+        service: { name: input.model ?? "LLM", provider: input.provider ?? "custom", type: "llm", method: "sdk" },
+        metadata: { sessionId: input.sessionId, model: input.model, riskScore: inspection.riskScore, maskedDataDetected: inspection.maskedDataDetected, ...(input.metadata ?? {}) },
+        response: result,
+      }).catch(() => undefined);
+      return result;
+    } catch (error) {
+      await audit({
+        eventType: "oberyn_prompt_result",
+        actionName: input.actionName ?? "prompt.protect",
+        decision: "blocked",
+        riskLevel: "high",
+        decisionId: inspection.decision.id,
+        error: error instanceof Error ? error.message : "Model call failed",
+      }).catch(() => undefined);
+      throw error;
+    }
+  }
+
+  async function guardTool<T>(toolCall: OberynToolCall, fn: () => Promise<T> | T, options: Omit<OberynProtectOptions, "payload" | "riskLevel" | "metadata"> = {}) {
+    return protect(toolCall.name, fn, {
+      ...options,
+      eventType: "oberyn_tool_call",
+      riskLevel: toolCall.riskLevel ?? "medium",
+      service: { name: toolCall.target ?? "Tool", provider: toolCall.target ?? "custom", type: toolCall.category ?? "tool", method: "sdk" },
+      actor: toolCall.actor,
+      resource: toolCall.resource,
+      metadata: { toolCategory: toolCall.category, target: toolCall.target, ...(toolCall.metadata ?? {}) },
+      payload: toolCall.arguments,
+    });
   }
 
   function gateway(path = "") {
@@ -372,6 +541,17 @@ export function createOberyn(config: OberynConfig): OberynClient {
     track,
     protect,
     guard: protect,
+    inspectPrompt,
+    protectPrompt,
+    guardTool,
+    shield: {
+      inspect: inspectPrompt,
+      protect: protectPrompt,
+    },
+    proof: {
+      guard: guardTool,
+      protect,
+    },
     gateway,
     async stop() {
       stopped = true;

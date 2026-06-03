@@ -1,5 +1,5 @@
 import { useAuth } from "@clerk/react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { apiClient } from "../lib/api/client";
 import type { ApprovalRequest } from "../types/approval";
 import type { AuditEvent } from "../types/audit";
@@ -28,11 +28,15 @@ const emptyDashboardData: DashboardData = {
   rules: [],
 };
 
+const DASHBOARD_REFRESH_MS = 15_000;
+
 export function useDashboardData(projectId?: string | null, organizationId?: string | null) {
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const [data, setData] = useState<DashboardData>(emptyDashboardData);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const hasLoadedRef = useRef(false);
+  const previousProjectIdRef = useRef<string | null | undefined>(projectId);
 
   const loadDashboardData = useCallback(async () => {
     if (!isLoaded || !projectId) {
@@ -48,7 +52,12 @@ export function useDashboardData(projectId?: string | null, organizationId?: str
       return;
     }
 
-    setIsLoading(true);
+    if (previousProjectIdRef.current !== projectId) {
+      hasLoadedRef.current = false;
+      previousProjectIdRef.current = projectId;
+    }
+
+    setIsLoading(!hasLoadedRef.current);
     setError(null);
 
     try {
@@ -69,9 +78,12 @@ export function useDashboardData(projectId?: string | null, organizationId?: str
         flows: flows.data,
       });
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "No se pudo cargar la información del dashboard.");
-      setData(emptyDashboardData);
+      setError(loadError instanceof Error ? loadError.message : "No se pudo cargar la informacion del dashboard.");
+      if (!hasLoadedRef.current) {
+        setData(emptyDashboardData);
+      }
     } finally {
+      hasLoadedRef.current = true;
       setIsLoading(false);
     }
   }, [getToken, isLoaded, isSignedIn, organizationId, projectId]);
@@ -79,6 +91,16 @@ export function useDashboardData(projectId?: string | null, organizationId?: str
   useEffect(() => {
     void loadDashboardData();
   }, [loadDashboardData]);
+
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn || !projectId) return undefined;
+
+    const refreshId = window.setInterval(() => {
+      void loadDashboardData();
+    }, DASHBOARD_REFRESH_MS);
+
+    return () => window.clearInterval(refreshId);
+  }, [isLoaded, isSignedIn, loadDashboardData, projectId]);
 
   return {
     ...data,

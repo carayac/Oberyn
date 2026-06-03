@@ -206,9 +206,62 @@ function containsSensitiveData(value: unknown) {
   return /(sk-[a-z0-9]|api[_-]?key|secret|password|token|ssn|credit.?card|tarjeta|contrase)/i.test(text);
 }
 
+function extractPromptText(body: unknown) {
+  const payload = body as Record<string, unknown>;
+  const messages = Array.isArray(payload?.messages) ? payload.messages : [];
+  const messageText = messages
+    .map((message) => {
+      const content = (message as Record<string, unknown>)?.content;
+      if (typeof content === "string") return content;
+      if (Array.isArray(content)) return content.map((item) => JSON.stringify(item)).join(" ");
+      return "";
+    })
+    .filter(Boolean)
+    .join("\n");
+
+  const prompt = typeof payload?.prompt === "string" ? payload.prompt : "";
+  const input = typeof payload?.input === "string" ? payload.input : "";
+  return [messageText, prompt, input].filter(Boolean).join("\n");
+}
+
+function detectPromptThreats(body: unknown) {
+  const text = extractPromptText(body);
+  if (!text) return { text, score: 0, matches: [] as string[] };
+
+  const checks = [
+    { name: "ignore_previous_instructions", pattern: /ignore (all )?(previous|prior|above) instructions/i, score: 35 },
+    { name: "system_prompt_extraction", pattern: /system prompt|developer message|hidden instructions/i, score: 30 },
+    { name: "jailbreak", pattern: /jailbreak|DAN|developer mode|roleplay/i, score: 25 },
+    { name: "secret_exfiltration", pattern: /api[_-]?key|secret|password|token|authorization|cookie/i, score: 35 },
+    { name: "policy_bypass", pattern: /bypass|disable safety|continue anyway|sin restricciones|omite las reglas/i, score: 25 },
+  ];
+
+  const matches = checks.filter((check) => check.pattern.test(text));
+  return {
+    text,
+    score: Math.min(100, matches.reduce((total, match) => total + match.score, 0)),
+    matches: matches.map((match) => match.name),
+  };
+}
+
+function blockedDecisionFrom(decision: DecisionResult, reason: string, matchedRules: DecisionResult["matchedRules"]): DecisionResult {
+  return {
+    ...decision,
+    decision: "blocked",
+    riskLevel: "critical",
+    reason,
+    matchedRules: [...decision.matchedRules, ...matchedRules],
+    createdAt: now(),
+  };
+}
+
 function inferProvider(targetPath: string, body: unknown) {
   const text = `${targetPath} ${JSON.stringify(body ?? {})}`.toLowerCase();
+  if (text.includes("deepseek")) return { name: "DeepSeek", provider: "deepseek", serviceType: "llm" };
   if (text.includes("anthropic")) return { name: "Anthropic", provider: "anthropic", serviceType: "llm" };
+  if (text.includes("gemini") || text.includes("google")) return { name: "Google Gemini", provider: "google", serviceType: "llm" };
+  if (text.includes("mistral")) return { name: "Mistral", provider: "mistral", serviceType: "llm" };
+  if (text.includes("cohere")) return { name: "Cohere", provider: "cohere", serviceType: "llm" };
   if (text.includes("stripe")) return { name: "Stripe", provider: "stripe", serviceType: "payments" };
   if (text.includes("slack")) return { name: "Slack", provider: "slack", serviceType: "messaging" };
   if (text.includes("openai") || text.includes("chat/completions") || text.includes("gpt")) return { name: "OpenAI", provider: "openai", serviceType: "llm" };
@@ -300,6 +353,19 @@ function buildUpstreamHeaders(req: Request) {
   if (upstreamApiKey) headers.set("x-api-key", upstreamApiKey);
 
   return headers;
+}
+
+function getUpstreamBaseUrl(req: Request, config: GatewayConfig) {
+  const override = req.header("x-oberyn-upstream-base-url");
+  if (!override) return config.upstreamBaseUrl;
+
+  try {
+    const url = new URL(override);
+    if (url.protocol !== "https:" && url.protocol !== "http:") throw new Error("Invalid protocol");
+    return url.origin;
+  } catch {
+    throw new Error("x-oberyn-upstream-base-url no es una URL valida.");
+  }
 }
 
 function buildUpstreamBody(req: Request): BodyInit | undefined {
@@ -428,23 +494,41 @@ export const gatewayService = {
     }
 
     const path = `/${req.params[0] ?? ""}`;
-    const service = inferProvider(path, req.body);
+    const upstreamBaseUrl = getUpstreamBaseUrl(req, config);
+    const promptThreat = config.inspectPrompts ? detectPromptThreats(req.body) : { text: "", score: 0, matches: [] as string[] };
+    const service = inferProvider(`${upstreamBaseUrl} ${path}`, req.body);
     const integration = await findOrCreateGatewayIntegration(projectId, service);
     const input = {
       projectId,
       source: "gateway" as const,
       eventType: "gateway_request",
       actionName: `${req.method.toUpperCase()} ${path}`,
-      riskLevel: req.method === "GET" ? "low" : "medium",
+      riskLevel: promptThreat.score >= 75 ? "critical" : promptThreat.score >= 50 ? "high" : req.method === "GET" ? "low" : "medium",
       service: { ...service, method: "gateway" },
       method: req.method.toUpperCase(),
       path,
-      metadata: { upstreamBaseUrl: config.upstreamBaseUrl },
+      metadata: {
+        upstreamBaseUrl,
+        configuredUpstreamBaseUrl: config.upstreamBaseUrl,
+        model: (req.body as Record<string, unknown> | undefined)?.model,
+        promptThreatScore: promptThreat.score,
+        promptThreatMatches: promptThreat.matches,
+      },
       payload: req.body,
       blockSensitiveData: config.blockSensitiveData,
       ignoreProjectRules: !config.applyProjectRules,
     };
     let decision = await decisionService.evaluate(input);
+    if (config.inspectPrompts && promptThreat.score >= 50) {
+      decision = blockedDecisionFrom(decision, "Prompt malicioso detectado por Oberyn Gateway antes de contactar el proveedor.", [
+        {
+          id: "gateway-prompt-inspection",
+          name: "Inspeccion de prompts del Gateway",
+          action: "blocked",
+          reason: `Patrones detectados: ${promptThreat.matches.join(", ")}`,
+        },
+      ]);
+    }
     const approvalOverride = await getApprovedGatewayOverride(projectId, req.header("x-oberyn-approval-id") ?? undefined, { actionName: input.actionName, service: input.service });
     if (approvalOverride && decision.decision === "requires_approval") {
       decision = approvedDecisionFrom(decision, approvalOverride.approvalId);
@@ -474,7 +558,7 @@ export const gatewayService = {
       };
     }
 
-    const upstreamUrl = `${config.upstreamBaseUrl.replace(/\/$/, "")}${path}`;
+    const upstreamUrl = `${upstreamBaseUrl.replace(/\/$/, "")}${path}`;
     if (!isHostAllowed(config, upstreamUrl)) {
       return { status: 403, headers: rateHeaders, body: { success: false, error: { message: "El host upstream no está permitido para este proyecto." } } };
     }

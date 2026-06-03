@@ -71,7 +71,7 @@ const steps = [
   {
     icon: Plug,
     title: "Conecta Oberyn",
-    description: "Integra por SDK o Gateway en minutos. Sin cambios en tu infraestructura existente.",
+    description: "Integra por SDK en minutos. Gateway estara disponible en futuras versiones.",
   },
   {
     icon: Cpu,
@@ -157,7 +157,6 @@ const useCases = [
 const footerLinks = {
   producto: [
     { label: "SDK", href: "#" },
-    { label: "Gateway", href: "#" },
     { label: "Reglas", href: "#" },
     { label: "Auditoría", href: "#" },
   ],
@@ -530,7 +529,7 @@ function SdkGateway() {
 
             <div className="rounded-xl border border-border bg-muted/50 p-4 font-mono text-sm">
               <div className="text-muted-foreground">
-                <span className="text-primary">import</span> {"{"} oberyn {"}"} <span className="text-primary">from</span> <span className="text-chart-2">"@oberyn/sdk"</span>
+                <span className="text-primary">import</span> {"{"} createOberyn {"}"} <span className="text-primary">from</span> <span className="text-chart-2">"oberyn"</span>
               </div>
               <div className="mt-2 text-muted-foreground">
                 <span className="text-primary">await</span> oberyn.<span className="text-chart-1">protect</span>(action)
@@ -543,18 +542,13 @@ function SdkGateway() {
               <Globe className="h-7 w-7 text-primary" />
             </div>
 
-            <h3 className="mb-3 text-xl font-semibold text-foreground">Gateway</h3>
-            <p className="mb-6 leading-relaxed text-muted-foreground">Inspecciona y filtra solicitudes hacia modelos de IA o APIs externas sin modificar tu código existente.</p>
+            <h3 className="mb-3 text-xl font-semibold text-foreground">Gateway en desarrollo</h3>
+            <p className="mb-6 leading-relaxed text-muted-foreground">El Gateway sera una implementacion de futuras versiones. Por ahora, Oberyn se integra mediante SDK para proteger prompts, acciones y auditoria.</p>
 
             <div className="rounded-xl border border-border bg-muted/50 p-4">
-              <div className="flex items-center justify-between gap-2 text-xs">
-                <div className="rounded-lg border border-border bg-card px-3 py-2 font-medium text-foreground">Tu IA</div>
-                <div className="flex flex-1 items-center justify-center">
-                  <div className="h-0.5 flex-1 bg-border" />
-                  <div className="mx-1 rounded-md bg-primary px-2 py-1 font-medium text-primary-foreground">Oberyn</div>
-                  <div className="h-0.5 flex-1 bg-border" />
-                </div>
-                <div className="rounded-lg border border-border bg-card px-3 py-2 font-medium text-foreground">API</div>
+              <div className="flex items-center gap-3 text-sm font-medium text-muted-foreground">
+                <Clock className="h-4 w-4 text-primary" />
+                <span>Disponible proximamente</span>
               </div>
             </div>
           </div>
@@ -742,7 +736,7 @@ function CTASection() {
 
               <h2 className="text-balance text-3xl font-bold text-foreground sm:text-4xl lg:text-5xl">Dale permisos a tu IA sin perder el control</h2>
 
-              <p className="text-pretty mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">Empieza con SDK, Gateway o reglas por proyecto. Controla acciones, protege datos y demuestra trazabilidad.</p>
+              <p className="text-pretty mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">Empieza con SDK y reglas por proyecto. Controla acciones, protege datos y demuestra trazabilidad.</p>
 
               <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
                 <Button size="lg" className="gap-2" to="/login">
@@ -758,7 +752,7 @@ function CTASection() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Globe className="h-4 w-4 text-primary" />
-                  <span>Gateway sin código</span>
+                  <span>Gateway en desarrollo</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Shield className="h-4 w-4 text-primary" />
@@ -861,3 +855,5 @@ export function LandingPage() {
     </div>
   );
 }
+
+

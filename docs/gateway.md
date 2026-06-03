@@ -46,6 +46,14 @@ If a request returns `requires_approval`, approve it in Oberyn and retry the sam
 x-oberyn-approval-id: <approval_id>
 ```
 
+For local/provider testing, callers can override the configured upstream base URL per request:
+
+```txt
+x-oberyn-upstream-base-url: https://api.deepseek.com
+```
+
+The override is still checked against `allowedUpstreamHosts` and `blockedUpstreamHosts`.
+
 ## Database
 
 Gateway configuration uses:
@@ -61,17 +69,19 @@ Production should use the persisted `gateway_configs` table so tokens, settings,
 For every proxied request, the Gateway:
 
 1. Validates the project Gateway token.
-2. Detects the likely service or provider from route and payload.
+2. Detects the likely service or provider from route, upstream host, model, and payload.
 3. Creates or updates the project integration record.
-4. Evaluates project rules and sensitive-data policy.
-5. Blocks or requires approval before forwarding when rules demand it.
-6. Allows approved retries when `x-oberyn-approval-id` matches an approved request.
-7. Enforces per-project Gateway rate limits.
-8. For approved requests, forwards the request to the configured upstream base URL.
-9. Streams SSE responses when the provider returns `text/event-stream`.
-10. Supports JSON and raw binary/multipart bodies for Gateway traffic.
-11. Returns the upstream provider response to the caller.
-12. Records an audit event with status, duration, risk, decision, service, route, and redacted payload preview.
+4. Inspects prompt payloads when `inspectPrompts` is enabled.
+5. Evaluates project rules, prompt threats, and sensitive-data policy.
+6. Blocks prompt injection, jailbreak, system-prompt extraction, secret exfiltration, and bypass attempts before forwarding.
+7. Blocks or requires approval before forwarding when rules demand it.
+8. Allows approved retries when `x-oberyn-approval-id` matches an approved request.
+9. Enforces per-project Gateway rate limits.
+10. For approved requests, forwards the request to the configured or request-overridden upstream base URL.
+11. Streams SSE responses when the provider returns `text/event-stream`.
+12. Supports JSON and raw binary/multipart bodies for Gateway traffic.
+13. Returns the upstream provider response to the caller.
+14. Records an audit event with status, duration, risk, decision, service, route, prompt threat metadata, and redacted payload preview.
 
 Gateway responses include:
 
@@ -111,7 +121,10 @@ curl -X POST http://localhost:4000/api/gateway/<project-id>/v1/chat/completions 
   "metadata": {
     "method": "POST",
     "status": 200,
-    "durationMs": 431
+    "durationMs": 431,
+    "upstreamBaseUrl": "https://api.deepseek.com",
+    "promptThreatScore": 0,
+    "promptThreatMatches": []
   }
 }
 ```
@@ -134,9 +147,17 @@ set PROVIDER_API_KEY=<provider-key>
 node examples/gateway-openai-demo.mjs
 ```
 
+DeepSeek Gateway mini project:
+
+```bash
+set DEEPSEEK_API_KEY=<deepseek-key>
+set OBERYN_GATEWAY_TOKEN=gw_...
+node examples/gateway-mini-api/index.mjs
+```
+
 ## Current Implementation Status
 
-The Gateway persists configuration, forwards approved traffic to the upstream provider, supports approved retries, streams SSE responses, handles JSON and raw bodies, enforces rate limits, constrains upstream hosts, detects services from traffic, applies project rules, blocks sensitive payloads when enabled, creates approval requests when required, writes `audit_events`, updates project activity, and exposes admin controls in the Gateway project page.
+The Gateway persists configuration, forwards approved traffic to the upstream provider, supports request-level upstream overrides, supports approved retries, streams SSE responses, handles JSON and raw bodies, enforces rate limits, constrains upstream hosts, detects services from traffic including DeepSeek/OpenAI/Anthropic/Gemini/Mistral/Cohere, applies project rules, blocks prompt attacks when prompt inspection is enabled, blocks sensitive payloads when enabled, creates approval requests when required, writes `audit_events`, updates project activity, and exposes admin controls in the Gateway project page.
 
 ## Maintenance Rule
 

@@ -1,5 +1,5 @@
 import { UserButton } from "@clerk/react";
-import { Bot, Building2, Cloud, Code2, FileText, Folder, GitBranch, Home, Menu, Plug, Settings, ShieldCheck, UserCheck } from "lucide-react";
+import { Bot, Building2, Code2, FileText, Folder, GitBranch, Home, Menu, Plug, Settings, ShieldCheck, UserCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useOrganizations } from "../../hooks/useOrganizations";
@@ -104,7 +104,6 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         items: [
           { id: "bots", label: "Bots", to: projectRoute("bots"), Icon: Bot },
           { id: "flows", label: "Flujos", to: projectRoute("flows"), Icon: GitBranch },
-          { id: "gateway", label: "Gateway", to: projectRoute("gateway"), Icon: Cloud },
           { id: "sdk", label: "SDK", to: projectRoute("sdk"), Icon: Code2 },
         ],
       },

@@ -13,7 +13,7 @@ type DocSection = {
 const docs: Record<string, { title: string; description: string; sections: DocSection[] }> = {
   sdk: {
     title: "Oberyn SDK",
-    description: "Guía técnica para conectar una aplicación, proteger acciones críticas y enviar eventos al dashboard del proyecto.",
+    description: "Guía técnica para conectar una aplicación, proteger prompts, gobernar tool calls y enviar eventos al dashboard del proyecto.",
     sections: [
       {
         title: "Endpoints runtime",
@@ -35,13 +35,24 @@ export const oberyn = createOberyn({
 });`,
       },
       {
+        title: "Prompts",
+        body: ["Usa shield.protect para inspeccionar prompts, enmascarar datos sensibles comunes y auditar la llamada al modelo."],
+        code: `const result = await oberyn.shield.protect({
+  prompt: userInput,
+  provider: "openai",
+  model: "gpt-4o"
+}, async (safePrompt) => callModel(safePrompt));`,
+      },
+      {
         title: "Acciones críticas",
         body: ["Usa protect para acciones sensibles. Oberyn puede aprobar, bloquear o crear una solicitud de aprobación antes de ejecutar tu función."],
-        code: `await oberyn.protect("crear_reembolso", async () => {
+        code: `await oberyn.proof.guard({
+  name: "payment.refund",
+  target: "stripe",
+  riskLevel: "critical",
+  arguments: { paymentIntentId }
+}, async () => {
   return stripe.refunds.create({ payment_intent: paymentIntentId });
-}, {
-  riskLevel: "high",
-  service: { name: "Stripe", provider: "stripe", type: "payments" }
 });`,
       },
       {
@@ -52,30 +63,23 @@ export const oberyn = createOberyn({
   },
   gateway: {
     title: "Oberyn Gateway",
-    description: "Guía técnica para enrutar tráfico por proxy, aplicar políticas y registrar actividad auditable.",
+    description: "Modulo en desarrollo para futuras versiones de Oberyn. La configuracion, endpoints y pruebas runtime permanecen ocultas hasta que el Gateway este listo.",
     sections: [
       {
-        title: "Endpoints administrativos",
-        body: ["Estos endpoints requieren Clerk y x-organization-id. Sirven para obtener configuración y probar el gateway del proyecto."],
-        code: "GET /api/projects/:projectId/gateway/config\nPOST /api/projects/:projectId/gateway/test",
+        title: "Estado",
+        body: ["Gateway estara disponible en futuras versiones. Por ahora no se exponen tokens, endpoints, pruebas de trafico ni configuracion operativa desde la interfaz."],
       },
       {
-        title: "Comportamiento runtime",
-        body: ["El gateway registra proveedor, ruta, decisión, riesgo, estado HTTP, duración, hash del evento y payload sanitizado."],
-        code: `{
-  "eventType": "gateway_request",
-  "actionName": "POST /v1/chat/completions",
-  "decision": "approved",
-  "riskLevel": "medium"
-}`,
+        title: "Que se habilitara",
+        body: ["El Gateway se planea como un proxy seguro para modelos y APIs externas, con inspeccion de trafico, politicas centralizadas y auditoria de requests."],
       },
       {
-        title: "Seguridad",
-        body: ["No almacenes API keys de proveedores, cookies, tokens ni secretos en metadata. Todo payload debe pasar por redacción antes de auditarse."],
+        title: "Mientras tanto",
+        body: ["Usa el SDK de Oberyn para proteger prompts, guardar eventos de auditoria y controlar acciones sensibles dentro de tus aplicaciones."],
       },
       {
         title: "Mantenimiento",
-        body: ["Cada cambio de config, proxy, redacción, eventos, políticas, aprobaciones o auditoría debe actualizar docs/gateway.md."],
+        body: ["Cuando el modulo se reactive, la documentacion publica debera actualizarse antes de exponer configuracion o guias de conexion."],
       },
     ],
   },
@@ -104,10 +108,12 @@ export function TechnicalDocsPage() {
             <div>
               <h1 className="text-3xl font-bold text-slate-950">{doc.title}</h1>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">{doc.description}</p>
-              <a href={topic === "gateway" ? getDocsRedirectUrl("gateway") : getDocsRedirectUrl("sdk")} className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[#008f1f]">
-                Endpoint de redirect
-                <ExternalLink className="h-4 w-4" />
-              </a>
+              {topic === "gateway" ? null : (
+                <a href={getDocsRedirectUrl("sdk")} className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[#008f1f]">
+                  Endpoint de redirect
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              )}
             </div>
           </div>
         </Card>
@@ -133,3 +139,6 @@ export function TechnicalDocsPage() {
     </main>
   );
 }
+
+
+

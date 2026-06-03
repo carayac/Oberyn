@@ -4,11 +4,12 @@ Last updated: 2026-06-01
 
 ## Purpose
 
-The Oberyn SDK protects critical actions from inside the customer's own code. Provider credentials stay in the customer's infrastructure; Oberyn receives action context, evaluates project rules, returns a decision, and records audit evidence.
+The Oberyn SDK protects prompts and critical actions from inside the customer's own code. Provider credentials stay in the customer's infrastructure; Oberyn receives prompt/action context, evaluates project rules, returns a decision, and records audit evidence.
 
-The SDK supports two modes:
+The SDK organizes Oberyn runtime protection into one package:
 
-- `protect` / `guard`: preflight decision before executing a sensitive action.
+- Prompt protection: prompt/API inspection, local PII masking, risk scoring, and audit.
+- Action control: tool-call/action guardrails, approvals, dry-run support, and audit.
 - `capture` / `track`: telemetry for lower-risk events and activity discovery.
 
 ## Runtime Endpoints
@@ -52,6 +53,25 @@ export const oberyn = createOberyn({
 });
 ```
 
+## Protect A Prompt
+
+```ts
+const answer = await oberyn.shield.protect({
+  prompt: userInput,
+  provider: "openai",
+  model: "gpt-4o",
+  sessionId,
+  metadata: { userRole: "support" }
+}, async (safePrompt) => {
+  return openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: [{ role: "user", content: safePrompt }]
+  });
+});
+```
+
+`shield.protect` masks common sensitive data locally before sending prompt context to Oberyn, evaluates the prompt through `/api/sdk/evaluate`, blocks or escalates when project rules require it, and records the model-call result through `/api/sdk/audit`.
+
 ## Protect A Critical Action
 
 ```ts
@@ -83,6 +103,25 @@ try {
 - `requires_approval`: the SDK throws `OberynApprovalRequiredError`, creates an approval request, and does not execute the function.
 
 If `approvalMode` is `"poll"`, `protect` waits for the approval request to be approved in Oberyn. When it is approved, the SDK continues and executes the function. If it is rejected or times out, the function is not executed.
+
+## Guard A Tool Call
+
+```ts
+const result = await oberyn.proof.guard({
+  name: "payment.refund",
+  category: "payments",
+  target: "stripe",
+  riskLevel: "critical",
+  actor: { id: user.id, role: "support_manager" },
+  arguments: { paymentIntentId, amount }
+}, async () => {
+  return stripe.refunds.create({ payment_intent: paymentIntentId, amount });
+}, {
+  dryRun: async () => ({ estimatedRefund: amount, currency: "usd" })
+});
+```
+
+`proof.guard` is an alias over the core `protect` flow with a tool-call event shape. If the decision is `requires_approval` and `approvalMode` is `"poll"`, the SDK waits until the approval is resolved before running the real action.
 
 ## Check Approval Status
 
@@ -127,6 +166,8 @@ await fetch(gateway.url, {
 ## What Oberyn Detects
 
 - Critical actions wrapped with `protect` or `guard`.
+- Prompts inspected through `shield.inspect` or `shield.protect`.
+- Tool calls wrapped with `proof.guard` or `guardTool`.
 - External APIs called through `fetch` when `captureFetch` is enabled.
 - Services and integrations from event metadata.
 - Flows by `actionName`.
@@ -134,6 +175,7 @@ await fetch(gateway.url, {
 - Approval requests when rules require them.
 - Approval polling for long-running backend jobs.
 - Sensitive payloads when protection is enabled.
+- Local masking for common emails, phone numbers, long numeric identifiers, API keys, tokens, passwords, and secrets before prompt context is sent.
 - Project activity status.
 
 ## Security
@@ -154,3 +196,4 @@ node examples/sdk-guard-demo.mjs
 ```
 
 Every code change that affects SDK initialization, event shape, authentication, batching, fetch capture, decision evaluation, approval creation, polling, or audit ingestion must update this document in the same change.
+

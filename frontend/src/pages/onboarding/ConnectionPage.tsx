@@ -68,6 +68,7 @@ function MethodCard({
   onSelect: (method: Method) => void;
 }) {
   const isSelected = selectedMethod === method;
+  const isDisabled = method === "gateway";
 
   return (
     <section
@@ -83,7 +84,7 @@ function MethodCard({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-[20px] font-extrabold leading-7 text-[#08090c]">{title}</h2>
-            <span className="rounded-full bg-[#eaf7ee] px-3 py-1 text-[12px] font-extrabold text-[#128329]">{badge}</span>
+            <span className={cn("rounded-full px-3 py-1 text-[12px] font-extrabold", isDisabled ? "bg-amber-100 text-amber-800" : "bg-[#eaf7ee] text-[#128329]")}>{isDisabled ? "En desarrollo" : badge}</span>
           </div>
           <p className="mt-2 text-[15px] font-semibold leading-6 text-[#52617b]">{description}</p>
         </div>
@@ -100,15 +101,22 @@ function MethodCard({
 
       <button
         type="button"
-        onClick={() => onSelect(method)}
+        onClick={() => {
+          if (!isDisabled) onSelect(method);
+        }}
+        disabled={isDisabled}
         className={cn(
           "mt-auto inline-flex h-11 w-full items-center justify-between rounded-lg border px-5 text-[14px] font-extrabold transition",
-          isSelected ? "border-[#00951d] bg-[#f0fbf3] text-[#006e17]" : "border-[#dce2ea] bg-white text-[#1d2738] hover:bg-[#f8fafc]",
+          isDisabled
+            ? "cursor-not-allowed border-amber-200 bg-amber-50 text-amber-800"
+            : isSelected
+              ? "border-[#00951d] bg-[#f0fbf3] text-[#006e17]"
+              : "border-[#dce2ea] bg-white text-[#1d2738] hover:bg-[#f8fafc]",
         )}
       >
         <span className="inline-flex items-center gap-3">
           {method === "sdk" ? <Code2 className="h-5 w-5" /> : <Globe2 className="h-5 w-5" />}
-          {buttonLabel}
+          {isDisabled ? "Disponible proximamente" : buttonLabel}
         </span>
         <ChevronRight className="h-5 w-5" />
       </button>
@@ -486,9 +494,7 @@ export function ConnectionPage() {
     }
   }, [activeProjectId, projects]);
 
-  const sdkSnippet = `npm install @oberyn/sdk\n\nimport { Oberyn } from "@oberyn/sdk";\n\nconst oberyn = new Oberyn({\n  projectId: "${activeProject?.id ?? "project_id"}"\n});`;
-  const gatewayEndpoint = `https://api.oberyn.dev/gateway/${activeProject?.id ?? "project_id"}`;
-
+  const sdkSnippet = `npm install oberyn\n\nimport { createOberyn } from "oberyn";\n\nconst oberyn = createOberyn({\n  apiKey: "ob_pk_...",\n  endpoint: "https://api.oberyn.dev/api/sdk/events",\n  service: { name: "${activeProject?.name ?? "mi-proyecto"}", provider: "custom", type: "agent" }\n});`;
   function selectMethod(method: Method) {
     setSelectedMethod(method);
     setMessage(null);
@@ -581,10 +587,10 @@ export function ConnectionPage() {
                   method="gateway"
                   selectedMethod={selectedMethod}
                   title="Gateway"
-                  badge="Fácil de implementar"
-                  description="Enruta tus llamadas a APIs y modelos a través del Gateway de Oberyn."
-                  bullets={["Protege datos y prompts antes de salir", "Compatible con OpenAI, Anthropic y más", "No necesitas cambiar tu código salvo la URL"]}
-                  buttonLabel="Ver endpoint del Gateway"
+                  badge="En desarrollo"
+                  description="El Gateway sera una implementacion disponible en futuras versiones de Oberyn."
+                  bullets={["Proxy seguro para modelos y APIs", "Inspeccion de trafico antes del proveedor", "Auditoria centralizada de requests"]}
+                  buttonLabel="Disponible proximamente"
                   Icon={Globe2}
                   onSelect={selectMethod}
                 />
@@ -665,17 +671,11 @@ export function ConnectionPage() {
               </div>
             </section>
 
-            {(selectedMethod === "sdk" || selectedMethod === "gateway" || integrations.length > 0) && (
+            {(selectedMethod === "sdk" || integrations.length > 0) && (
               <section className="mt-6 rounded-lg border border-[#dce2ea] bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.04)] sm:p-6">
                 <h2 className="text-[18px] font-extrabold text-[#08090c]">Configuración seleccionada</h2>
                 {selectedMethod === "sdk" && (
                   <pre className="mt-4 overflow-x-auto rounded-lg bg-[#0f172a] p-4 text-[13px] font-semibold leading-6 text-[#dbeafe]">{sdkSnippet}</pre>
-                )}
-                {selectedMethod === "gateway" && (
-                  <div className="mt-4 rounded-lg border border-[#dce2ea] bg-[#f8fafc] p-4">
-                    <p className="text-[13px] font-extrabold uppercase text-[#52617b]">Endpoint del Gateway</p>
-                    <code className="mt-2 block break-all text-[15px] font-extrabold text-[#111827]">{gatewayEndpoint}</code>
-                  </div>
                 )}
                 {integrations.length > 0 && (
                   <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -698,7 +698,7 @@ export function ConnectionPage() {
             <h2 className="text-[21px] font-extrabold text-[#08090c]">¿Cómo funciona?</h2>
             <div className="mt-6 space-y-5">
               {[
-                { title: "Conectas tu proyecto", description: "Usa SDK, Gateway o detección automática. No necesitamos tus claves API.", Icon: PlugZap },
+                { title: "Conectas tu proyecto", description: "Usa el SDK o deteccion automatica. No necesitamos tus claves API.", Icon: PlugZap },
                 { title: "Detectamos y entendemos", description: "Identificamos agentes, servicios, APIs y acciones críticas.", Icon: Search },
                 { title: "Aplicamos protecciónes", description: "Tú defines las reglas. Oberyn evalúa cada acción en tiempo real.", Icon: ShieldCheck },
                 { title: "Auditoría y control", description: "Todo queda registrado y puedes aprobar, bloquear o alertar.", Icon: TrendingUp },
@@ -752,3 +752,7 @@ export function ConnectionPage() {
     </OnboardingFrame>
   );
 }
+
+
+
+
