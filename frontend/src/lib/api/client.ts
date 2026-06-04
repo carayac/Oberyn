@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4000/api";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.PROD ? "/_/backend/api" : "http://localhost:4000/api");
 
 type ApiRequestOptions = RequestInit & {
   token?: string | null;
@@ -11,11 +11,12 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
   if (options.token) headers.set("Authorization", `Bearer ${options.token}`);
   if (options.organizationId) headers.set("x-organization-id", options.organizationId);
 
+  const url = `${API_BASE_URL}${path}`;
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
+    response = await fetch(url, { ...options, headers });
   } catch {
-    throw new Error("No se pudo conectar con la API. Revisa que el backend esté corriendo en http://localhost:4000.");
+    throw new Error(`No se pudo conectar con la API en ${url}. Revisa la configuracion del backend.`);
   }
 
   if (!response.ok) {
