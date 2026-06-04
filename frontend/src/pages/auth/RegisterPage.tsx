@@ -1,11 +1,11 @@
-import { useAuth } from "@clerk/react";
+import { SignInWithMetamaskButton, useAuth } from "@clerk/react";
 import { useSignUp } from "@clerk/react/legacy";
-import { UserPlus } from "lucide-react";
+import { UserPlus, Wallet } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthCard } from "../../components/auth/AuthCard";
 import { AuthCheckbox } from "../../components/auth/AuthCheckbox";
-import { AuthInlineLink, AuthPrimaryButton } from "../../components/auth/AuthActions";
+import { AuthDivider, AuthInlineLink, AuthPrimaryButton } from "../../components/auth/AuthActions";
 import { AuthField, AuthPasswordField } from "../../components/auth/AuthFields";
 import { AuthFormMessage } from "../../components/auth/AuthFormMessage";
 import { AuthShell } from "../../components/auth/AuthShell";
@@ -137,6 +137,24 @@ export function RegisterPage() {
           <AuthPrimaryButton id="register-submit-button" type="submit" disabled={!isLoaded || !isAuthLoaded || Boolean(isSignedIn) || isSubmitting} icon={<UserPlus className="h-7 w-7" strokeWidth={2.3} />}>
             {isSubmitting ? "Procesando..." : isVerifyingEmail ? "Verificar cuenta" : "Crear cuenta"}
           </AuthPrimaryButton>
+
+          {!isVerifyingEmail && (
+            <>
+              <AuthDivider />
+
+              <SignInWithMetamaskButton>
+                <button
+                  id="register-wallet-button"
+                  type="button"
+                  disabled={!isLoaded || !isAuthLoaded || Boolean(isSignedIn)}
+                  className="inline-flex h-[54px] w-full items-center justify-center gap-4 rounded-lg border border-[#d6dde7] bg-white px-6 text-[18px] font-extrabold text-[#08090c] transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <Wallet className="h-6 w-6" strokeWidth={2.4} />
+                  Continuar con MetaMask
+                </button>
+              </SignInWithMetamaskButton>
+            </>
+          )}
 
           <p className="pt-2 text-center text-[18px] font-medium text-[#28354a]">
             ¿Ya tienes cuenta?{" "}

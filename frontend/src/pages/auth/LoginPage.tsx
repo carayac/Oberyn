@@ -1,6 +1,6 @@
-import { useAuth } from "@clerk/react";
+import { SignInWithMetamaskButton, useAuth } from "@clerk/react";
 import { useSignIn } from "@clerk/react/legacy";
-import { KeyRound, LockKeyhole } from "lucide-react";
+import { KeyRound, LockKeyhole, Wallet } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthCard } from "../../components/auth/AuthCard";
@@ -22,6 +22,7 @@ export function LoginPage() {
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [loginStep, setLoginStep] = useState<LoginStep>("credentials");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSsoSubmitting, setIsSsoSubmitting] = useState(false);
 
   useEffect(() => {
     if (isAuthLoaded && isSignedIn) {
@@ -125,6 +126,38 @@ export function LoginPage() {
     }
   }
 
+  async function handleSsoSignIn() {
+    if (!isLoaded || !signIn) return;
+
+    const form = document.getElementById("login-form") as HTMLFormElement | null;
+    const formData = form ? new FormData(form) : null;
+    const identifier = String(formData?.get("email") ?? "").trim();
+    const signInFlow = signIn as unknown as {
+      authenticateWithRedirect: (params: {
+        strategy: "enterprise_sso" | "oauth_google";
+        identifier?: string;
+        redirectUrl: string;
+        redirectUrlComplete: string;
+      }) => Promise<void>;
+    };
+
+    setIsSsoSubmitting(true);
+    setErrorMessage(null);
+    setInfoMessage(null);
+
+    try {
+      await signInFlow.authenticateWithRedirect({
+        strategy: identifier ? "enterprise_sso" : "oauth_google",
+        identifier: identifier || undefined,
+        redirectUrl: appRoutes.ssoCallback,
+        redirectUrlComplete: appRoutes.dashboard,
+      });
+    } catch (error) {
+      setErrorMessage(getClerkErrorMessage(error, "No pudimos iniciar SSO con Clerk. Revisa que el proveedor este habilitado."));
+      setIsSsoSubmitting(false);
+    }
+  }
+
   return (
     <AuthShell id="auth-login-view" title="Bienvenido a Oberyn" description="La plataforma que asegura y controla cada acción de tu IA.">
       <AuthCard id="auth-login-card" title="Iniciar sesión" description="Ingresa tus credenciales para continuar.">
@@ -163,11 +196,25 @@ export function LoginPage() {
           <button
             id="login-sso-button"
             type="button"
-            className="inline-flex h-[54px] w-full items-center justify-center gap-4 rounded-lg border border-[#d6dde7] bg-white px-6 text-[18px] font-extrabold text-[#08090c] transition hover:bg-slate-50"
+            onClick={handleSsoSignIn}
+            disabled={!isLoaded || !isAuthLoaded || Boolean(isSignedIn) || isSsoSubmitting}
+            className="inline-flex h-[54px] w-full items-center justify-center gap-4 rounded-lg border border-[#d6dde7] bg-white px-6 text-[18px] font-extrabold text-[#08090c] transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <KeyRound className="h-6 w-6" strokeWidth={2.4} />
-            Continuar con SSO
+            {isSsoSubmitting ? "Conectando con Clerk..." : "Continuar con SSO"}
           </button>
+
+          <SignInWithMetamaskButton>
+            <button
+              id="login-wallet-button"
+              type="button"
+              disabled={!isLoaded || !isAuthLoaded || Boolean(isSignedIn)}
+              className="inline-flex h-[54px] w-full items-center justify-center gap-4 rounded-lg border border-[#d6dde7] bg-white px-6 text-[18px] font-extrabold text-[#08090c] transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Wallet className="h-6 w-6" strokeWidth={2.4} />
+              Continuar con MetaMask
+            </button>
+          </SignInWithMetamaskButton>
 
           <p className="pt-5 text-center text-[18px] font-medium text-[#28354a]">
             ¿No tienes cuenta?{" "}

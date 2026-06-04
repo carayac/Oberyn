@@ -1,6 +1,7 @@
 export const appRoutes = {
   login: "/login",
   register: "/register",
+  ssoCallback: "/sso-callback",
   forgotPassword: "/forgot-password",
   onboardingSuccess: "/onboarding/success",
   onboardingOrganization: "/onboarding/organization",

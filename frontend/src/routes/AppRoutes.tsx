@@ -1,3 +1,4 @@
+import { AuthenticateWithRedirectCallback } from "@clerk/react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "../components/layout/AppShell";
 import { AuthLayout } from "../components/layout/AuthLayout";
@@ -40,6 +41,7 @@ export function AppRoutes() {
       <Route element={<AuthLayout />}>
         <Route path={appRoutes.login} element={<LoginPage />} />
         <Route path={appRoutes.register} element={<RegisterPage />} />
+        <Route path={appRoutes.ssoCallback} element={<AuthenticateWithRedirectCallback />} />
         <Route path={appRoutes.forgotPassword} element={<ForgotPasswordPage />} />
         <Route path={appRoutes.onboardingSuccess} element={<AccountSuccessPage />} />
       </Route>
