@@ -32,7 +32,7 @@ const timezoneOptions = [
 
 const dateFormatOptions = ["DD/MM/YYYY", "MM/DD/YYYY", "YYYY-MM-DD"];
 const timeFormatOptions = ["24 horas", "12 horas"];
-const languageOptions = ["Español", "English"];
+const languageOptions = ["Español"];
 
 function loadSettings(): GeneralSettings {
   try {
