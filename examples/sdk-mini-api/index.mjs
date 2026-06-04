@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createOberyn, OberynApprovalRequiredError, OberynBlockedError } from "../../dist/index.js";
+import { createOberyn, OberynApprovalRequiredError, OberynBlockedError } from "oberyn";
 
 function loadEnvFile(path) {
   if (!existsSync(path)) return;

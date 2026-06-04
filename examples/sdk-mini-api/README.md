@@ -18,7 +18,6 @@ El usuario solo describe acciones, prompts, URLs y metadata util. Oberyn calcula
 Desde la raiz del repositorio:
 
 ```powershell
-npm run build
 npm run dev:backend
 ```
 
@@ -26,6 +25,7 @@ En otra terminal:
 
 ```powershell
 cd examples/sdk-mini-api
+npm install
 npm start
 ```
 

@@ -31,14 +31,10 @@ La autenticacion usa la clave publica del proyecto en `x-oberyn-key`. Esta clave
 ## Instalacion
 
 ```bash
-npm install oberyn
+npm i oberyn
 ```
 
-En este repositorio local, el paquete se compila con:
-
-```bash
-npm run build
-```
+El SDK se consume como paquete npm. Instala `oberyn` desde npm y úsalo directamente en tu aplicacion.
 
 ## Inicializacion
 
@@ -64,7 +60,7 @@ export const oberyn = createOberyn({
 
 ## Variables de entorno
 
-Configuracion minima para una aplicacion local:
+Configuracion minima:
 
 ```env
 OBERYN_SDK_KEY=ob_pk_tu_clave_publica_del_proyecto
@@ -101,7 +97,7 @@ DEEPSEEK_APPROVAL_PROMPT=Responde exactamente: accion aprobada por humano en Obe
 Variables disponibles:
 
 - `OBERYN_SDK_KEY`: clave publica del proyecto. Se copia desde la pagina SDK del proyecto.
-- `OBERYN_SDK_ENDPOINT`: endpoint runtime. En local normalmente es `http://localhost:4000/api/sdk/events`.
+- `OBERYN_SDK_ENDPOINT`: endpoint runtime de Oberyn. En desarrollo puede ser `http://localhost:4000/api/sdk/events`; en produccion usa tu dominio de API.
 - `OBERYN_APPROVAL_MODE`: `throw` lanza error cuando se requiere aprobacion; `poll` espera hasta que el humano apruebe o rechace.
 - `OBERYN_RUN_APPROVAL_DEMO`: `1` activa el escenario del mini proyecto que espera aprobacion humana antes de llamar a DeepSeek.
 - `DEEPSEEK_API_KEY`: clave privada del proveedor. Se queda en tu aplicacion; Oberyn no la necesita.
@@ -443,7 +439,7 @@ import { OberynBlockedError, OberynApprovalRequiredError } from "oberyn";
 - La clave `ob_pk_...` identifica el proyecto; no es una clave privada de proveedor.
 - Los dashboards administrativos siguen usando Clerk; los endpoints runtime usan `x-oberyn-key`.
 
-## Mini proyecto local
+## Mini proyecto de ejemplo
 
 Configura `examples/.env`:
 
@@ -456,16 +452,17 @@ DEEPSEEK_API_KEY=...
 DEEPSEEK_MODEL=deepseek-chat
 ```
 
-Compila el SDK:
+Instala dependencias:
 
 ```bash
-npm run build
+cd examples/sdk-mini-api
+npm install
 ```
 
 Ejecuta el demo:
 
 ```bash
-node examples/sdk-mini-api/index.mjs
+npm start
 ```
 
 El demo prueba:
@@ -492,15 +489,15 @@ node examples/sdk-mini-api/index.mjs
 
 La terminal queda esperando. Aprueba la solicitud desde `Proyecto > Aprobaciones`. Si todo esta correcto, DeepSeek se invoca despues de la aprobacion, no antes. Luego el mini proyecto continua con inspeccion de prompt, DeepSeek protegido, prompt malicioso, JSONPlaceholder y registro final.
 
-## Checklist de prueba local
+## Checklist de prueba
 
 1. Backend activo en `http://localhost:4000`.
 2. Frontend activo en `http://localhost:5173`.
 3. Proyecto creado y clave `ob_pk_...` copiada en `OBERYN_SDK_KEY`.
 4. Regla activa de aprobacion para riesgo alto si quieres probar `approvalMode=poll`.
 5. `DEEPSEEK_API_KEY` configurada si quieres llamadas reales al proveedor.
-6. Ejecutar `npm run build` en la raiz antes de probar cambios del SDK.
-7. Ejecutar `node examples/sdk-mini-api/index.mjs`.
+6. Ejecutar `npm install` dentro del proyecto que consume el SDK para instalar `oberyn` desde npm.
+7. Ejecutar `npm start` dentro de `examples/sdk-mini-api`.
 8. Revisar `Proyecto > Auditoria`, `Proyecto > Integraciones`, `Proyecto > Flujos` y `Proyecto > Aprobaciones`.
 
 ## Mantenimiento
