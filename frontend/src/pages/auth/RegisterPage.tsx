@@ -1,4 +1,4 @@
-import { SignInWithMetamaskButton, useAuth } from "@clerk/react";
+import { useAuth, useClerk } from "@clerk/react";
 import { useSignUp } from "@clerk/react/legacy";
 import { UserPlus, Wallet } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
@@ -14,12 +14,14 @@ import { appRoutes } from "../../routes/routes";
 
 export function RegisterPage() {
   const navigate = useNavigate();
+  const clerk = useClerk();
   const { isLoaded, signUp, setActive } = useSignUp();
   const { isLoaded: isAuthLoaded, isSignedIn } = useAuth();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [isVerifyingEmail, setIsVerifyingEmail] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isWalletSubmitting, setIsWalletSubmitting] = useState(false);
 
   useEffect(() => {
     if (isAuthLoaded && isSignedIn) {
@@ -101,6 +103,29 @@ export function RegisterPage() {
     }
   }
 
+  async function handleMetamaskSignIn() {
+    if (!isLoaded || !isAuthLoaded || isSignedIn) return;
+
+    const ethereum = (window as typeof window & { ethereum?: unknown }).ethereum;
+    if (!ethereum) {
+      setErrorMessage("MetaMask no esta instalado o no esta disponible en este navegador.");
+      setInfoMessage("Instala la extension de MetaMask y vuelve a intentarlo.");
+      return;
+    }
+
+    setIsWalletSubmitting(true);
+    setErrorMessage(null);
+    setInfoMessage(null);
+
+    try {
+      await clerk.authenticateWithMetamask({ redirectUrl: appRoutes.onboardingSuccess });
+    } catch (error) {
+      setErrorMessage(getClerkErrorMessage(error, "No pudimos conectar MetaMask con Clerk. Revisa que MetaMask este habilitado en Clerk."));
+    } finally {
+      setIsWalletSubmitting(false);
+    }
+  }
+
   return (
     <AuthShell id="auth-register-view" title="Crea tu cuenta" description="Comienza a proteger y controlar cada acción de tu IA.">
       <AuthCard id="auth-register-card" title="Crear cuenta" description="Completa tus datos para empezar." className="max-w-[740px]">
@@ -142,17 +167,16 @@ export function RegisterPage() {
             <>
               <AuthDivider />
 
-              <SignInWithMetamaskButton>
-                <button
-                  id="register-wallet-button"
-                  type="button"
-                  disabled={!isLoaded || !isAuthLoaded || Boolean(isSignedIn)}
-                  className="inline-flex h-[54px] w-full items-center justify-center gap-4 rounded-lg border border-[#d6dde7] bg-white px-6 text-[18px] font-extrabold text-[#08090c] transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <Wallet className="h-6 w-6" strokeWidth={2.4} />
-                  Continuar con MetaMask
-                </button>
-              </SignInWithMetamaskButton>
+              <button
+                id="register-wallet-button"
+                type="button"
+                onClick={handleMetamaskSignIn}
+                disabled={!isLoaded || !isAuthLoaded || Boolean(isSignedIn) || isWalletSubmitting}
+                className="inline-flex h-[54px] w-full items-center justify-center gap-4 rounded-lg border border-[#d6dde7] bg-white px-6 text-[18px] font-extrabold text-[#08090c] transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Wallet className="h-6 w-6" strokeWidth={2.4} />
+                {isWalletSubmitting ? "Conectando MetaMask..." : "Continuar con MetaMask"}
+              </button>
             </>
           )}
 
