@@ -1,63 +1,109 @@
 # Oberyn SDK Mini API Demo
 
-Mini proyecto para probar el SDK contra una API externa usando `createOberyn`.
+Mini proyecto para probar el SDK contra APIs externas con inferencia automatica de Oberyn.
 
-## What It Does
+## Que prueba
 
-- Inspects a prompt with `oberyn.shield.inspect`.
-- Optionally calls DeepSeek Chat Completions through `oberyn.shield.protect` and `oberyn.proof.guard`.
-- Protects a `GET` request to JSONPlaceholder with `oberyn.proof.guard`.
-- Protects a `POST` request with `proof.guard` and `dryRun`.
-- Sends one manual completion event with `capture`.
+- `oberyn.shield.inspect` para revisar prompts.
+- `oberyn.shield.protect` para detener prompts maliciosos antes de llamar al proveedor.
+- `oberyn.api.request` para proteger llamadas HTTP sin pasar `decision`, `riskLevel` ni `service`.
+- `oberyn.proof.guard` para proteger tool calls con contexto de accion.
+- `oberyn.record` para registrar el cierre del demo sin datos quemados.
+- Una pregunta real a DeepSeek y la respuesta textual que devuelve el modelo.
 
-## Run
+El usuario solo describe acciones, prompts, URLs y metadata util. Oberyn calcula riesgo, decision, servicio, flujo e integracion.
 
-From the repository root:
+## Ejecutar
+
+Desde la raiz del repositorio:
 
 ```powershell
 npm run build
 npm run dev:backend
 ```
 
-In another terminal:
+En otra terminal:
 
 ```powershell
 cd examples/sdk-mini-api
 npm start
 ```
 
-The demo uses this SDK key by default:
+El demo usa esta clave SDK por defecto:
 
 ```txt
 ob_pk_9923d658b3c0a0494f35fefa093f0dfb47b1f9a99ad43961
 ```
 
-You can override it:
+Puedes sobrescribirla en `examples/.env`:
 
-```powershell
-$env:OBERYN_SDK_KEY="ob_pk_..."
-$env:OBERYN_SDK_ENDPOINT="http://localhost:4000/api/sdk/events"
-npm start
+```env
+OBERYN_SDK_KEY=ob_pk_...
+OBERYN_SDK_ENDPOINT=http://localhost:4000/api/sdk/events
 ```
 
 ## DeepSeek
 
-To test a real DeepSeek API call, add this to `examples/.env` or `examples/sdk-mini-api/.env`:
+Para probar DeepSeek real, agrega:
 
 ```env
 DEEPSEEK_API_KEY=your_deepseek_api_key
 DEEPSEEK_MODEL=deepseek-chat
+DEEPSEEK_PROMPT=Explica en una frase que hace Oberyn SDK.
 ```
 
-If `DEEPSEEK_API_KEY` is missing, the demo skips the DeepSeek call and continues with JSONPlaceholder.
+Si `DEEPSEEK_API_KEY` falta, el demo omite esa llamada y continua con JSONPlaceholder.
 
-The first prompt in the script intentionally contains `Ignore previous instructions` to test Oberyn prompt inspection. The DeepSeek call uses a separate clean prompt with a unique run id, so a successful response should include something like:
+El demo ejecuta dos pruebas:
+
+- Prompt limpio: Oberyn inspecciona el prompt, protege la llamada y luego invoca DeepSeek.
+- Prompt configurable: el demo imprime `Respuesta real de DeepSeek` con el texto devuelto por el proveedor.
+- Prompt malicioso: Oberyn debe detenerlo antes de que llegue a DeepSeek, ya sea como bloqueo o aprobacion requerida segun reglas del proyecto.
+
+## Eventos esperados
+
+En el dashboard deberias ver:
+
+- Flujos por `actionName`, como `deepseek.chat.completions.create` y `jsonplaceholder.posts.create`.
+- Integraciones detectadas desde URLs y targets.
+- Auditoria de decisiones y ejecuciones.
+- Riesgo calculado por Oberyn.
+- Evento final `sdk_mini_api_demo.completed` registrado con `record`.
+
+Si una regla requiere aprobacion para acciones de riesgo alto, el demo puede detenerse con `OberynApprovalRequiredError`. Aprueba la solicitud en el dashboard o ajusta reglas para pruebas locales.
+
+## Validar ejecucion despues de aprobacion humana
+
+Este modo agrega una prueba de aprobacion humana antes de ejecutar el resto del demo. Una accion marcada como `requires_approval` no llama a DeepSeek hasta que la apruebes en Oberyn; despues de aprobarla, el mini proyecto continua con todas las pruebas normales del SDK.
+
+En `examples/.env` usa:
+
+```env
+OBERYN_APPROVAL_MODE=poll
+OBERYN_RUN_APPROVAL_DEMO=1
+DEEPSEEK_API_KEY=your_deepseek_api_key
+DEEPSEEK_MODEL=deepseek-chat
+```
+
+Ejecuta:
+
+```powershell
+cd examples/sdk-mini-api
+npm start
+```
+
+La terminal mostrara un `Run ID` y quedara esperando. En el frontend abre:
 
 ```txt
-oberyn-deepseek-...
+Proyecto > Aprobaciones
 ```
 
-The demo also runs a malicious DeepSeek prompt test. That prompt is inspected by Oberyn and should be blocked before a provider request is made. If the backend rules do not block it yet, the demo applies a local Oberyn demo policy, records a blocked event, and still prevents the DeepSeek request.
+Aprueba la solicitud `deepseek.chat.human_approval_required`. Despues de aprobarla, el SDK recibira el estado `approved`, ejecutara la funcion protegida, llamara a DeepSeek y seguira con el resto de pruebas. La terminal debe imprimir:
 
-If a project rule requires approval for medium/high risk actions, the POST action may stop with an approval message. Approve it in the dashboard or set rules to allow medium risk while testing.
+```txt
+Human approval received by SDK. Calling DeepSeek now...
+DeepSeek result after human approval
+Human approval demo completed. Continuing with the full SDK test suite...
+```
 
+Eso valida el flujo completo: evaluacion, solicitud humana, polling del SDK, aprobacion y ejecucion real del proveedor.

@@ -172,6 +172,17 @@ const providerRules: ProviderRule[] = [
     riskSignals: ["Modelo generativo", "Salida externa", "Prompt y datos sensibles"],
   },
   {
+    name: "DeepSeek",
+    provider: "deepseek",
+    serviceType: "llm",
+    suggestedMethod: "sdk",
+    packagePatterns: [/"deepseek"\s*:/i, /@langchain\/deepseek/i],
+    envPatterns: [/DEEPSEEK_API_KEY/i, /DEEPSEEK_MODEL/i],
+    codePatterns: [/api\.deepseek\.com/i, /deepseek-chat/i, /deepseek-reasoner/i, /provider:\s*["']deepseek["']/i],
+    endpointPatterns: [/api\.deepseek\.com/i],
+    riskSignals: ["Modelo generativo", "Prompt externo", "Riesgo de prompt injection"],
+  },
+  {
     name: "Supabase",
     provider: "supabase",
     serviceType: "database",

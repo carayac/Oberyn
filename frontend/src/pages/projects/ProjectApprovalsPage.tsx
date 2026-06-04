@@ -1,4 +1,4 @@
-import { AlertTriangle, ArrowRight, Bot, CheckCircle2, Clock3, Copy, FileText, MessageCircle, Package, Shield, SlidersHorizontal, UserCheck, XCircle } from "lucide-react";
+import { AlertTriangle, ArrowRight, Bot, CheckCircle2, Clock3, Copy, FileText, MessageCircle, Package, RefreshCcw, Shield, SlidersHorizontal, UserCheck, XCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Button } from "../../components/ui/Button";
@@ -263,7 +263,7 @@ export function ProjectApprovalsPage() {
   const { activeOrganization } = useOrganizations();
   const { projects } = useProjects(activeOrganization?.id);
   const selectedProject = projects.find((project) => project.id === projectId) ?? projects[0] ?? null;
-  const { approvals, isLoading, error, approve, reject, requestContext, createPermanentRule } = useApprovals(selectedProject?.id, activeOrganization?.id);
+  const { approvals, isLoading, error, reloadApprovals, approve, reject, requestContext, createPermanentRule } = useApprovals(selectedProject?.id, activeOrganization?.id);
   const dashboardData = useDashboardData(selectedProject?.id, activeOrganization?.id);
   const [selectedApprovalId, setSelectedApprovalId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -295,6 +295,16 @@ export function ProjectApprovalsPage() {
     }
   }
 
+  async function refreshApprovals() {
+    setMessage(null);
+    try {
+      await Promise.all([reloadApprovals(), dashboardData.reloadDashboardData()]);
+      setMessage("Solicitudes actualizadas.");
+    } catch (refreshError) {
+      setMessage(refreshError instanceof Error ? refreshError.message : "No se pudieron actualizar las solicitudes.");
+    }
+  }
+
   return (
     <div className="space-y-6">
       <section className="rounded-lg border border-slate-200 bg-white/70 p-7 shadow-soft 2xl:p-8">
@@ -302,6 +312,13 @@ export function ProjectApprovalsPage() {
           <h1 className="text-3xl font-bold tracking-normal text-slate-950">Aprobación humana</h1>
           <p className="mt-3 text-sm leading-6 text-slate-600">Revisa y aprueba acciones de alto riesgo antes de su ejecución.</p>
         </header>
+
+        <div className="mt-5 flex justify-end">
+          <Button type="button" variant="secondary" onClick={() => void refreshApprovals()} disabled={isLoading || dashboardData.isLoading} className="gap-2">
+            <RefreshCcw className={isLoading || dashboardData.isLoading ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
+            Actualizar solicitudes
+          </Button>
+        </div>
 
         <div className="mt-6 grid gap-5 md:grid-cols-2 2xl:grid-cols-4">
           <StatCard label="Pendientes" value={pending} detail="Solicitudes por revisar" Icon={Clock3} />

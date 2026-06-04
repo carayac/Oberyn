@@ -18,7 +18,9 @@ function toProject(row: Record<string, unknown>, counts: Partial<Project> = {}):
     botsCount: counts.botsCount ?? 0,
     flowsCount: counts.flowsCount ?? 0,
     pendingApprovalsCount: counts.pendingApprovalsCount ?? 0,
-    lastActivityAt: row.updated_at ? new Date(String(row.updated_at)).toISOString() : null,
+    allowedActionsCount: counts.allowedActionsCount ?? 0,
+    blockedActionsCount: counts.blockedActionsCount ?? 0,
+    lastActivityAt: counts.lastActivityAt ?? (row.updated_at ? new Date(String(row.updated_at)).toISOString() : null),
     createdAt: new Date(String(row.created_at)).toISOString(),
     updatedAt: new Date(String(row.updated_at)).toISOString(),
   };
@@ -43,15 +45,28 @@ async function countRows(table: string, column: string, value: string, extra?: (
 }
 
 async function getProjectCounts(projectId: string) {
-  const [integrationsCount, rulesCount, botsCount, flowsCount, pendingApprovalsCount] = await Promise.all([
+  const [integrationsCount, rulesCount, botsCount, flowsCount, pendingApprovalsCount, allowedActionsCount, blockedActionsCount, latestAuditEvent] = await Promise.all([
     countRows("integrations", "project_id", projectId),
     countRows("rules", "project_id", projectId, (query) => (query as never as { eq: (column: string, value: boolean) => unknown }).eq("is_active", true)),
     countRows("bots", "project_id", projectId),
     countRows("flows", "project_id", projectId),
     countRows("approval_requests", "project_id", projectId, (query) => (query as never as { eq: (column: string, value: string) => unknown }).eq("status", "pending_approval")),
+    countRows("audit_events", "project_id", projectId, (query) => (query as never as { in: (column: string, values: string[]) => unknown }).in("decision", ["approved", "allowed"])),
+    countRows("audit_events", "project_id", projectId, (query) => (query as never as { in: (column: string, values: string[]) => unknown }).in("decision", ["blocked", "denied", "rejected"])),
+    supabaseAdmin.from("audit_events").select("created_at").eq("project_id", projectId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
+  if (latestAuditEvent.error) throw latestAuditEvent.error;
 
-  return { integrationsCount, rulesCount, botsCount, flowsCount, pendingApprovalsCount };
+  return {
+    integrationsCount,
+    rulesCount,
+    botsCount,
+    flowsCount,
+    pendingApprovalsCount,
+    allowedActionsCount,
+    blockedActionsCount,
+    lastActivityAt: latestAuditEvent.data?.created_at ? new Date(String(latestAuditEvent.data.created_at)).toISOString() : undefined,
+  };
 }
 
 function countByProject(rows: Array<Record<string, unknown>> | null, projectIds: string[]) {
@@ -66,15 +81,18 @@ function countByProject(rows: Array<Record<string, unknown>> | null, projectIds:
 async function getProjectsCounts(projectIds: string[]) {
   if (!projectIds.length) return {};
 
-  const [integrations, rules, bots, flows, approvals] = await Promise.all([
+  const [integrations, rules, bots, flows, approvals, allowedActions, blockedActions, latestAuditEvents] = await Promise.all([
     supabaseAdmin.from("integrations").select("project_id").in("project_id", projectIds),
     supabaseAdmin.from("rules").select("project_id").in("project_id", projectIds).eq("is_active", true),
     supabaseAdmin.from("bots").select("project_id").in("project_id", projectIds),
     supabaseAdmin.from("flows").select("project_id").in("project_id", projectIds),
     supabaseAdmin.from("approval_requests").select("project_id").in("project_id", projectIds).eq("status", "pending_approval"),
+    supabaseAdmin.from("audit_events").select("project_id").in("project_id", projectIds).in("decision", ["approved", "allowed"]),
+    supabaseAdmin.from("audit_events").select("project_id").in("project_id", projectIds).in("decision", ["blocked", "denied", "rejected"]),
+    supabaseAdmin.from("audit_events").select("project_id, created_at").in("project_id", projectIds).order("created_at", { ascending: false }),
   ]);
 
-  for (const result of [integrations, rules, bots, flows, approvals]) {
+  for (const result of [integrations, rules, bots, flows, approvals, allowedActions, blockedActions, latestAuditEvents]) {
     if (result.error) throw result.error;
   }
 
@@ -83,6 +101,13 @@ async function getProjectsCounts(projectIds: string[]) {
   const botsByProject = countByProject(bots.data, projectIds);
   const flowsByProject = countByProject(flows.data, projectIds);
   const approvalsByProject = countByProject(approvals.data, projectIds);
+  const allowedActionsByProject = countByProject(allowedActions.data, projectIds);
+  const blockedActionsByProject = countByProject(blockedActions.data, projectIds);
+  const latestActivityByProject: Record<string, string | undefined> = {};
+  for (const event of latestAuditEvents.data ?? []) {
+    const projectId = String(event.project_id);
+    if (!latestActivityByProject[projectId] && event.created_at) latestActivityByProject[projectId] = new Date(String(event.created_at)).toISOString();
+  }
 
   return Object.fromEntries(
     projectIds.map((projectId) => [
@@ -93,6 +118,9 @@ async function getProjectsCounts(projectIds: string[]) {
         botsCount: botsByProject[projectId] ?? 0,
         flowsCount: flowsByProject[projectId] ?? 0,
         pendingApprovalsCount: approvalsByProject[projectId] ?? 0,
+        allowedActionsCount: allowedActionsByProject[projectId] ?? 0,
+        blockedActionsCount: blockedActionsByProject[projectId] ?? 0,
+        lastActivityAt: latestActivityByProject[projectId],
       },
     ]),
   );

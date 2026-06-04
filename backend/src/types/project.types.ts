@@ -13,6 +13,8 @@ export type Project = {
   botsCount: number;
   flowsCount: number;
   pendingApprovalsCount: number;
+  allowedActionsCount?: number;
+  blockedActionsCount?: number;
   lastActivityAt?: string | null;
   createdAt: string;
   updatedAt: string;

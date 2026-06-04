@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { IntegrationIcon } from "../../components/integrations/IntegrationIcon";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { useDashboardData } from "../../hooks/useDashboardData";
@@ -47,6 +48,8 @@ const ACTIVE_PROJECT_EVENT = "oberyn:active-project-change";
 
 type ActivityRow = {
   source: string;
+  provider?: string | null;
+  serviceType?: string | null;
   action: string;
   risk: "Bajo" | "Medio" | "Alto" | "Crítico";
   status: "Permitida" | "Aprobación" | "Bloqueada";
@@ -110,8 +113,13 @@ function getDashboardMetrics(project: Project, data: DashboardSnapshot) {
 function buildActivities(data: DashboardSnapshot): ActivityRow[] {
   return data.auditEvents.slice(0, 8).map((event) => {
     const integration = event.integrationId ? data.integrations.find((item) => item.id === event.integrationId) : null;
+    const metadata = event.metadata ?? {};
+    const provider = integration?.provider ?? (typeof metadata.serviceProvider === "string" ? metadata.serviceProvider : typeof metadata.provider === "string" ? metadata.provider : null);
+    const serviceType = integration?.serviceType ?? (typeof metadata.serviceType === "string" ? metadata.serviceType : null);
     return {
       source: integration?.name ?? event.eventType,
+      provider,
+      serviceType,
       action: event.actionName,
       risk: getRiskLabel(event.riskLevel),
       status: getDecisionStatus(event.decision),
@@ -180,7 +188,12 @@ function ActivityTable({ rows }: { rows: ActivityRow[] }) {
           <tbody className="divide-y divide-slate-100">
             {rows.map((row) => (
               <tr key={`${row.source}-${row.action}-${row.time}`} className="text-slate-700">
-                <td className="whitespace-nowrap px-5 py-4 font-semibold">{row.source}</td>
+                <td className="whitespace-nowrap px-5 py-4">
+                  <span className="inline-flex items-center gap-3 font-semibold">
+                    <IntegrationIcon provider={row.provider} serviceType={row.serviceType} className="h-9 w-9" iconClassName="h-4 w-4" />
+                    {row.source}
+                  </span>
+                </td>
                 <td className="whitespace-nowrap px-5 py-4">{row.action}</td>
                 <td className="whitespace-nowrap px-5 py-4">
                   <span className="inline-flex items-center gap-2">

@@ -1,93 +1,206 @@
-import { ArrowLeft, BookOpen, ExternalLink } from "lucide-react";
+import { ArrowLeft, BookOpen } from "lucide-react";
+import { Fragment, type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
+import sdkMarkdown from "../../../../docs/sdk.md?raw";
 import { AuthBrandLogo } from "../../components/auth/AuthBrandLogo";
 import { Card } from "../../components/ui/Card";
-import { getDocsRedirectUrl } from "../../lib/api/docs";
 
 type DocSection = {
   title: string;
   body: string[];
-  code?: string;
 };
 
-const docs: Record<string, { title: string; description: string; sections: DocSection[] }> = {
-  sdk: {
-    title: "Oberyn SDK",
-    description: "Guía técnica para conectar una aplicación, proteger prompts, gobernar tool calls y enviar eventos al dashboard del proyecto.",
-    sections: [
-      {
-        title: "Endpoints runtime",
-        body: ["El SDK evalúa acciones antes de ejecutarlas y envía eventos usando una clave pública del proyecto en el header x-oberyn-key."],
-        code: "POST /api/sdk/evaluate\nPOST /api/sdk/audit\nPOST /api/sdk/events\nPOST /api/sdk/events/batch\nPOST /api/sdk/heartbeat",
-      },
-      {
-        title: "Inicialización",
-        body: ["Instala el paquete local oberyn e inicialízalo con la clave del proyecto."],
-        code: `import { createOberyn } from "oberyn";
+type MarkdownBlock =
+  | { type: "heading"; level: number; text: string }
+  | { type: "paragraph"; text: string }
+  | { type: "code"; language: string; code: string }
+  | { type: "list"; items: string[] };
 
-export const oberyn = createOberyn({
-  apiKey: "ob_pk_...",
-  endpoint: "http://localhost:4000/api/sdk/events",
-  service: { name: "mi-app", provider: "custom", type: "app" },
-  environment: "production",
-  captureFetch: true,
-  failMode: "closed"
-});`,
-      },
-      {
-        title: "Prompts",
-        body: ["Usa shield.protect para inspeccionar prompts, enmascarar datos sensibles comunes y auditar la llamada al modelo."],
-        code: `const result = await oberyn.shield.protect({
-  prompt: userInput,
-  provider: "openai",
-  model: "gpt-4o"
-}, async (safePrompt) => callModel(safePrompt));`,
-      },
-      {
-        title: "Acciones críticas",
-        body: ["Usa protect para acciones sensibles. Oberyn puede aprobar, bloquear o crear una solicitud de aprobación antes de ejecutar tu función."],
-        code: `await oberyn.proof.guard({
-  name: "payment.refund",
-  target: "stripe",
-  riskLevel: "critical",
-  arguments: { paymentIntentId }
-}, async () => {
-  return stripe.refunds.create({ payment_intent: paymentIntentId });
-});`,
-      },
-      {
-        title: "Mantenimiento",
-        body: ["Cada cambio relacionado a inicialización, evento, auth, batch, fetch capture, decisiones, aprobaciones o auditoría debe actualizar docs/sdk.md."],
-      },
-    ],
-  },
-  gateway: {
-    title: "Oberyn Gateway",
-    description: "Modulo en desarrollo para futuras versiones de Oberyn. La configuracion, endpoints y pruebas runtime permanecen ocultas hasta que el Gateway este listo.",
-    sections: [
-      {
-        title: "Estado",
-        body: ["Gateway estara disponible en futuras versiones. Por ahora no se exponen tokens, endpoints, pruebas de trafico ni configuracion operativa desde la interfaz."],
-      },
-      {
-        title: "Que se habilitara",
-        body: ["El Gateway se planea como un proxy seguro para modelos y APIs externas, con inspección de tráfico, reglas centralizadas y auditoría de requests."],
-      },
-      {
-        title: "Mientras tanto",
-        body: ["Usa el SDK de Oberyn para proteger prompts, guardar eventos de auditoria y controlar acciones sensibles dentro de tus aplicaciones."],
-      },
-      {
-        title: "Mantenimiento",
-        body: ["Cuando el modulo se reactive, la documentacion publica debera actualizarse antes de exponer configuracion o guias de conexion."],
-      },
-    ],
-  },
+const gatewayDoc: { title: string; description: string; sections: DocSection[] } = {
+  title: "Oberyn Gateway",
+  description: "Modulo en desarrollo para futuras versiones de Oberyn. La configuracion, endpoints y pruebas runtime permanecen ocultas hasta que el Gateway este listo.",
+  sections: [
+    {
+      title: "Estado",
+      body: ["Gateway estara disponible en futuras versiones. Por ahora no se exponen tokens, endpoints, pruebas de trafico ni configuracion operativa desde la interfaz."],
+    },
+    {
+      title: "Que se habilitara",
+      body: ["El Gateway se planea como un proxy seguro para modelos y APIs externas, con inspeccion de trafico, reglas centralizadas y auditoria de requests."],
+    },
+    {
+      title: "Mientras tanto",
+      body: ["Usa el SDK de Oberyn para proteger prompts, guardar eventos de auditoria y controlar acciones sensibles dentro de tus aplicaciones."],
+    },
+  ],
 };
+
+function parseInline(text: string): ReactNode[] {
+  const parts = text.split(/(`[^`]+`|\*\*[^*]+\*\*)/g).filter(Boolean);
+  return parts.map((part, index) => {
+    if (part.startsWith("`") && part.endsWith("`")) {
+      return (
+        <code key={`${part}-${index}`} className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[0.92em] font-semibold text-slate-800">
+          {part.slice(1, -1)}
+        </code>
+      );
+    }
+
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return (
+        <strong key={`${part}-${index}`} className="font-bold text-slate-950">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+
+    return <Fragment key={`${part}-${index}`}>{part}</Fragment>;
+  });
+}
+
+function parseMarkdown(markdown: string) {
+  const lines = markdown.replace(/\r\n/g, "\n").split("\n");
+  const blocks: MarkdownBlock[] = [];
+  let paragraph: string[] = [];
+  let list: string[] = [];
+  let code: string[] | null = null;
+  let codeLanguage = "";
+
+  function flushParagraph() {
+    if (!paragraph.length) return;
+    blocks.push({ type: "paragraph", text: paragraph.join(" ") });
+    paragraph = [];
+  }
+
+  function flushList() {
+    if (!list.length) return;
+    blocks.push({ type: "list", items: list });
+    list = [];
+  }
+
+  for (const line of lines) {
+    if (line.startsWith("```")) {
+      if (code) {
+        blocks.push({ type: "code", language: codeLanguage, code: code.join("\n") });
+        code = null;
+        codeLanguage = "";
+      } else {
+        flushParagraph();
+        flushList();
+        code = [];
+        codeLanguage = line.replace("```", "").trim();
+      }
+      continue;
+    }
+
+    if (code) {
+      code.push(line);
+      continue;
+    }
+
+    const trimmed = line.trim();
+    if (!trimmed) {
+      flushParagraph();
+      flushList();
+      continue;
+    }
+
+    const heading = /^(#{1,3})\s+(.+)$/.exec(trimmed);
+    if (heading) {
+      flushParagraph();
+      flushList();
+      blocks.push({ type: "heading", level: heading[1].length, text: heading[2] });
+      continue;
+    }
+
+    if (trimmed.startsWith("- ")) {
+      flushParagraph();
+      list.push(trimmed.slice(2));
+      continue;
+    }
+
+    flushList();
+    paragraph.push(trimmed);
+  }
+
+  flushParagraph();
+  flushList();
+  return blocks;
+}
+
+function MarkdownDoc({ markdown }: { markdown: string }) {
+  const blocks = parseMarkdown(markdown);
+
+  return (
+    <div className="mt-6 space-y-4">
+      {blocks.map((block, index) => {
+        if (block.type === "heading") {
+          if (block.level === 1) {
+            return (
+              <Card key={`${block.text}-${index}`} className="p-7">
+                <h2 className="text-2xl font-bold text-slate-950">{block.text}</h2>
+              </Card>
+            );
+          }
+
+          return (
+            <div key={`${block.text}-${index}`} className={block.level === 2 ? "pt-5" : "pt-2"}>
+              <h2 className={block.level === 2 ? "text-2xl font-bold text-slate-950" : "text-lg font-bold text-slate-950"}>{block.text}</h2>
+            </div>
+          );
+        }
+
+        if (block.type === "paragraph") {
+          return (
+            <p key={`${block.text}-${index}`} className="text-sm leading-7 text-slate-600">
+              {parseInline(block.text)}
+            </p>
+          );
+        }
+
+        if (block.type === "list") {
+          return (
+            <ul key={`list-${index}`} className="space-y-2 rounded-lg border border-slate-200 bg-white p-5 text-sm leading-6 text-slate-700">
+              {block.items.map((item) => (
+                <li key={item} className="flex gap-3">
+                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#008f1f]" />
+                  <span>{parseInline(item)}</span>
+                </li>
+              ))}
+            </ul>
+          );
+        }
+
+        return (
+          <pre key={`code-${index}`} className="overflow-x-auto rounded-lg bg-slate-950 p-5 text-sm leading-6 text-slate-100">
+            <code>{block.code}</code>
+          </pre>
+        );
+      })}
+    </div>
+  );
+}
+
+function GatewayDoc() {
+  return (
+    <div className="mt-6 space-y-5">
+      {gatewayDoc.sections.map((section) => (
+        <Card key={section.title} className="p-6">
+          <h2 className="text-xl font-bold text-slate-950">{section.title}</h2>
+          {section.body.map((paragraph) => (
+            <p key={paragraph} className="mt-3 text-sm leading-6 text-slate-600">
+              {paragraph}
+            </p>
+          ))}
+        </Card>
+      ))}
+    </div>
+  );
+}
 
 export function TechnicalDocsPage() {
   const { topic = "sdk" } = useParams();
-  const doc = docs[topic] ?? docs.sdk;
+  const isGateway = topic === "gateway";
 
   return (
     <main className="min-h-[100dvh] bg-[#fbfcfd] px-4 py-8 sm:px-6">
@@ -106,39 +219,16 @@ export function TechnicalDocsPage() {
               <BookOpen className="h-6 w-6" />
             </span>
             <div>
-              <h1 className="text-3xl font-bold text-slate-950">{doc.title}</h1>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">{doc.description}</p>
-              {topic === "gateway" ? null : (
-                <a href={getDocsRedirectUrl("sdk")} className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[#008f1f]">
-                  Endpoint de redirect
-                  <ExternalLink className="h-4 w-4" />
-                </a>
-              )}
+              <h1 className="text-3xl font-bold text-slate-950">{isGateway ? gatewayDoc.title : "Oberyn SDK"}</h1>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+                {isGateway ? gatewayDoc.description : "Documentacion completa renderizada desde docs/sdk.md. Esta pagina debe reflejar la guia tecnica actual del SDK."}
+              </p>
             </div>
           </div>
         </Card>
 
-        <div className="mt-6 space-y-5">
-          {doc.sections.map((section) => (
-            <Card key={section.title} className="p-6">
-              <h2 className="text-xl font-bold text-slate-950">{section.title}</h2>
-              {section.body.map((paragraph) => (
-                <p key={paragraph} className="mt-3 text-sm leading-6 text-slate-600">
-                  {paragraph}
-                </p>
-              ))}
-              {section.code ? (
-                <pre className="mt-4 overflow-x-auto rounded-lg bg-slate-950 p-4 text-sm leading-6 text-slate-100">
-                  <code>{section.code}</code>
-                </pre>
-              ) : null}
-            </Card>
-          ))}
-        </div>
+        {isGateway ? <GatewayDoc /> : <MarkdownDoc markdown={sdkMarkdown} />}
       </div>
     </main>
   );
 }
-
-
-

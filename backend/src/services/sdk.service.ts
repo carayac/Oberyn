@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { supabaseAdmin } from "../config/supabase.js";
-import { decisionService, normalizeDecision, normalizeRisk } from "./decision.service.js";
+import { containsSensitiveData, decisionService, normalizeDecision, normalizeRisk } from "./decision.service.js";
 
 type SdkEventInput = {
   eventType?: string;
@@ -97,6 +97,58 @@ function normalizeText(value: unknown, fallback: string) {
   return typeof value === "string" && value.trim() ? value.trim() : fallback;
 }
 
+function payloadText(value: unknown) {
+  try {
+    return JSON.stringify(value ?? {}).slice(0, 60_000);
+  } catch {
+    return "";
+  }
+}
+
+function metadataText(metadata?: Record<string, unknown>) {
+  const method = typeof metadata?.method === "string" ? metadata.method : "";
+  const url = typeof metadata?.url === "string" ? metadata.url : "";
+  const status = typeof metadata?.status === "number" ? String(metadata.status) : "";
+  return `${method} ${url} ${status}`;
+}
+
+function amountFromPayload(payload?: Record<string, unknown>) {
+  if (!payload) return 0;
+  for (const key of ["amount", "total", "value", "price", "paymentAmount", "refundAmount"]) {
+    const value = payload[key];
+    if (typeof value === "number") return value;
+    if (typeof value === "string") {
+      const parsed = Number(value.replace(/[^0-9.-]/g, ""));
+      if (Number.isFinite(parsed)) return parsed;
+    }
+  }
+  return 0;
+}
+
+function inferEventRisk(event: SdkEventInput) {
+  if (event.riskLevel) return normalizeRisk(event.riskLevel);
+  const actionName = normalizeText(event.actionName, "unknown_action");
+  const text = `${actionName} ${event.eventType ?? ""} ${metadataText(event.metadata)} ${event.service?.provider ?? ""} ${event.service?.type ?? ""}`;
+  const payload = event.payload ?? {};
+  const amount = amountFromPayload(payload);
+
+  if (containsSensitiveData(payload) || /api[_-]?key|secret|password|token|authorization|cookie|private.?key/i.test(payloadText(payload))) return "critical";
+  if (/delete|drop|truncate|destroy|admin|root|permission|credential|secret|password|token|api[_-]?key|private.?key/i.test(text)) return "critical";
+  if (amount >= 10_000) return "critical";
+  if (/refund|transfer|payout|payment|charge|withdraw|export|send.?email|invite|impersonate/i.test(text)) return "high";
+  if (amount >= 1_000) return "high";
+  if (/post|put|patch|create|update|write|modify|publish|upload/i.test(text)) return "medium";
+  return "low";
+}
+
+function inferEventDecision(event: SdkEventInput) {
+  if (event.decision) return normalizeDecision(event.decision);
+  const status = typeof event.metadata?.status === "number" ? event.metadata.status : undefined;
+  if (typeof status === "number" && status >= 400) return "blocked";
+  if (event.reason) return "blocked";
+  return "approved";
+}
+
 function eventHash(projectId: string, event: SdkEventInput) {
   return crypto.createHash("sha256").update(JSON.stringify({ projectId, event, receivedAt: now() })).digest("hex");
 }
@@ -167,14 +219,11 @@ async function ensureDefaultRules(projectId: string) {
 
 async function findOrCreateIntegration(projectId: string, event: SdkEventInput) {
   const service = inferService(event);
-  const { data: existing, error: existingError } = await supabaseAdmin
-    .from("integrations")
-    .select("*")
-    .eq("project_id", projectId)
-    .eq("provider", service.provider)
-    .eq("name", service.name)
-    .limit(1)
-    .maybeSingle();
+  const baseQuery = supabaseAdmin.from("integrations").select("*").eq("project_id", projectId).eq("provider", service.provider);
+  const { data: existing, error: existingError } =
+    service.provider === "custom"
+      ? await baseQuery.eq("name", service.name).limit(1).maybeSingle()
+      : await baseQuery.order("last_activity_at", { ascending: false, nullsFirst: false }).order("updated_at", { ascending: false }).limit(1).maybeSingle();
   if (existingError) throw existingError;
 
   if (existing) {
@@ -234,10 +283,15 @@ async function ingestResolvedEvent(projectId: string, event: SdkEventInput) {
   await ensureFlow(projectId, String(integration.id), event);
 
   const actionName = normalizeText(event.actionName, "unknown_action");
-  const decision = normalizeDecision(event.decision);
-  const riskLevel = normalizeRisk(event.riskLevel);
+  const decision = inferEventDecision(event);
+  const riskLevel = inferEventRisk(event);
   const metadata = {
     ...(event.metadata ?? {}),
+    oberynBackendInference: {
+      inferred: !event.decision || !event.riskLevel,
+      decision,
+      riskLevel,
+    },
     payloadPreview: event.payload ?? undefined,
     traceparent: event.traceparent ?? undefined,
     sdkReceivedAt: now(),
@@ -284,7 +338,7 @@ function sdkDecisionInput(projectId: string, payload: SdkEventInput) {
     source: "sdk" as const,
     eventType: payload.eventType ?? "sdk_guard",
     actionName: normalizeText(payload.actionName, "unknown_action"),
-    riskLevel: payload.riskLevel,
+    riskLevel: payload.riskLevel ?? inferEventRisk(payload),
     service: payload.service,
     metadata: payload.metadata,
     payload: payload.payload,

@@ -1,11 +1,28 @@
-import { Box, CheckCircle2, FileText, Info, Link2, Lock, ShieldCheck, Sparkles, UserCheck, type LucideIcon } from "lucide-react";
+import { useAuth } from "@clerk/react";
+import { Box, CheckCircle2, FileText, Info, Link2, Lock, SearchCode, ShieldCheck, Sparkles, UserCheck, type LucideIcon } from "lucide-react";
 import { useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { connectionModeLabels, environmentLabels, projectTypeLabels } from "../../components/projects/projectLabels";
 import { useOrganizations } from "../../hooks/useOrganizations";
 import { useProjects } from "../../hooks/useProjects";
+import { apiClient } from "../../lib/api/client";
 import { appRoutes } from "../../routes/routes";
 import type { CreateProjectInput } from "../../types/project";
+
+type DetectionFileInput = {
+  name: string;
+  content: string;
+};
+
+type ApiResponse<T> = {
+  success: boolean;
+  data: T;
+};
+
+type DetectionResult = {
+  findings: Array<{ id: string; name: string; provider: string; serviceType: string; confidence: number }>;
+  integrations: Array<{ id: string; name: string; provider: string }>;
+};
 
 const connectionOptions = [
   { value: "sdk", label: "SDK", description: "Integra usando nuestro SDK oficial.", Icon: Box },
@@ -37,6 +54,7 @@ function slugify(value: string) {
 
 export function NewProjectPage() {
   const navigate = useNavigate();
+  const { getToken } = useAuth();
   const { activeOrganization, isLoading: isLoadingOrganizations } = useOrganizations();
   const { createProject } = useProjects(activeOrganization?.id);
   const [name, setName] = useState("");
@@ -46,8 +64,41 @@ export function NewProjectPage() {
   const [slug, setSlug] = useState("");
   const [isSubmitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [repositoryUrl, setRepositoryUrl] = useState("");
+  const [analysisFiles, setAnalysisFiles] = useState<DetectionFileInput[]>([]);
+  const [analysisSummary, setAnalysisSummary] = useState<string | null>(null);
 
   const generatedSlug = useMemo(() => slug || slugify(name), [name, slug]);
+
+  async function readAnalysisFiles(fileList: FileList | null) {
+    if (!fileList) return;
+    const selectedFiles = Array.from(fileList).slice(0, 40);
+    const files = await Promise.all(
+      selectedFiles.map(async (file) => ({
+        name: file.name,
+        content: (await file.text()).slice(0, 160_000),
+      })),
+    );
+    setAnalysisFiles(files.filter((file) => file.content.trim().length > 0));
+  }
+
+  async function runInitialAnalysis(projectId: string) {
+    if (!activeOrganization?.id) return null;
+    if (!repositoryUrl.trim() && analysisFiles.length === 0) return null;
+
+    const token = await getToken();
+    const response = await apiClient.post<ApiResponse<DetectionResult>>(
+      `/projects/${projectId}/integrations/detect`,
+      {
+        repositoryUrl: repositoryUrl.trim(),
+        files: analysisFiles,
+        commit: true,
+      },
+      token,
+      activeOrganization.id,
+    );
+    return response.data;
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -65,7 +116,21 @@ export function NewProjectPage() {
         riskProfile: "medium",
         defaultPolicyMode: "balanced",
       } satisfies CreateProjectInput);
-      navigate(`/projects/${project.id}`);
+      let analysis: DetectionResult | null = null;
+      try {
+        analysis = await runInitialAnalysis(project.id);
+      } catch (analysisError) {
+        setAnalysisSummary(analysisError instanceof Error ? analysisError.message : "El proyecto se creo, pero no se pudo completar el analisis inicial.");
+        navigate(`/projects/${project.id}/integrations`);
+        return;
+      }
+      if (analysis) {
+        const detected = analysis.integrations.length;
+        setAnalysisSummary(`${detected} integraciones creadas desde el analisis inicial.`);
+        navigate(`/projects/${project.id}/integrations`);
+      } else {
+        navigate(`/projects/${project.id}`);
+      }
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : "No se pudo crear el proyecto.");
     } finally {
@@ -167,6 +232,47 @@ export function NewProjectPage() {
           <section className="border-b border-[#e5e9ef] p-4 sm:p-6">
             <h2 className="flex min-w-0 items-center gap-3 text-[17px] font-extrabold text-[#111827] sm:gap-4 sm:text-[18px]">
               <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#00951d] text-sm text-white">3</span>
+              Analisis inicial de APIs
+            </h2>
+            <p className="mt-2 max-w-3xl text-sm font-medium leading-6 text-[#596783]">
+              Pega el repositorio publico o sube archivos clave para que Oberyn detecte proveedores, modelos, endpoints, variables de entorno y senales de riesgo antes del primer evento del SDK.
+            </p>
+            <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(260px,0.8fr)]">
+              <label className="block">
+                <span className="mb-2 block text-sm font-extrabold text-[#111827]">Repositorio publico</span>
+                <span className="relative block">
+                  <SearchCode className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#596783]" />
+                  <input
+                    value={repositoryUrl}
+                    onChange={(event) => setRepositoryUrl(event.target.value)}
+                    placeholder="https://github.com/tu-org/tu-repo"
+                    className="h-12 w-full rounded-lg border border-[#dce2ea] pl-12 pr-4 outline-none focus:border-[#00951d] focus:ring-4 focus:ring-[#00951d]/10"
+                  />
+                </span>
+              </label>
+              <label className="block">
+                <span className="mb-2 block text-sm font-extrabold text-[#111827]">Archivos clave</span>
+                <input
+                  type="file"
+                  multiple
+                  onChange={(event) => void readAnalysisFiles(event.currentTarget.files)}
+                  className="block w-full rounded-lg border border-dashed border-[#cbd5e1] bg-[#f8fafc] px-4 py-3 text-sm font-semibold text-[#596783] file:mr-4 file:rounded-md file:border-0 file:bg-[#00951d] file:px-4 file:py-2 file:text-sm file:font-extrabold file:text-white"
+                />
+              </label>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-3 text-xs font-bold text-[#596783]">
+              <span className="rounded-md bg-emerald-50 px-3 py-1 text-emerald-700">{analysisFiles.length} archivos preparados</span>
+              <span className="rounded-md bg-slate-100 px-3 py-1">package.json</span>
+              <span className="rounded-md bg-slate-100 px-3 py-1">.env.example</span>
+              <span className="rounded-md bg-slate-100 px-3 py-1">src/services/*</span>
+              <span className="rounded-md bg-slate-100 px-3 py-1">README.md</span>
+            </div>
+            {analysisSummary ? <p className="mt-4 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-bold text-sky-800">{analysisSummary}</p> : null}
+          </section>
+
+          <section className="border-b border-[#e5e9ef] p-4 sm:p-6">
+            <h2 className="flex min-w-0 items-center gap-3 text-[17px] font-extrabold text-[#111827] sm:gap-4 sm:text-[18px]">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#00951d] text-sm text-white">4</span>
               Configuración inicial
             </h2>
             <div className="mt-5 grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr))]">
@@ -184,7 +290,7 @@ export function NewProjectPage() {
 
           <section className="p-4 sm:p-6">
             <h2 className="flex min-w-0 items-center gap-3 text-[17px] font-extrabold text-[#111827] sm:gap-4 sm:text-[18px]">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#00951d] text-sm text-white">4</span>
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#00951d] text-sm text-white">5</span>
               Etiquetas o categoria
             </h2>
             <div className="mt-5 flex flex-wrap gap-4">

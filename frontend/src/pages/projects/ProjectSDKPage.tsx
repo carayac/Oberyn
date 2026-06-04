@@ -1,5 +1,5 @@
 import { useAuth } from "@clerk/react";
-import { BookOpen, CheckCircle2, Code2, Copy, Play, ShieldCheck } from "lucide-react";
+import { BookOpen, CheckCircle2, Code2, Copy, ExternalLink, Play, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Button } from "../../components/ui/Button";
@@ -19,6 +19,12 @@ type SdkConfig = {
   endpoint: string;
   packageName: string;
   storesClientSecrets: boolean;
+};
+
+type TestEventResult = {
+  accepted: boolean;
+  eventId: string;
+  projectId?: string;
 };
 
 function CodeBlock({ code }: { code: string }) {
@@ -44,7 +50,9 @@ export function ProjectSDKPage() {
   const { activeOrganizationId, isLoading: isLoadingOrganizations } = useOrganizations();
   const [config, setConfig] = useState<SdkConfig | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSendingTestEvent, setIsSendingTestEvent] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [testEventResult, setTestEventResult] = useState<TestEventResult | null>(null);
 
   useEffect(() => {
     async function loadConfig() {
@@ -78,18 +86,35 @@ export function ProjectSDKPage() {
       return;
     }
 
+    if (!config) {
+      setMessage("Espera a que Oberyn cargue la clave del proyecto antes de enviar el evento.");
+      return;
+    }
+
+    setIsSendingTestEvent(true);
     setMessage(null);
+    setTestEventResult(null);
     try {
       const token = await getToken();
-      const response = await apiClient.post<ApiResponse<{ accepted: boolean; eventId: string }>>(
+      const response = await apiClient.post<ApiResponse<TestEventResult>>(
         `/projects/${projectId}/sdk/test-event`,
-        { source: "sdk-page", sentAt: new Date().toISOString() },
+        {
+          source: "sdk-page",
+          sentAt: new Date().toISOString(),
+          provider: "oberyn",
+          actionName: "sdk_test_event",
+          environment: "sandbox",
+          userAgent: navigator.userAgent,
+        },
         token,
         activeOrganizationId,
       );
-      setMessage(`Evento recibido: ${response.data.eventId}`);
+      setTestEventResult(response.data);
+      setMessage(response.data.accepted ? "Evento de prueba enviado y registrado en auditoria." : "El backend respondio, pero el evento no fue aceptado.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "No se pudo enviar el evento de prueba.");
+    } finally {
+      setIsSendingTestEvent(false);
     }
   }
 
@@ -113,13 +138,16 @@ export const oberyn = createOberyn({
 });`
     : "";
 
-  const actionSnippet = `await oberyn.protect("crear_reembolso", async () => {
-  return stripe.refunds.create({ payment_intent: paymentIntentId });
-}, {
-  riskLevel: "high",
-  service: { name: "Stripe", provider: "stripe", type: "payments" },
-  payload: { paymentIntentId }
-});`;
+  const actionSnippet = `const refund = await oberyn.proof.guard(
+  {
+    name: "billing.refund.create",
+    category: "payments",
+    target: "stripe",
+    arguments: { paymentIntentId, amount },
+    actor: { id: user.id, role: user.role }
+  },
+  async () => stripe.refunds.create({ payment_intent: paymentIntentId, amount })
+);`;
 
   return (
     <div className="space-y-6">
@@ -138,14 +166,34 @@ export const oberyn = createOberyn({
               Documentación técnica
             </Button>
           </a>
-          <Button onClick={sendTestEvent} disabled={!config || isLoading}>
+          <Button onClick={sendTestEvent} disabled={!config || isLoading || isSendingTestEvent}>
             <Play className="mr-2 h-4 w-4" />
-            Enviar evento de prueba
+            {isSendingTestEvent ? "Enviando..." : "Enviar evento de prueba"}
           </Button>
         </div>
       </header>
 
       {message ? <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">{message}</div> : null}
+      {testEventResult ? (
+        <Card className="border-emerald-200 bg-emerald-50/50">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex gap-3">
+              <CheckCircle2 className="h-6 w-6 shrink-0 text-[#008f1f]" />
+              <div>
+                <h2 className="font-bold text-slate-950">Evento registrado correctamente</h2>
+                <p className="mt-1 break-all text-sm font-semibold text-slate-600">ID: {testEventResult.eventId}</p>
+                <p className="mt-1 text-sm text-slate-600">Este evento crea actividad SDK, una integracion de prueba y un registro auditable para el proyecto.</p>
+              </div>
+            </div>
+            <a href={`/projects/${projectId}/audit`} className="inline-flex">
+              <Button variant="secondary" className="gap-2">
+                Ver auditoria
+                <ExternalLink className="h-4 w-4" />
+              </Button>
+            </a>
+          </div>
+        </Card>
+      ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
         <section className="space-y-6">

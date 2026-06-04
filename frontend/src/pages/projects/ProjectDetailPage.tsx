@@ -1,10 +1,19 @@
+import { useAuth } from "@clerk/react";
 import { ArrowLeft, Bot, CheckCircle2, Cloud, Code2, FileText, Pencil, Plug, Settings, ShieldCheck, Workflow } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ProjectStatusBadge } from "../../components/projects/ProjectStatusBadge";
 import { ProjectTypeBadge } from "../../components/projects/ProjectTypeBadge";
 import { connectionModeLabels, environmentLabels } from "../../components/projects/projectLabels";
 import { useAllProjects } from "../../hooks/useAllProjects";
 import { useOrganizations } from "../../hooks/useOrganizations";
+import { apiClient } from "../../lib/api/client";
+import type { AuditEvent } from "../../types/audit";
+
+type ApiResponse<T> = {
+  success: boolean;
+  data: T;
+};
 
 const moduleCards = [
   { label: "Integraciones", section: "integrations", Icon: Plug, text: "Servicios detectados, conexión SDK y configuración manual." },
@@ -36,11 +45,34 @@ function LoadingProjectDetail() {
 
 export function ProjectDetailPage() {
   const { projectId } = useParams();
+  const { getToken, isLoaded, isSignedIn } = useAuth();
   const { organizations, isLoading: isLoadingOrganizations } = useOrganizations();
   const { projects, isLoading: isLoadingProjects } = useAllProjects(organizations, isLoadingOrganizations);
+  const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
   const project = projects.find((item) => item.id === projectId);
   const organization = organizations.find((item) => item.id === project?.organizationId);
   const isLoading = isLoadingOrganizations || isLoadingProjects;
+  const activityStats = useMemo(() => {
+    const allowed = auditEvents.filter((event) => event.decision === "approved" || event.decision === "allowed").length;
+    const blocked = auditEvents.filter((event) => ["blocked", "denied", "rejected"].includes(event.decision)).length;
+    const latest = auditEvents[0]?.createdAt ?? project?.lastActivityAt ?? null;
+    return {
+      allowed: auditEvents.length ? allowed : project?.allowedActionsCount ?? 0,
+      blocked: auditEvents.length ? blocked : project?.blockedActionsCount ?? 0,
+      latest,
+    };
+  }, [auditEvents, project?.allowedActionsCount, project?.blockedActionsCount, project?.lastActivityAt]);
+
+  useEffect(() => {
+    async function loadAuditEvents() {
+      if (!isLoaded || !isSignedIn || !project?.id) return;
+      const token = await getToken();
+      const response = await apiClient.get<ApiResponse<AuditEvent[]>>(`/projects/${project.id}/audit`, token, project.organizationId);
+      setAuditEvents(response.data);
+    }
+
+    void loadAuditEvents().catch(() => setAuditEvents([]));
+  }, [getToken, isLoaded, isSignedIn, project?.id, project?.organizationId]);
 
   if (isLoading) return <LoadingProjectDetail />;
 
@@ -136,18 +168,18 @@ export function ProjectDetailPage() {
             <div className="rounded-lg bg-[#f8fafc] p-4">
               <FileText className="h-6 w-6 text-[#00951d]" />
               <p className="mt-3 text-sm font-bold text-[#596783]">Permitidas</p>
-              <p className="text-2xl font-extrabold text-[#050505]">{project.allowedActionsCount ?? 0}</p>
+              <p className="text-2xl font-extrabold text-[#050505]">{activityStats.allowed}</p>
             </div>
             <div className="rounded-lg bg-[#f8fafc] p-4">
               <Code2 className="h-6 w-6 text-rose-600" />
               <p className="mt-3 text-sm font-bold text-[#596783]">Bloqueadas</p>
-              <p className="text-2xl font-extrabold text-[#050505]">{project.blockedActionsCount ?? 0}</p>
+              <p className="text-2xl font-extrabold text-[#050505]">{activityStats.blocked}</p>
             </div>
           </div>
           <div className="mt-6 rounded-lg border border-[#dce2ea] bg-[#f8fafc] p-4">
             <p className="text-sm font-bold text-[#596783]">Última actividad</p>
             <p className="mt-1 text-sm font-extrabold text-[#111827]">
-              {project.lastActivityAt ? new Date(project.lastActivityAt).toLocaleString() : "Sin actividad registrada"}
+              {activityStats.latest ? new Date(activityStats.latest).toLocaleString() : "Sin actividad registrada"}
             </p>
           </div>
         </article>

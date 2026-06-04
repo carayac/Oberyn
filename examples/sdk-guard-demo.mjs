@@ -15,9 +15,8 @@ async function dangerousAction() {
 
 try {
   const result = await oberyn.protect("send_sensitive_email", dangerousAction, {
-    riskLevel: "high",
-    service: { name: "Email provider", provider: "custom-email", type: "email" },
     payload: { to: "cliente@example.com", subject: "Cuenta actualizada" },
+    metadata: { channel: "email", template: "account_update" },
   });
 
   console.log("Action executed:", result);

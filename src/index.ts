@@ -18,6 +18,10 @@ export type OberynEvent = {
   service?: OberynService;
   metadata?: Record<string, unknown>;
   payload?: Record<string, unknown>;
+  method?: string;
+  url?: string;
+  statusCode?: number;
+  outcome?: "success" | "failure" | "blocked" | "skipped";
 };
 
 export type OberynProtectOptions = Omit<OberynEvent, "actionName" | "decision"> & {
@@ -57,6 +61,18 @@ export type OberynToolCall = {
   actor?: Record<string, unknown>;
   resource?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
+};
+
+export type OberynApiOptions = {
+  actionName?: string;
+  service?: OberynService;
+  metadata?: Record<string, unknown>;
+  payload?: Record<string, unknown>;
+  actor?: Record<string, unknown>;
+  resource?: Record<string, unknown>;
+  permissions?: string[];
+  protect?: boolean;
+  parseAs?: "json" | "text" | "response";
 };
 
 export type OberynDecision = {
@@ -101,6 +117,7 @@ export type OberynConfig = {
 
 export type OberynClient = {
   capture(event: OberynEvent): void;
+  record(event: OberynEvent): Promise<{ accepted: boolean; projectId: string; eventId: string }>;
   evaluate(event: OberynEvent): Promise<OberynDecision>;
   audit(event: OberynEvent & { decisionId?: string; status?: "completed" | "failed"; response?: unknown; error?: string }): Promise<{ recorded: boolean; eventId: string; decisionId: string }>;
   approvalStatus(input: { decisionId?: string; approvalId?: string }): Promise<OberynApprovalStatus>;
@@ -118,6 +135,10 @@ export type OberynClient = {
   proof: {
     guard<T>(toolCall: OberynToolCall, fn: () => Promise<T> | T, options?: Omit<OberynProtectOptions, "payload" | "riskLevel" | "metadata">): Promise<T>;
     protect<T>(actionName: string, fn: () => Promise<T> | T, options?: OberynProtectOptions): Promise<T>;
+  };
+  api: {
+    fetch(input: RequestInfo | URL, init?: RequestInit, options?: OberynApiOptions): Promise<Response>;
+    request<T = unknown>(input: RequestInfo | URL, init?: RequestInit, options?: OberynApiOptions): Promise<T>;
   };
   gateway(path?: string): { url: string; headers: Record<string, string> };
   stop(): Promise<void>;
@@ -159,7 +180,8 @@ function isWriteMethod(method?: string) {
 
 function inferFetchRisk(input: RequestInfo | URL, init?: RequestInit): OberynRiskLevel {
   const method = init?.method ?? (typeof Request !== "undefined" && input instanceof Request ? input.method : "GET");
-  return isWriteMethod(method) ? "medium" : "low";
+  const url = getUrl(input);
+  return inferRiskLevel({ actionName: `${method} ${url}`, method, url, payload: sanitizePayload(init?.body) });
 }
 
 function getUrl(input: RequestInfo | URL) {
@@ -177,15 +199,136 @@ function getHost(url: string) {
   }
 }
 
+function parsePayloadPreview(value: unknown): Record<string, unknown> {
+  if (!value) return {};
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : { preview: value.slice(0, 500) };
+    } catch {
+      return { preview: value.slice(0, 500) };
+    }
+  }
+  if (typeof URLSearchParams !== "undefined" && value instanceof URLSearchParams) {
+    return Object.fromEntries([...value.entries()].slice(0, 25));
+  }
+  if (typeof FormData !== "undefined" && value instanceof FormData) {
+    return Object.fromEntries([...value.entries()].slice(0, 25).map(([key, item]) => [key, typeof item === "string" ? item : "[FILE]"]));
+  }
+  if (typeof value === "object" && !Array.isArray(value)) return value as Record<string, unknown>;
+  return {};
+}
+
 function sanitizePayload(value: unknown): Record<string, unknown> {
-  if (!value || typeof value !== "object") return {};
-  const source = value as Record<string, unknown>;
+  const source = parsePayloadPreview(value);
   const blocked = ["authorization", "cookie", "password", "secret", "token", "apiKey", "apikey", "key"];
   return Object.fromEntries(
     Object.entries(source)
       .filter(([key]) => !blocked.some((blockedKey) => key.toLowerCase().includes(blockedKey)))
       .slice(0, 25),
   );
+}
+
+function providerFromHost(host: string) {
+  return host
+    .replace(/^www\./, "")
+    .replace(/^api\./, "")
+    .split(".")[0]
+    ?.toLowerCase() || "custom";
+}
+
+function titleCase(value: string) {
+  return value
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase())
+    .trim();
+}
+
+function compactActionName(value: string) {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function actionProvider(actionName: string) {
+  const firstSegment = actionName.split(/[.:/\s]/).find(Boolean);
+  return firstSegment?.toLowerCase() || "custom";
+}
+
+function containsSensitivePayload(payload?: Record<string, unknown>) {
+  if (!payload) return false;
+  return /api[_-]?key|secret|password|token|authorization|cookie|credit.?card|ssn|private.?key/i.test(JSON.stringify(payload).slice(0, 50_000));
+}
+
+function numericAmount(payload?: Record<string, unknown>) {
+  if (!payload) return 0;
+  const candidates = ["amount", "total", "value", "price", "paymentAmount", "refundAmount"];
+  for (const key of candidates) {
+    const value = payload[key];
+    if (typeof value === "number") return value;
+    if (typeof value === "string") {
+      const parsed = Number(value.replace(/[^0-9.-]/g, ""));
+      if (Number.isFinite(parsed)) return parsed;
+    }
+  }
+  return 0;
+}
+
+function inferEventType(event: Partial<OberynEvent>) {
+  if (event.eventType) return event.eventType;
+  const actionName = event.actionName ?? "";
+  if (event.url || event.method || /^(GET|POST|PUT|PATCH|DELETE)\s/i.test(actionName)) return "http_request";
+  if (/prompt|completion|chat|llm|model/i.test(actionName)) return "llm_call";
+  if (/tool|function|guard/i.test(actionName)) return "tool_call";
+  if (/completed|started|finished|failed/i.test(actionName)) return "application_event";
+  return "sdk_event";
+}
+
+function inferService(event: Partial<OberynEvent>, defaultService?: OberynService): OberynService {
+  const url = event.url ?? (typeof event.metadata?.url === "string" ? event.metadata.url : "");
+  const host = url ? getHost(url) : "";
+  const provider = event.service?.provider ?? defaultService?.provider ?? (host ? providerFromHost(host) : actionProvider(event.actionName ?? ""));
+  const eventType = inferEventType(event);
+  const serviceType =
+    event.service?.type ??
+    defaultService?.type ??
+    (eventType === "http_request" ? "api" : eventType === "llm_call" ? "llm" : eventType === "tool_call" ? "tool" : "application");
+
+  return {
+    ...defaultService,
+    ...event.service,
+    provider,
+    name: event.service?.name ?? defaultService?.name ?? (provider === "custom" ? "Aplicacion" : titleCase(provider)),
+    type: serviceType,
+    method: event.service?.method ?? defaultService?.method ?? "sdk",
+  };
+}
+
+function inferRiskLevel(event: Partial<OberynEvent>): OberynRiskLevel {
+  if (event.riskLevel) return event.riskLevel;
+
+  const actionName = event.actionName ?? "";
+  const method = (event.method ?? (typeof event.metadata?.method === "string" ? event.metadata.method : "")).toUpperCase();
+  const text = `${actionName} ${method} ${event.url ?? ""} ${event.service?.provider ?? ""} ${event.service?.type ?? ""}`;
+  const payload = event.payload ?? sanitizePayload(event.metadata?.payloadPreview);
+  const amount = numericAmount(payload);
+
+  if (containsSensitivePayload(payload)) return "critical";
+  if (/delete|drop|truncate|destroy|admin|root|permission|credential|secret|password|token|api[_-]?key|private.?key/i.test(text)) return "critical";
+  if (amount >= 10_000) return "critical";
+  if (/refund|transfer|payout|payment|charge|withdraw|export|send.?email|invite|impersonate/i.test(text)) return "high";
+  if (method === "DELETE") return "high";
+  if (amount >= 1_000) return "high";
+  if (isWriteMethod(method) || /create|update|write|post|patch|put|modify|publish|upload/i.test(text)) return "medium";
+  if (/read|lookup|get|list|search|fetch|completed|health|heartbeat/i.test(text)) return "low";
+  return "low";
+}
+
+function inferDecision(event: Partial<OberynEvent>): OberynDecisionStatus {
+  if (event.decision) return event.decision;
+  if (event.outcome === "blocked" || event.outcome === "failure") return "blocked";
+  const status = event.statusCode ?? (typeof event.metadata?.status === "number" ? event.metadata.status : undefined);
+  if (typeof status === "number" && status >= 400) return "blocked";
+  if (typeof event.reason === "string" && event.reason) return "blocked";
+  return "approved";
 }
 
 function sdkBase(endpoint: string) {
@@ -249,16 +392,58 @@ export function createOberyn(config: OberynConfig): OberynClient {
   let originalFetch: typeof fetch | null = null;
   let stopped = false;
 
-  async function request<T>(path: string, body: unknown): Promise<T> {
-    const response = await fetch(`${sdkBase(endpoint)}${path}`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-oberyn-key": config.apiKey,
+  function enrichEvent(event: OberynEvent): OberynEvent & { traceparent: string; capturedAt: string } {
+    const url = event.url ?? (typeof event.metadata?.url === "string" ? event.metadata.url : undefined);
+    const method = event.method ?? (typeof event.metadata?.method === "string" ? event.metadata.method : undefined);
+    const payload = sanitizePayload(event.payload ?? event.metadata?.payloadPreview);
+    const service = inferService({ ...event, url, method, payload }, config.service);
+    const riskLevel = inferRiskLevel({ ...event, service, url, method, payload });
+    const decision = inferDecision(event);
+    const eventType = inferEventType({ ...event, url, method });
+
+    return {
+      ...event,
+      eventType,
+      decision,
+      riskLevel,
+      service,
+      payload: Object.keys(payload).length ? payload : event.payload,
+      method,
+      url,
+      metadata: {
+        environment: config.environment,
+        ...(event.metadata ?? {}),
+        oberyn: {
+          inferred: true,
+          sdkVersion: "0.1.0",
+          eventType,
+          decision,
+          riskLevel,
+          serviceProvider: service.provider,
+        },
       },
-      body: JSON.stringify(body),
-      keepalive: true,
-    });
+      traceparent: createTraceparent(),
+      capturedAt: new Date().toISOString(),
+    };
+  }
+
+  async function request<T>(path: string, body: unknown): Promise<T> {
+    const url = `${sdkBase(endpoint)}${path}`;
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-oberyn-key": config.apiKey,
+        },
+        body: JSON.stringify(body),
+        keepalive: true,
+      });
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : "fetch failed";
+      throw new Error(`Oberyn SDK could not reach ${url}. Check that the backend is running and OBERYN_SDK_ENDPOINT is correct. ${reason}`);
+    }
     const payload = await response.json().catch(() => null);
     if (!response.ok || !payload?.success) throw new Error(payload?.error?.message ?? `Oberyn request failed with status ${response.status}`);
     return payload.data as T;
@@ -302,32 +487,38 @@ export function createOberyn(config: OberynConfig): OberynClient {
 
   function capture(event: OberynEvent) {
     if (stopped) return;
-    queue.push({
-      ...event,
-      eventType: event.eventType ?? "sdk_event",
-      decision: event.decision ?? "approved",
-      riskLevel: event.riskLevel ?? "low",
-      service: { ...config.service, ...event.service },
-      metadata: { environment: config.environment, ...(event.metadata ?? {}) },
-      traceparent: createTraceparent(),
-      capturedAt: new Date().toISOString(),
-    });
+    queue.push(enrichEvent(event));
 
     if (queue.length >= batchSize) void flush();
   }
 
+  async function record(event: OberynEvent) {
+    return request<{ accepted: boolean; projectId: string; eventId: string }>("/events", enrichEvent(event));
+  }
+
   async function evaluate(event: OberynEvent) {
+    const payload = sanitizePayload(event.payload ?? event.metadata?.payloadPreview);
+    const service = inferService({ ...event, payload }, config.service);
     return request<OberynDecision>("/evaluate", {
       ...event,
-      service: { ...config.service, ...event.service },
+      eventType: inferEventType(event),
+      riskLevel: inferRiskLevel({ ...event, service, payload }),
+      service,
+      payload: Object.keys(payload).length ? payload : event.payload,
       metadata: { environment: config.environment, ...(event.metadata ?? {}) },
     });
   }
 
   async function audit(event: OberynEvent & { decisionId?: string; status?: "completed" | "failed"; response?: unknown; error?: string }) {
+    const payload = sanitizePayload(event.payload ?? event.metadata?.payloadPreview);
+    const service = inferService({ ...event, payload }, config.service);
     return request<{ recorded: boolean; eventId: string; decisionId: string }>("/audit", {
       ...event,
-      service: { ...config.service, ...event.service },
+      eventType: inferEventType(event),
+      decision: event.decision ?? (event.status === "failed" ? "blocked" : "approved"),
+      riskLevel: inferRiskLevel({ ...event, service, payload }),
+      service,
+      payload: Object.keys(payload).length ? payload : event.payload,
       metadata: { environment: config.environment, ...(event.metadata ?? {}) },
     });
   }
@@ -336,18 +527,148 @@ export function createOberyn(config: OberynConfig): OberynClient {
     return request<OberynApprovalStatus>("/approval-status", input);
   }
 
+  async function ensureDecisionAllows(decision: OberynDecision) {
+    if (decision.decision === "blocked") throw new OberynBlockedError(decision);
+    if (decision.decision !== "requires_approval") return;
+
+    if (approvalMode !== "poll") throw new OberynApprovalRequiredError(decision);
+
+    const startedAt = Date.now();
+    while (Date.now() - startedAt < approvalTimeoutMs) {
+      const status = await approvalStatus({ decisionId: decision.id, approvalId: decision.approvalId ?? undefined });
+      if (status.approved) return;
+      if (status.rejected) throw new OberynBlockedError({ ...decision, reason: status.reason ?? "La aprobacion fue rechazada." });
+      await sleep(approvalPollIntervalMs);
+    }
+
+    throw new OberynApprovalRequiredError(decision);
+  }
+
+  function httpActionName(input: RequestInfo | URL, init?: RequestInit, options: OberynApiOptions = {}) {
+    if (options.actionName) return options.actionName;
+    const url = getUrl(input);
+    const method = init?.method ?? (typeof Request !== "undefined" && input instanceof Request ? input.method : "GET");
+    try {
+      const parsed = new URL(url);
+      const path = parsed.pathname === "/" ? "" : parsed.pathname.replace(/\/\d+(\b|\/)/g, "/:id$1");
+      return compactActionName(`${method.toUpperCase()} ${parsed.hostname}${path}`);
+    } catch {
+      return compactActionName(`${method.toUpperCase()} ${url}`);
+    }
+  }
+
+  function httpEvent(input: RequestInfo | URL, init?: RequestInit, options: OberynApiOptions = {}): OberynEvent {
+    const url = getUrl(input);
+    const method = init?.method ?? (typeof Request !== "undefined" && input instanceof Request ? input.method : "GET");
+    const payload = { ...sanitizePayload(init?.body), ...(options.payload ?? {}) };
+    const service = inferService(
+      {
+        actionName: options.actionName ?? httpActionName(input, init, options),
+        eventType: "http_request",
+        method,
+        url,
+        payload,
+        service: options.service,
+      },
+      config.service,
+    );
+
+    return {
+      eventType: "http_request",
+      actionName: httpActionName(input, init, options),
+      method,
+      url,
+      service,
+      riskLevel: inferRiskLevel({ actionName: options.actionName ?? httpActionName(input, init, options), method, url, service, payload }),
+      payload,
+      metadata: {
+        ...(options.metadata ?? {}),
+        actor: options.actor,
+        resource: options.resource,
+        permissions: options.permissions,
+      },
+    };
+  }
+
+  async function apiFetch(input: RequestInfo | URL, init?: RequestInit, options: OberynApiOptions = {}) {
+    const event = httpEvent(input, init, options);
+    const startedAt = performance.now();
+    let decision: OberynDecision | null = null;
+
+    if (options.protect !== false) {
+      try {
+        decision = await evaluate(event);
+        await ensureDecisionAllows(decision);
+      } catch (error) {
+        if (error instanceof OberynBlockedError || error instanceof OberynApprovalRequiredError) {
+          throw error;
+        }
+        if (failMode === "open") {
+          capture({ ...event, outcome: "failure", reason: error instanceof Error ? error.message : "Oberyn evaluation failed", metadata: { ...(event.metadata ?? {}), failMode: "open" } });
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    const fetchImpl = originalFetch ?? fetch.bind(globalThis);
+    try {
+      const response = await fetchImpl(input, init);
+      await audit({
+        ...event,
+        decisionId: decision?.id,
+        decision: response.ok ? decision?.decision ?? "approved" : "blocked",
+        status: response.ok ? "completed" : "failed",
+        response: { status: response.status, statusText: response.statusText, url: response.url },
+        metadata: {
+          ...(event.metadata ?? {}),
+          status: response.status,
+          durationMs: Math.round(performance.now() - startedAt),
+        },
+      }).catch(() => undefined);
+      return response;
+    } catch (error) {
+      await audit({
+        ...event,
+        decisionId: decision?.id,
+        decision: "blocked",
+        status: "failed",
+        error: error instanceof Error ? error.message : "HTTP request failed",
+        metadata: { ...(event.metadata ?? {}), durationMs: Math.round(performance.now() - startedAt) },
+      }).catch(() => undefined);
+      throw error;
+    }
+  }
+
+  async function apiRequest<T = unknown>(input: RequestInfo | URL, init?: RequestInit, options: OberynApiOptions = {}) {
+    const response = await apiFetch(input, init, options);
+    const parseAs = options.parseAs ?? "json";
+    if (parseAs === "response") return response as T;
+    if (!response.ok) {
+      const errorPayload = await response.clone().json().catch(async () => response.clone().text().catch(() => ""));
+      const message =
+        typeof errorPayload === "object" && errorPayload && "error" in errorPayload
+          ? JSON.stringify((errorPayload as Record<string, unknown>).error)
+          : typeof errorPayload === "string" && errorPayload
+            ? errorPayload
+            : `Provider request failed with status ${response.status}`;
+      throw new Error(message);
+    }
+    if (parseAs === "text") return (await response.text()) as T;
+    return (await response.json()) as T;
+  }
+
   async function track<T>(actionName: string, fn: () => Promise<T> | T, options: Omit<OberynEvent, "actionName" | "decision"> = {}) {
     const startedAt = performance.now();
     try {
       const result = await fn();
-      capture({ ...options, actionName, decision: "approved", metadata: { ...(options.metadata ?? {}), durationMs: Math.round(performance.now() - startedAt) } });
+      capture({ ...options, actionName, outcome: "success", metadata: { ...(options.metadata ?? {}), durationMs: Math.round(performance.now() - startedAt) } });
       return result;
     } catch (error) {
       capture({
         ...options,
         actionName,
-        decision: "blocked",
-        riskLevel: options.riskLevel ?? "high",
+        outcome: "failure",
         reason: error instanceof Error ? error.message : "Action failed",
         metadata: { ...(options.metadata ?? {}), durationMs: Math.round(performance.now() - startedAt) },
       });
@@ -359,9 +680,9 @@ export function createOberyn(config: OberynConfig): OberynClient {
     const { dryRun, actor, resource, permissions, metadata, ...eventOptions } = options;
     const event = {
       eventType: "sdk_guard",
-      riskLevel: "high" as OberynRiskLevel,
       ...eventOptions,
       actionName,
+      riskLevel: eventOptions.riskLevel ?? inferRiskLevel({ ...eventOptions, actionName, payload: eventOptions.payload }),
       metadata: { ...(metadata ?? {}), actor, resource, permissions },
     };
     let decision: OberynDecision;
@@ -373,21 +694,7 @@ export function createOberyn(config: OberynConfig): OberynClient {
       throw error;
     }
 
-    if (decision.decision === "blocked") throw new OberynBlockedError(decision);
-    if (decision.decision === "requires_approval") {
-      if (approvalMode !== "poll") throw new OberynApprovalRequiredError(decision);
-
-      const startedAt = Date.now();
-      while (Date.now() - startedAt < approvalTimeoutMs) {
-        const status = await approvalStatus({ decisionId: decision.id, approvalId: decision.approvalId ?? undefined });
-        if (status.approved) break;
-        if (status.rejected) throw new OberynBlockedError({ ...decision, reason: status.reason ?? "La aprobación fue rechazada." });
-        await sleep(approvalPollIntervalMs);
-      }
-
-      const finalStatus = await approvalStatus({ decisionId: decision.id, approvalId: decision.approvalId ?? undefined });
-      if (!finalStatus.approved) throw new OberynApprovalRequiredError(decision);
-    }
+    await ensureDecisionAllows(decision);
 
     try {
       let dryRunResult: unknown;
@@ -431,8 +738,7 @@ export function createOberyn(config: OberynConfig): OberynClient {
 
   async function protectPrompt<T>(input: OberynPromptInput, fn: (safePrompt: string) => Promise<T> | T) {
     const inspection = await inspectPrompt(input);
-    if (inspection.decision.decision === "blocked") throw new OberynBlockedError(inspection.decision);
-    if (inspection.decision.decision === "requires_approval") throw new OberynApprovalRequiredError(inspection.decision);
+    await ensureDecisionAllows(inspection.decision);
 
     try {
       const result = await fn(inspection.maskedPrompt);
@@ -461,11 +767,12 @@ export function createOberyn(config: OberynConfig): OberynClient {
   }
 
   async function guardTool<T>(toolCall: OberynToolCall, fn: () => Promise<T> | T, options: Omit<OberynProtectOptions, "payload" | "riskLevel" | "metadata"> = {}) {
+    const service = { name: toolCall.target ?? "Tool", provider: toolCall.target ?? "custom", type: toolCall.category ?? "tool", method: "sdk" as const };
     return protect(toolCall.name, fn, {
       ...options,
       eventType: "oberyn_tool_call",
-      riskLevel: toolCall.riskLevel ?? "medium",
-      service: { name: toolCall.target ?? "Tool", provider: toolCall.target ?? "custom", type: toolCall.category ?? "tool", method: "sdk" },
+      riskLevel: toolCall.riskLevel ?? inferRiskLevel({ actionName: toolCall.name, service, payload: toolCall.arguments }),
+      service,
       actor: toolCall.actor,
       resource: toolCall.resource,
       metadata: { toolCategory: toolCall.category, target: toolCall.target, ...(toolCall.metadata ?? {}) },
@@ -502,9 +809,10 @@ export function createOberyn(config: OberynConfig): OberynClient {
         capture({
           eventType: "http_request",
           actionName: `${method.toUpperCase()} ${serviceProvider}`,
-          decision: response && response.ok ? "approved" : "blocked",
-          riskLevel: config.fetchRisk?.(input, init) ?? inferFetchRisk(input, init),
-          service: { name: serviceProvider, provider: serviceProvider, type: "api", method: "sdk" },
+          riskLevel: config.fetchRisk?.(input, init),
+          method,
+          url,
+          statusCode: response?.status,
           metadata: {
             url,
             method,
@@ -518,10 +826,10 @@ export function createOberyn(config: OberynConfig): OberynClient {
         capture({
           eventType: "http_request",
           actionName: `${method.toUpperCase()} ${serviceProvider}`,
-          decision: "blocked",
-          riskLevel: "high",
+          outcome: "failure",
           reason: error instanceof Error ? error.message : "Fetch failed",
-          service: { name: serviceProvider, provider: serviceProvider, type: "api", method: "sdk" },
+          method,
+          url,
           metadata: { url, method, durationMs: Math.round(performance.now() - startedAt) },
         });
         throw error;
@@ -534,6 +842,7 @@ export function createOberyn(config: OberynConfig): OberynClient {
 
   return {
     capture,
+    record,
     evaluate,
     audit,
     approvalStatus,
@@ -551,6 +860,10 @@ export function createOberyn(config: OberynConfig): OberynClient {
     proof: {
       guard: guardTool,
       protect,
+    },
+    api: {
+      fetch: apiFetch,
+      request: apiRequest,
     },
     gateway,
     async stop() {
