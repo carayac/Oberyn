@@ -7,7 +7,7 @@ Run these files in order:
 
 For an existing Supabase project that already has the base schema, run the migration files in `database/migrations` in numeric order instead of re-running `schema.sql`.
 
-PayGuard tables are added by `database/migrations/006_payguard.sql`.
+PayGuard tables are added by `database/migrations/006_payguard.sql`. `database/migrations/007_remove_payguard_demo_seed.sql` removes the old demo PayGuard seed rows if they were inserted before mock fallback was removed. `database/migrations/008_require_real_payguard_tokens.sql` removes token defaults so every wallet/request must carry the real token selected by the project.
 
 No seed data is included. Organizations, projects, integrations and rules must be created through the authenticated app/API so the workspace only contains real user data.
 

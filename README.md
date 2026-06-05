@@ -215,6 +215,7 @@ For an existing Supabase project, run migrations in order and include:
 
 ```txt
 database/migrations/006_payguard.sql
+database/migrations/007_remove_payguard_demo_seed.sql
 ```
 
 ### Configure frontend
@@ -243,6 +244,8 @@ Backend:  http://localhost:4000
 
 PayGuard lets AI agents create payment requests while keeping execution behind policy checks, audit logs, and human approval.
 
+Technical guide: `docs/payguard.md`.
+
 Core rule:
 
 ```txt
@@ -252,11 +255,13 @@ The agent proposes. The human approves. Oberyn executes on-chain.
 How to test locally:
 
 1. Start the app with `npm run dev`.
-2. Open a project and go to `Project > PayGuard`.
-3. Use the default demo agent and verified demo wallet to create a payment request.
-4. Amounts up to 1000 USDC become `pending_approval`; amounts over 1000 USDC become `requires_multi_approval`; blocked agents or unverified wallets become `blocked`.
-5. Approve a pending request, then run `Crear escrow`, `Fund`, and `Release`.
-6. Review the audit panel for `PAYMENT_REQUEST_CREATED`, `POLICY_EVALUATED`, `HUMAN_APPROVED`, `ESCROW_CREATED`, `ESCROW_FUNDED`, and `PAYMENT_RELEASED`.
+2. Apply `database/migrations/006_payguard.sql` and `database/migrations/007_remove_payguard_demo_seed.sql` in the connected Supabase project.
+3. Open a project and go to `Project > PayGuard`.
+4. Use `Configuracion PayGuard` to create a real payment agent and register a real verified Stellar wallet.
+5. Create a payment request with that real verified wallet and token.
+6. Amounts up to 1000 units of the configured token become `pending_approval`; amounts over 1000 become `requires_multi_approval`; blocked agents or unverified wallets become `blocked`.
+7. Approve a pending request, then run `Crear escrow`, `Fund`, and `Release` only when Trustless Work is configured in `live`.
+8. Review the audit panel for `PAYMENT_REQUEST_CREATED`, `POLICY_EVALUATED`, `HUMAN_APPROVED`, `ESCROW_CREATED`, `ESCROW_FUNDED`, and `PAYMENT_RELEASED`.
 
 Agents can also create payment requests through the SDK:
 
@@ -269,9 +274,9 @@ const request = await oberyn.payguard.requestPayment({
   agentId: agent!.id,
   recipientName: wallet!.recipientName,
   recipientWallet: wallet!.walletAddress,
-  amount: 250,
-  token: "USDC",
-  reason: "Invoice #1842",
+  amount: Number(process.env.PAYGUARD_AMOUNT),
+  token: wallet!.token,
+  reason: process.env.PAYGUARD_REASON!,
   riskLevel: "medium"
 });
 ```
@@ -282,16 +287,16 @@ Mock mode:
 
 - `TRUSTLESS_WORK_MODE=mock` is the default.
 - If Trustless Work API key, Stellar role public keys, signer secret, or USDC issuer are missing, PayGuard stays in mock mode.
-- Mock mode simulates escrow IDs, transaction hashes, funding, release, and status checks.
-- The frontend shows a `Trustless Work Mock Mode` badge.
+- Mock mode reports that Trustless Work is not ready and blocks escrow/fund/release operations instead of simulating contract IDs or transaction hashes.
+- The frontend shows a `Trustless Work Mock Mode` badge and disables on-chain actions.
 
 Production connection:
 
 - Store `TRUSTLESS_WORK_API_KEY` only in `backend/.env`.
 - Configure `TRUSTLESS_WORK_MODE=live`.
 - Configure the Stellar signer and role public keys used by Trustless Work: signer, approver, platform address, release signer, dispute resolver, and USDC issuer.
-- Apply `database/migrations/006_payguard.sql`.
-- Replace demo trusted wallets with verified recipient wallets for the project.
+- Apply `database/migrations/006_payguard.sql` and `database/migrations/007_remove_payguard_demo_seed.sql`.
+- Configure verified recipient wallets for the project.
 - Decide whether Oberyn signs Trustless Work XDR server-side after human approval or whether a wallet-signing step should be added for non-custodial customer signing.
 
 ## SDK Mini Project

@@ -25,11 +25,22 @@ loadEnvFile(join(currentDir, ".env"));
 loadEnvFile(resolve(currentDir, "..", ".env"));
 loadEnvFile(resolve(currentDir, "..", "..", ".env"));
 
+function requiredEnv(name) {
+  const value = process.env[name]?.trim();
+  if (!value) throw new Error(`Set ${name} in examples/sdk-mini-api/.env or examples/.env before running this demo.`);
+  return value;
+}
+
+function optionalEnv(name) {
+  const value = process.env[name]?.trim();
+  return value || undefined;
+}
+
 const oberyn = createOberyn({
-  apiKey: process.env.OBERYN_SDK_KEY ?? "ob_pk_7e341bb721212d08c7df97cf4482ce4240f0dc75bb8a852f",
+  apiKey: requiredEnv("OBERYN_SDK_KEY"),
   endpoint: process.env.OBERYN_SDK_ENDPOINT ?? "http://localhost:4000/api/sdk/events",
   service: {
-    name: "sdk-mini-api-demo",
+    name: process.env.OBERYN_SERVICE_NAME ?? "sdk-mini-api-demo",
     provider: "custom",
     type: "demo-app",
   },
@@ -158,15 +169,22 @@ function envNumber(name, fallback) {
   return Number.isFinite(value) && value > 0 ? value : fallback;
 }
 
+function requiredEnvNumber(name) {
+  const rawValue = requiredEnv(name);
+  const value = Number(rawValue);
+  if (!Number.isFinite(value) || value <= 0) throw new Error(`${name} must be a positive number.`);
+  return value;
+}
+
 function shortHash(value) {
   if (!value) return "pending";
   return value.length > 18 ? `${value.slice(0, 8)}...${value.slice(-6)}` : value;
 }
 
 async function runPayGuardDemo() {
-  if (process.env.OBERYN_RUN_PAYGUARD_DEMO === "0") {
+  if (process.env.OBERYN_RUN_PAYGUARD_DEMO !== "1") {
     console.log("\nPayGuard demo skipped");
-    console.log("Set OBERYN_RUN_PAYGUARD_DEMO=1 or remove the variable to enable it.");
+    console.log("Set OBERYN_RUN_PAYGUARD_DEMO=1 and real PayGuard env values to enable it.");
     return null;
   }
 
@@ -174,32 +192,34 @@ async function runPayGuardDemo() {
   console.log("Loading real PayGuard agents and trusted wallets from the dashboard project...");
 
   const config = await oberyn.payguard.config();
-  const agent =
-    config.agents.find((item) => item.id === process.env.OBERYN_PAYGUARD_AGENT_ID) ??
-    config.agents.find((item) => item.status === "active" && item.canCreatePaymentRequest && !item.canExecutePayment) ??
-    config.agents[0];
-  const wallet =
-    config.trustedWallets.find((item) => item.walletAddress === process.env.OBERYN_PAYGUARD_RECIPIENT_WALLET) ??
-    config.trustedWallets[0];
+  const agentId = optionalEnv("OBERYN_PAYGUARD_AGENT_ID");
+  const recipientWallet = optionalEnv("OBERYN_PAYGUARD_RECIPIENT_WALLET");
+  const selectableAgents = config.agents.filter((item) => item.status === "active" && item.canCreatePaymentRequest);
+  const selectableWallets = config.trustedWallets.filter((item) => item.isVerified);
+  const agent = agentId ? selectableAgents.find((item) => item.id === agentId) : selectableAgents[0];
+  const wallet = recipientWallet ? selectableWallets.find((item) => item.walletAddress === recipientWallet) : selectableWallets[0];
 
   if (!agent) {
-    throw new Error("No PayGuard payment agent is available for this project. Open Project > PayGuard to seed or create one.");
+    throw new Error("No real active PayGuard agent can create payment requests for this project. Create one in the dashboard or run npm run payguard:setup with real values.");
   }
 
   if (!wallet) {
-    throw new Error("No verified PayGuard wallet is available for this project. Open Project > PayGuard and add a trusted wallet.");
+    throw new Error("No real verified PayGuard wallet exists for this project. Add one in the dashboard or run npm run payguard:setup with a real Stellar wallet.");
   }
 
-  const defaultAmount = Math.min(75, Number(agent.maxAmount || 75));
-  const amount = envNumber("OBERYN_PAYGUARD_AMOUNT", defaultAmount);
+  const amount = requiredEnvNumber("OBERYN_PAYGUARD_AMOUNT");
+  const reason = requiredEnv("OBERYN_PAYGUARD_REASON");
+  const token = optionalEnv("OBERYN_PAYGUARD_TOKEN") ?? wallet.token;
+  if (!token) throw new Error("Set OBERYN_PAYGUARD_TOKEN or configure a token on the selected trusted wallet.");
+
   const paymentRequest = await oberyn.payguard.requestPayment({
     agentId: agent.id,
-    recipientName: process.env.OBERYN_PAYGUARD_RECIPIENT_NAME ?? wallet.recipientName,
-    recipientWallet: process.env.OBERYN_PAYGUARD_RECIPIENT_WALLET ?? wallet.walletAddress,
+    recipientName: optionalEnv("OBERYN_PAYGUARD_RECIPIENT_NAME") ?? wallet.recipientName,
+    recipientWallet: wallet.walletAddress,
     amount,
-    token: process.env.OBERYN_PAYGUARD_TOKEN ?? wallet.token ?? "USDC",
-    reason: process.env.OBERYN_PAYGUARD_REASON ?? `SDK PayGuard demo ${new Date().toISOString()}`,
-    riskLevel: process.env.OBERYN_PAYGUARD_RISK_LEVEL ?? "medium",
+    token,
+    reason,
+    ...(optionalEnv("OBERYN_PAYGUARD_RISK_LEVEL") ? { riskLevel: optionalEnv("OBERYN_PAYGUARD_RISK_LEVEL") } : {}),
   });
 
   console.log("PayGuard request created from SDK");

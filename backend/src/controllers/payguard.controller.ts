@@ -8,6 +8,8 @@ function actorId(res: Response) {
 
 export const payguardController = {
   summary: async (req: Request, res: Response) => res.json(ok(await payguardService.summary(req.params.projectId))),
+  createAgent: async (req: Request, res: Response) => res.status(201).json(created(await payguardService.createAgent(req.params.projectId, req.body))),
+  upsertTrustedWallet: async (req: Request, res: Response) => res.status(201).json(created(await payguardService.upsertTrustedWallet(req.params.projectId, req.body))),
   createPaymentRequest: async (req: Request, res: Response) => res.status(201).json(created(await payguardService.createPaymentRequest(req.params.projectId, req.body))),
   approve: async (req: Request, res: Response) => res.json(ok(await payguardService.approve(req.params.projectId, req.params.paymentRequestId, actorId(res)))),
   reject: async (req: Request, res: Response) => res.json(ok(await payguardService.reject(req.params.projectId, req.params.paymentRequestId, actorId(res)))),

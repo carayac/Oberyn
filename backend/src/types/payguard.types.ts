@@ -113,3 +113,18 @@ export type PayGuardSummary = {
   auditLogs: PaymentAuditLog[];
   trustlessWork: TrustlessWorkIntegrationStatus;
 };
+
+export type PayGuardAgentInput = {
+  name: string;
+  status?: PaymentAgentStatus;
+  riskLevel: PaymentRiskLevel;
+  maxAmount: number;
+  canCreatePaymentRequest?: boolean;
+};
+
+export type TrustedWalletInput = {
+  recipientName: string;
+  walletAddress: string;
+  token: string;
+  isVerified?: boolean;
+};

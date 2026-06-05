@@ -1,9 +1,11 @@
 import crypto from "node:crypto";
+import { Keypair } from "@stellar/stellar-sdk";
 import { supabaseAdmin } from "../config/supabase.js";
 import { payguardPolicyEngine } from "./payguardPolicyEngine.service.js";
 import { trustlessWorkAdapter } from "./trustlessWorkAdapter.service.js";
 import type {
   PayGuardSummary,
+  PayGuardAgentInput,
   PaymentActorType,
   PaymentAgent,
   PaymentAgentStatus,
@@ -14,6 +16,7 @@ import type {
   PaymentRequestStatus,
   PaymentRiskLevel,
   TrustedWallet,
+  TrustedWalletInput,
 } from "../types/payguard.types.js";
 
 type CreatePaymentRequestInput = {
@@ -26,9 +29,10 @@ type CreatePaymentRequestInput = {
   riskLevel?: string;
 };
 
-const mockStores = new Map<string, PayGuardSummary>();
-const mockTrustedWallet = "GDEMOAPPROVEDPAYGUARDWALLET000000000000000000000000";
 const systemActorId = "oberyn-payguard";
+const legacyDemoAgentNames = ["PayOps Analyst", "Treasury Copilot", "Blocked Payout Bot"];
+const legacyDemoWalletAddress = "GDEMOAPPROVEDPAYGUARDWALLET000000000000000000000000";
+const legacyDemoWalletName = "Proveedor verificado demo";
 
 function now() {
   return new Date().toISOString();
@@ -97,6 +101,23 @@ function isPayGuardTableMissing(error: unknown) {
   return detail?.code === "42P01" || detail?.code === "PGRST205" || /payment_agents|payment_requests|payment_audit_logs|payment_approvals|trusted_wallets|schema cache|does not exist/i.test(text);
 }
 
+function throwPayGuardConnectionError(error: unknown): never {
+  if (!isPayGuardTableMissing(error)) throw error;
+
+  const connectionError = new Error("PayGuard no esta conectado a las tablas reales de Supabase. Aplica database/migrations/006_payguard.sql y reinicia el backend antes de probar.");
+  (connectionError as Error & { status?: number; code?: string }).status = 503;
+  (connectionError as Error & { status?: number; code?: string }).code = "PAYGUARD_SCHEMA_MISSING";
+  throw connectionError;
+}
+
+async function withPayGuardConnection<T>(operation: () => Promise<T>): Promise<T> {
+  try {
+    return await operation();
+  } catch (error) {
+    throwPayGuardConnectionError(error);
+  }
+}
+
 function actionHash(input: unknown) {
   return crypto.createHash("sha256").update(JSON.stringify(input)).digest("hex");
 }
@@ -124,7 +145,7 @@ function toTrustedWallet(row: Record<string, unknown>): TrustedWallet {
     recipientName: String(row.recipient_name),
     walletAddress: String(row.wallet_address),
     isVerified: Boolean(row.is_verified),
-    token: String(row.token ?? "USDC"),
+    token: String(row.token ?? ""),
     createdAt: new Date(String(row.created_at)).toISOString(),
     updatedAt: new Date(String(row.updated_at)).toISOString(),
   };
@@ -138,7 +159,7 @@ function toPaymentRequest(row: Record<string, unknown>): PaymentRequest {
     recipientName: String(row.recipient_name),
     recipientWallet: String(row.recipient_wallet),
     amount: Number(row.amount ?? 0),
-    token: String(row.token ?? "USDC"),
+    token: String(row.token ?? ""),
     reason: String(row.reason ?? ""),
     riskLevel: normalizeRisk(row.risk_level),
     status: normalizeRequestStatus(row.status),
@@ -176,96 +197,6 @@ function toPaymentAuditLog(row: Record<string, unknown>): PaymentAuditLog {
     timestamp: new Date(String(row.timestamp)).toISOString(),
     actionHash: String(row.action_hash),
     metadata: (row.metadata as Record<string, unknown>) ?? {},
-  };
-}
-
-function defaultAgents(projectId: string): PaymentAgent[] {
-  const timestamp = now();
-  return [
-    {
-      id: crypto.randomUUID(),
-      projectId,
-      name: "PayOps Analyst",
-      status: "active",
-      riskLevel: "low",
-      maxAmount: 100,
-      canCreatePaymentRequest: true,
-      canApprovePayment: false,
-      canExecutePayment: false,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    },
-    {
-      id: crypto.randomUUID(),
-      projectId,
-      name: "Treasury Copilot",
-      status: "active",
-      riskLevel: "medium",
-      maxAmount: 2500,
-      canCreatePaymentRequest: true,
-      canApprovePayment: false,
-      canExecutePayment: false,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    },
-    {
-      id: crypto.randomUUID(),
-      projectId,
-      name: "Blocked Payout Bot",
-      status: "blocked",
-      riskLevel: "high",
-      maxAmount: 0,
-      canCreatePaymentRequest: false,
-      canApprovePayment: false,
-      canExecutePayment: false,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    },
-  ];
-}
-
-function defaultWallets(projectId: string): TrustedWallet[] {
-  const timestamp = now();
-  return [
-    {
-      id: crypto.randomUUID(),
-      projectId,
-      recipientName: "Proveedor verificado demo",
-      walletAddress: mockTrustedWallet,
-      isVerified: true,
-      token: "USDC",
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    },
-  ];
-}
-
-function agentRow(agent: PaymentAgent) {
-  return {
-    id: agent.id,
-    project_id: agent.projectId,
-    name: agent.name,
-    status: agent.status,
-    risk_level: agent.riskLevel,
-    max_amount: agent.maxAmount,
-    can_create_payment_request: agent.canCreatePaymentRequest,
-    can_approve_payment: agent.canApprovePayment,
-    can_execute_payment: agent.canExecutePayment,
-    created_at: agent.createdAt,
-    updated_at: agent.updatedAt,
-  };
-}
-
-function walletRow(wallet: TrustedWallet) {
-  return {
-    id: wallet.id,
-    project_id: wallet.projectId,
-    recipient_name: wallet.recipientName,
-    wallet_address: wallet.walletAddress,
-    is_verified: wallet.isVerified,
-    token: wallet.token,
-    created_at: wallet.createdAt,
-    updated_at: wallet.updatedAt,
   };
 }
 
@@ -353,46 +284,120 @@ function normalizeCreateInput(payload: CreatePaymentRequestInput) {
     recipientName: String(payload.recipientName ?? "").trim(),
     recipientWallet: String(payload.recipientWallet ?? "").trim(),
     amount: Number.isFinite(amount) ? amount : 0,
-    token: String(payload.token ?? "USDC").trim().toUpperCase() || "USDC",
+    token: String(payload.token ?? "").trim().toUpperCase(),
     reason: String(payload.reason ?? "").trim(),
     riskLevel: normalizeRisk(payload.riskLevel),
   };
 }
 
-function ensureMockStore(projectId: string): PayGuardSummary {
-  const existing = mockStores.get(projectId);
-  if (existing) return existing;
-
-  const store: PayGuardSummary = {
-    agents: defaultAgents(projectId),
-    trustedWallets: defaultWallets(projectId),
-    requests: [],
-    approvals: [],
-    auditLogs: [],
-    trustlessWork: trustlessWorkAdapter.integrationStatus(),
-  };
-  mockStores.set(projectId, store);
-  return store;
+function normalizeMoney(value: unknown) {
+  const amount = typeof value === "string" ? Number(value) : Number(value ?? 0);
+  return Number.isFinite(amount) ? amount : 0;
 }
 
-async function ensureSeedData(projectId: string) {
-  const { count: agentsCount, error: agentsError } = await supabaseAdmin.from("payment_agents").select("id", { count: "exact", head: true }).eq("project_id", projectId);
+function cleanRequiredText(value: unknown, field: string) {
+  const text = String(value ?? "").trim();
+  if (!text) throw new Error(field);
+  return text;
+}
+
+function assertNotLegacyDemoValue(...values: string[]) {
+  const text = values.join(" ");
+  if (
+    legacyDemoAgentNames.some((name) => text.includes(name)) ||
+    text.includes(legacyDemoWalletAddress) ||
+    text.includes(legacyDemoWalletName)
+  ) {
+    throw new Error("PayGuard no acepta datos demo heredados. Usa un agente y una wallet reales.");
+  }
+}
+
+function assertValidStellarPublicKey(walletAddress: string) {
+  try {
+    Keypair.fromPublicKey(walletAddress);
+  } catch {
+    throw new Error("La wallet destino debe ser una public key Stellar valida que empiece con G.");
+  }
+}
+
+function normalizeAgentInput(payload: PayGuardAgentInput): Required<PayGuardAgentInput> {
+  const name = cleanRequiredText(payload.name, "Indica el nombre real del agente de pago.");
+  assertNotLegacyDemoValue(name);
+
+  const status = normalizeAgentStatus(payload.status);
+  const riskLevel = normalizeRisk(payload.riskLevel);
+  const maxAmount = normalizeMoney(payload.maxAmount);
+  if (maxAmount <= 0) throw new Error("El limite maximo del agente debe ser mayor que cero.");
+
+  return {
+    name,
+    status,
+    riskLevel,
+    maxAmount,
+    canCreatePaymentRequest: payload.canCreatePaymentRequest ?? true,
+  };
+}
+
+function normalizeTrustedWalletInput(payload: TrustedWalletInput): Required<TrustedWalletInput> {
+  const recipientName = cleanRequiredText(payload.recipientName, "Indica el nombre real del destinatario.");
+  const walletAddress = cleanRequiredText(payload.walletAddress, "Indica la wallet real del destinatario.");
+  const token = cleanRequiredText(payload.token, "Indica el token real para la wallet destino.").toUpperCase();
+  assertNotLegacyDemoValue(recipientName, walletAddress, token);
+  assertValidStellarPublicKey(walletAddress);
+
+  return {
+    recipientName,
+    walletAddress,
+    token,
+    isVerified: payload.isVerified ?? true,
+  };
+}
+
+async function removeLegacyDemoSeed(projectId: string) {
+  const { data: demoAgents, error: agentsError } = await supabaseAdmin.from("payment_agents").select("id").eq("project_id", projectId).in("name", legacyDemoAgentNames);
   if (agentsError) throw agentsError;
-  if ((agentsCount ?? 0) === 0) {
-    const { error } = await supabaseAdmin.from("payment_agents").insert(defaultAgents(projectId).map(agentRow));
-    if (error) throw error;
+
+  const demoAgentIds = (demoAgents ?? []).map((agent) => String(agent.id));
+  const requestIds = new Set<string>();
+
+  if (demoAgentIds.length) {
+    const { data: agentRequests, error: agentRequestsError } = await supabaseAdmin.from("payment_requests").select("id").eq("project_id", projectId).in("agent_id", demoAgentIds);
+    if (agentRequestsError) throw agentRequestsError;
+    (agentRequests ?? []).forEach((request) => requestIds.add(String(request.id)));
   }
 
-  const { count: walletsCount, error: walletsError } = await supabaseAdmin.from("trusted_wallets").select("id", { count: "exact", head: true }).eq("project_id", projectId);
+  const { data: walletRequests, error: walletRequestsError } = await supabaseAdmin.from("payment_requests").select("id").eq("project_id", projectId).eq("recipient_wallet", legacyDemoWalletAddress);
+  if (walletRequestsError) throw walletRequestsError;
+  (walletRequests ?? []).forEach((request) => requestIds.add(String(request.id)));
+
+  const requestIdList = [...requestIds];
+  if (requestIdList.length) {
+    const { error: logsError } = await supabaseAdmin.from("payment_audit_logs").delete().eq("project_id", projectId).in("payment_request_id", requestIdList);
+    if (logsError) throw logsError;
+
+    const { error: approvalsError } = await supabaseAdmin.from("payment_approvals").delete().eq("project_id", projectId).in("payment_request_id", requestIdList);
+    if (approvalsError) throw approvalsError;
+
+    const { error: requestsError } = await supabaseAdmin.from("payment_requests").delete().eq("project_id", projectId).in("id", requestIdList);
+    if (requestsError) throw requestsError;
+  }
+
+  const { error: walletsError } = await supabaseAdmin
+    .from("trusted_wallets")
+    .delete()
+    .eq("project_id", projectId)
+    .or(`wallet_address.eq.${legacyDemoWalletAddress},recipient_name.eq.${legacyDemoWalletName}`);
   if (walletsError) throw walletsError;
-  if ((walletsCount ?? 0) === 0) {
-    const { error } = await supabaseAdmin.from("trusted_wallets").insert(defaultWallets(projectId).map(walletRow));
-    if (error) throw error;
+
+  if (demoAgentIds.length) {
+    const { error: deleteAgentsError } = await supabaseAdmin.from("payment_agents").delete().eq("project_id", projectId).in("id", demoAgentIds);
+    if (deleteAgentsError) throw deleteAgentsError;
   }
 }
 
 async function readSummaryFromDb(projectId: string): Promise<PayGuardSummary> {
-  await ensureSeedData(projectId);
+  await removeLegacyDemoSeed(projectId);
+
   const [agentsResult, walletsResult, requestsResult, approvalsResult, logsResult] = await Promise.all([
     supabaseAdmin.from("payment_agents").select("*").eq("project_id", projectId).order("created_at", { ascending: true }),
     supabaseAdmin.from("trusted_wallets").select("*").eq("project_id", projectId).order("created_at", { ascending: true }),
@@ -415,6 +420,55 @@ async function readSummaryFromDb(projectId: string): Promise<PayGuardSummary> {
     auditLogs: (logsResult.data ?? []).map(toPaymentAuditLog),
     trustlessWork: trustlessWorkAdapter.integrationStatus(),
   };
+}
+
+async function createAgentDb(projectId: string, payload: PayGuardAgentInput) {
+  await removeLegacyDemoSeed(projectId);
+  const input = normalizeAgentInput(payload);
+  const timestamp = now();
+
+  const { data, error } = await supabaseAdmin
+    .from("payment_agents")
+    .insert({
+      project_id: projectId,
+      name: input.name,
+      status: input.status,
+      risk_level: input.riskLevel,
+      max_amount: input.maxAmount,
+      can_create_payment_request: input.canCreatePaymentRequest,
+      can_approve_payment: false,
+      can_execute_payment: false,
+      created_at: timestamp,
+      updated_at: timestamp,
+    })
+    .select("*")
+    .single();
+  if (error) throw error;
+  return toPaymentAgent(data);
+}
+
+async function upsertTrustedWalletDb(projectId: string, payload: TrustedWalletInput) {
+  await removeLegacyDemoSeed(projectId);
+  const input = normalizeTrustedWalletInput(payload);
+  const timestamp = now();
+
+  const { data, error } = await supabaseAdmin
+    .from("trusted_wallets")
+    .upsert(
+      {
+        project_id: projectId,
+        recipient_name: input.recipientName,
+        wallet_address: input.walletAddress,
+        is_verified: input.isVerified,
+        token: input.token,
+        updated_at: timestamp,
+      },
+      { onConflict: "project_id,wallet_address" },
+    )
+    .select("*")
+    .single();
+  if (error) throw error;
+  return toTrustedWallet(data);
 }
 
 async function insertAuditLogs(logs: PaymentAuditLog[]) {
@@ -442,11 +496,13 @@ async function updateRequestInDb(projectId: string, paymentRequestId: string, pa
 }
 
 async function createRequestDb(projectId: string, payload: CreatePaymentRequestInput) {
-  await ensureSeedData(projectId);
+  await removeLegacyDemoSeed(projectId);
+
   const input = normalizeCreateInput(payload);
   if (!input.agentId) throw new Error("Selecciona un agente de pago.");
   if (!input.recipientName) throw new Error("Indica el nombre del destinatario.");
   if (!input.recipientWallet) throw new Error("Indica la wallet destino.");
+  if (!input.token) throw new Error("Indica el token configurado para la wallet destino.");
   if (!input.reason) throw new Error("Indica el motivo del pago.");
 
   const { data: agentRowData, error: agentError } = await supabaseAdmin.from("payment_agents").select("*").eq("project_id", projectId).eq("id", input.agentId).maybeSingle();
@@ -693,6 +749,8 @@ async function createEscrowDb(projectId: string, paymentRequestId: string, actor
   const request = await getRequestFromDb(projectId, paymentRequestId);
   if (request.status !== "approved") throw new Error("Solo una solicitud aprobada puede crear escrow.");
   if (request.escrowId) throw new Error("La solicitud ya tiene escrow.");
+  const integration = trustlessWorkAdapter.integrationStatus();
+  if (!integration.canSubmitTransactions) throw new Error(integration.message);
 
   try {
     const result = await trustlessWorkAdapter.createEscrowFromPaymentRequest(request);
@@ -721,6 +779,8 @@ async function fundEscrowDb(projectId: string, paymentRequestId: string, actorId
   const request = await getRequestFromDb(projectId, paymentRequestId);
   if (!request.escrowId) throw new Error("No se puede fondear sin escrow.");
   if (request.status !== "escrow_created") throw new Error("Solo un escrow creado puede fondearse.");
+  const integration = trustlessWorkAdapter.integrationStatus();
+  if (!integration.canSubmitTransactions) throw new Error(integration.message);
 
   try {
     const result = await trustlessWorkAdapter.fundEscrow(request);
@@ -750,6 +810,8 @@ async function releaseEscrowDb(projectId: string, paymentRequestId: string, acto
   if (request.status === "released") throw new Error("No se permite doble release.");
   if (!request.escrowId) throw new Error("No se puede liberar sin escrow.");
   if (request.status !== "funded") throw new Error("Solo un escrow fondeado puede liberarse.");
+  const integration = trustlessWorkAdapter.integrationStatus();
+  if (!integration.canSubmitTransactions) throw new Error(integration.message);
 
   try {
     const result = await trustlessWorkAdapter.releaseEscrow(request);
@@ -774,153 +836,26 @@ async function releaseEscrowDb(projectId: string, paymentRequestId: string, acto
   }
 }
 
-function mockCreateRequest(projectId: string, payload: CreatePaymentRequestInput) {
-  const store = ensureMockStore(projectId);
-  const input = normalizeCreateInput(payload);
-  const agent = store.agents.find((item) => item.id === input.agentId);
-  if (!agent) throw new Error("El agente de pago no existe.");
-  if (!input.recipientName || !input.recipientWallet || !input.reason) throw new Error("Completa destinatario, wallet y motivo.");
-
-  const wallet = store.trustedWallets.find((item) => item.walletAddress === input.recipientWallet && item.isVerified);
-  const policy = payguardPolicyEngine.evaluatePaymentRequest({ agent, amount: input.amount, requestedRiskLevel: input.riskLevel, isWalletVerified: Boolean(wallet) });
-  const timestamp = now();
-  const request: PaymentRequest = {
-    id: crypto.randomUUID(),
-    projectId,
-    agentId: agent.id,
-    recipientName: input.recipientName,
-    recipientWallet: input.recipientWallet,
-    amount: input.amount,
-    token: input.token,
-    reason: input.reason,
-    riskLevel: policy.riskLevel,
-    status: policy.status,
-    policyApplied: policy.policyApplied,
-    auditHash: actionHash({ projectId, agentId: agent.id, input, policy, timestamp }),
-    escrowId: null,
-    txHash: null,
-    createdAt: timestamp,
-    updatedAt: timestamp,
-  };
-  store.requests.unshift(request);
-  store.auditLogs.unshift(
-    createAuditLog({ projectId, paymentRequestId: request.id, agentId: agent.id, action: "POLICY_EVALUATED", previousStatus: request.status, newStatus: request.status, actorType: "system", actorId: systemActorId, metadata: { policyApplied: policy.policyApplied, reasons: policy.reasons } }),
-  );
-  if (request.status === "blocked") {
-    store.auditLogs.unshift(createAuditLog({ projectId, paymentRequestId: request.id, agentId: agent.id, action: "PAYMENT_BLOCKED", previousStatus: request.status, newStatus: "blocked", actorType: "system", actorId: systemActorId, metadata: { reasons: policy.reasons } }));
-  }
-  store.auditLogs.unshift(createAuditLog({ projectId, paymentRequestId: request.id, agentId: agent.id, action: "PAYMENT_REQUEST_CREATED", newStatus: request.status, actorType: "agent", actorId: agent.id, metadata: { amount: request.amount, token: request.token } }));
-  return request;
-}
-
-function mutateMockRequest(projectId: string, paymentRequestId: string, mutator: (request: PaymentRequest, store: PayGuardSummary) => PaymentRequest) {
-  const store = ensureMockStore(projectId);
-  const request = store.requests.find((item) => item.id === paymentRequestId);
-  if (!request) throw new Error("La solicitud de pago no existe.");
-  return mutator(request, store);
-}
-
-function withPayGuardFallback<T>(operation: () => Promise<T>, fallback: () => T) {
-  return operation().catch((error) => {
-    if (isPayGuardTableMissing(error)) return fallback();
-    throw error;
-  });
-}
-
 export const payguardService = {
-  summary: async (projectId: string) => withPayGuardFallback(() => readSummaryFromDb(projectId), () => ensureMockStore(projectId)),
+  summary: async (projectId: string) => withPayGuardConnection(() => readSummaryFromDb(projectId)),
 
-  createPaymentRequest: async (projectId: string, payload: CreatePaymentRequestInput) =>
-    withPayGuardFallback(() => createRequestDb(projectId, payload), () => mockCreateRequest(projectId, payload)),
+  createAgent: async (projectId: string, payload: PayGuardAgentInput) => withPayGuardConnection(() => createAgentDb(projectId, payload)),
 
-  approve: async (projectId: string, paymentRequestId: string, actorId: string) =>
-    withPayGuardFallback(() => approveDb(projectId, paymentRequestId, actorId), () =>
-      mutateMockRequest(projectId, paymentRequestId, (request, store) => {
-        assertCanApprove(request);
-        if (store.approvals.some((approval) => approval.paymentRequestId === paymentRequestId && approval.actorId === actorId && approval.status === "approved")) {
-          throw new Error("Este humano ya aprobo la solicitud.");
-        }
-        const approvalCount = store.approvals.filter((approval) => approval.paymentRequestId === paymentRequestId && approval.status === "approved").length + 1;
-        const requiredApprovals = request.status === "requires_multi_approval" ? 2 : 1;
-        const previousStatus = request.status;
-        request.status = approvalCount >= requiredApprovals ? "approved" : "requires_multi_approval";
-        request.updatedAt = now();
-        store.approvals.unshift({ id: crypto.randomUUID(), projectId, paymentRequestId, actorId, status: "approved", createdAt: now() });
-        store.auditLogs.unshift(createAuditLog({ projectId, paymentRequestId, agentId: request.agentId, action: "HUMAN_APPROVED", previousStatus, newStatus: request.status, actorType: "human", actorId, metadata: { approvalCount, requiredApprovals } }));
-        return request;
-      }),
-    ),
+  upsertTrustedWallet: async (projectId: string, payload: TrustedWalletInput) => withPayGuardConnection(() => upsertTrustedWalletDb(projectId, payload)),
 
-  reject: async (projectId: string, paymentRequestId: string, actorId: string) =>
-    withPayGuardFallback(() => rejectDb(projectId, paymentRequestId, actorId), () =>
-      mutateMockRequest(projectId, paymentRequestId, (request, store) => {
-        assertCanRejectOrBlock(request, "reject");
-        const previousStatus = request.status;
-        request.status = "rejected";
-        request.updatedAt = now();
-        store.approvals.unshift({ id: crypto.randomUUID(), projectId, paymentRequestId, actorId, status: "rejected", createdAt: now() });
-        store.auditLogs.unshift(createAuditLog({ projectId, paymentRequestId, agentId: request.agentId, action: "HUMAN_REJECTED", previousStatus, newStatus: "rejected", actorType: "human", actorId, metadata: {} }));
-        return request;
-      }),
-    ),
+  createPaymentRequest: async (projectId: string, payload: CreatePaymentRequestInput) => withPayGuardConnection(() => createRequestDb(projectId, payload)),
 
-  block: async (projectId: string, paymentRequestId: string, actorId: string) =>
-    withPayGuardFallback(() => blockDb(projectId, paymentRequestId, actorId), () =>
-      mutateMockRequest(projectId, paymentRequestId, (request, store) => {
-        assertCanRejectOrBlock(request, "block");
-        const previousStatus = request.status;
-        request.status = "blocked";
-        request.updatedAt = now();
-        store.auditLogs.unshift(createAuditLog({ projectId, paymentRequestId, agentId: request.agentId, action: "PAYMENT_BLOCKED", previousStatus, newStatus: "blocked", actorType: "human", actorId, metadata: { reason: "Bloqueado manualmente por un humano." } }));
-        return request;
-      }),
-    ),
+  approve: async (projectId: string, paymentRequestId: string, actorId: string) => withPayGuardConnection(() => approveDb(projectId, paymentRequestId, actorId)),
 
-  createEscrow: async (projectId: string, paymentRequestId: string, actorId: string) =>
-    withPayGuardFallback(() => createEscrowDb(projectId, paymentRequestId, actorId), () =>
-      mutateMockRequest(projectId, paymentRequestId, (request, store) => {
-        if (request.status !== "approved") throw new Error("Solo una solicitud aprobada puede crear escrow.");
-        if (request.escrowId) throw new Error("La solicitud ya tiene escrow.");
-        const previousStatus = request.status;
-        const result = trustlessWorkAdapter.integrationStatus();
-        const fragment = actionHash({ paymentRequestId, at: Date.now() }).slice(0, 24);
-        request.status = "escrow_created";
-        request.escrowId = `mock_escrow_${fragment}`;
-        request.txHash = `mock_tx_${fragment}`;
-        request.updatedAt = now();
-        store.auditLogs.unshift(createAuditLog({ projectId, paymentRequestId, agentId: request.agentId, action: "ESCROW_CREATED", previousStatus, newStatus: "escrow_created", actorType: "system", actorId: systemActorId, metadata: { triggeredBy: actorId, trustlessWork: result } }));
-        return request;
-      }),
-    ),
+  reject: async (projectId: string, paymentRequestId: string, actorId: string) => withPayGuardConnection(() => rejectDb(projectId, paymentRequestId, actorId)),
 
-  fundEscrow: async (projectId: string, paymentRequestId: string, actorId: string) =>
-    withPayGuardFallback(() => fundEscrowDb(projectId, paymentRequestId, actorId), () =>
-      mutateMockRequest(projectId, paymentRequestId, (request, store) => {
-        if (!request.escrowId) throw new Error("No se puede fondear sin escrow.");
-        if (request.status !== "escrow_created") throw new Error("Solo un escrow creado puede fondearse.");
-        const previousStatus = request.status;
-        request.status = "funded";
-        request.txHash = `mock_tx_${actionHash({ paymentRequestId, action: "fund", at: Date.now() }).slice(0, 24)}`;
-        request.updatedAt = now();
-        store.auditLogs.unshift(createAuditLog({ projectId, paymentRequestId, agentId: request.agentId, action: "ESCROW_FUNDED", previousStatus, newStatus: "funded", actorType: "system", actorId: systemActorId, metadata: { triggeredBy: actorId, escrowId: request.escrowId } }));
-        return request;
-      }),
-    ),
+  block: async (projectId: string, paymentRequestId: string, actorId: string) => withPayGuardConnection(() => blockDb(projectId, paymentRequestId, actorId)),
 
-  releaseEscrow: async (projectId: string, paymentRequestId: string, actorId: string) =>
-    withPayGuardFallback(() => releaseEscrowDb(projectId, paymentRequestId, actorId), () =>
-      mutateMockRequest(projectId, paymentRequestId, (request, store) => {
-        if (request.status === "released") throw new Error("No se permite doble release.");
-        if (!request.escrowId) throw new Error("No se puede liberar sin escrow.");
-        if (request.status !== "funded") throw new Error("Solo un escrow fondeado puede liberarse.");
-        const previousStatus = request.status;
-        request.status = "released";
-        request.txHash = `mock_tx_${actionHash({ paymentRequestId, action: "release", at: Date.now() }).slice(0, 24)}`;
-        request.updatedAt = now();
-        store.auditLogs.unshift(createAuditLog({ projectId, paymentRequestId, agentId: request.agentId, action: "PAYMENT_RELEASED", previousStatus, newStatus: "released", actorType: "system", actorId: systemActorId, metadata: { triggeredBy: actorId, escrowId: request.escrowId } }));
-        return request;
-      }),
-    ),
+  createEscrow: async (projectId: string, paymentRequestId: string, actorId: string) => withPayGuardConnection(() => createEscrowDb(projectId, paymentRequestId, actorId)),
+
+  fundEscrow: async (projectId: string, paymentRequestId: string, actorId: string) => withPayGuardConnection(() => fundEscrowDb(projectId, paymentRequestId, actorId)),
+
+  releaseEscrow: async (projectId: string, paymentRequestId: string, actorId: string) => withPayGuardConnection(() => releaseEscrowDb(projectId, paymentRequestId, actorId)),
 
   getEscrowStatus: async (escrowId: string) => trustlessWorkAdapter.getEscrowStatus(escrowId),
 };

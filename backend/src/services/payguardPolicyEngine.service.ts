@@ -70,13 +70,13 @@ export const payguardPolicyEngine = {
 
     if (amount > 1000) {
       policyApplied.push("amount_requires_multi_approval");
-      reasons.push("Pagos mayores a 1000 USDC requieren aprobacion multiple.");
+      reasons.push("Pagos mayores a 1000 unidades del token configurado requieren aprobacion multiple.");
       return { status: "requires_multi_approval", riskLevel: "high", policyApplied, reasons };
     }
 
     if (amount > 100) {
       policyApplied.push("amount_requires_human_approval");
-      reasons.push("Pagos mayores a 100 USDC requieren aprobacion humana.");
+      reasons.push("Pagos mayores a 100 unidades del token configurado requieren aprobacion humana.");
       return { status: "pending_approval", riskLevel: maxRisk(computedRisk, "medium"), policyApplied, reasons };
     }
 

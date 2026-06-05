@@ -117,7 +117,7 @@ export type OberynPayGuardPaymentRequestInput = {
   recipientName: string;
   recipientWallet: string;
   amount: number;
-  token?: string;
+  token: string;
   reason: string;
   riskLevel?: OberynPayGuardRiskLevel;
 };
@@ -612,11 +612,7 @@ export function createOberyn(config: OberynConfig): OberynClient {
   }
 
   async function requestPayment(input: OberynPayGuardPaymentRequestInput) {
-    return request<OberynPayGuardPaymentRequest>("/payguard/payment-requests", {
-      token: "USDC",
-      riskLevel: "low",
-      ...input,
-    });
+    return request<OberynPayGuardPaymentRequest>("/payguard/payment-requests", input);
   }
 
   async function payguardConfig() {

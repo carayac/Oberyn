@@ -36,7 +36,7 @@ La autenticacion usa la clave publica del proyecto en `x-oberyn-key`. Esta clave
 npm i oberyn
 ```
 
-El SDK se consume como paquete npm. Instala `oberyn` desde npm y úsalo directamente en tu aplicacion.
+El SDK se consume como paquete npm. Instala `oberyn` desde npm y usalo directamente en tu aplicacion.
 
 ## Inicializacion
 
@@ -103,9 +103,11 @@ Variables disponibles:
 - `OBERYN_APPROVAL_MODE`: `throw` lanza error cuando se requiere aprobacion; `poll` espera hasta que el humano apruebe o rechace.
 - `OBERYN_RUN_APPROVAL_DEMO`: `1` activa el escenario del mini proyecto que espera aprobacion humana antes de llamar a DeepSeek.
 - `OBERYN_RUN_PAYGUARD_DEMO`: `1` crea una solicitud PayGuard desde el mini proyecto; `0` la omite.
-- `OBERYN_PAYGUARD_AGENT_ID`: opcional; si falta, el demo usa el primer agente PayGuard activo del proyecto.
-- `OBERYN_PAYGUARD_RECIPIENT_WALLET`: opcional; si falta, el demo usa la primera wallet verificada del proyecto.
-- `OBERYN_PAYGUARD_AMOUNT`: monto de prueba para la solicitud PayGuard.
+- `OBERYN_PAYGUARD_AGENT_ID`: opcional; si falta, el mini proyecto usa el primer agente PayGuard real, activo y con permiso de crear solicitudes.
+- `OBERYN_PAYGUARD_RECIPIENT_WALLET`: opcional; si falta, el mini proyecto usa la primera wallet real y verificada del proyecto.
+- `OBERYN_PAYGUARD_AMOUNT`: monto real para la solicitud PayGuard.
+- `OBERYN_PAYGUARD_REASON`: motivo real para la solicitud PayGuard.
+- `OBERYN_PAYGUARD_TOKEN`: opcional si la wallet verificada ya tiene token configurado.
 - `DEEPSEEK_API_KEY`: clave privada del proveedor. Se queda en tu aplicacion; Oberyn no la necesita.
 - `DEEPSEEK_MODEL`: modelo DeepSeek, por ejemplo `deepseek-chat`.
 - `DEEPSEEK_PROMPT`: prompt configurable para el demo normal.
@@ -330,9 +332,9 @@ const paymentRequest = await oberyn.payguard.requestPayment({
   agentId: agent!.id,
   recipientName: wallet!.recipientName,
   recipientWallet: wallet!.walletAddress,
-  amount: 250,
-  token: "USDC",
-  reason: "Factura aprobada por orden de compra #1842",
+  amount: Number(process.env.PAYGUARD_AMOUNT),
+  token: wallet!.token,
+  reason: process.env.PAYGUARD_REASON!,
   riskLevel: "medium"
 });
 
@@ -344,8 +346,8 @@ El backend evalua la solicitud con el policy engine de PayGuard:
 
 1. Agente bloqueado o sin permiso para crear solicitudes: `blocked`.
 2. Wallet no verificada: `blocked`.
-3. Pago hasta 1000 USDC: `pending_approval`.
-4. Pago mayor a 1000 USDC: `requires_multi_approval`.
+3. Pago hasta 1000 unidades del token configurado: `pending_approval`.
+4. Pago mayor a 1000 unidades del token configurado: `requires_multi_approval`.
 5. Se registra auditoria y `auditHash`.
 
 Despues de eso, el flujo continua en el dashboard:

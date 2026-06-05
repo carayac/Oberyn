@@ -123,3 +123,18 @@ export type CreatePaymentRequestPayload = {
   reason: string;
   riskLevel: PaymentRiskLevel;
 };
+
+export type CreatePaymentAgentPayload = {
+  name: string;
+  status?: PaymentAgentStatus;
+  riskLevel: PaymentRiskLevel;
+  maxAmount: number;
+  canCreatePaymentRequest?: boolean;
+};
+
+export type UpsertTrustedWalletPayload = {
+  recipientName: string;
+  walletAddress: string;
+  token: string;
+  isVerified?: boolean;
+};

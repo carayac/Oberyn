@@ -11,6 +11,7 @@ import {
   FileText,
   Link2,
   LockKeyhole,
+  PlusCircle,
   RefreshCw,
   ShieldCheck,
   UserCheck,
@@ -26,13 +27,17 @@ import { Select } from "../../components/ui/Select";
 import { useOrganizations } from "../../hooks/useOrganizations";
 import { usePayGuard } from "../../hooks/usePayGuard";
 import { useProjects } from "../../hooks/useProjects";
-import type { CreatePaymentRequestPayload, PaymentAgent, PaymentAuditLog, PaymentRequest, PaymentRequestStatus, PaymentRiskLevel } from "../../types/payguard";
+import type { CreatePaymentAgentPayload, CreatePaymentRequestPayload, PaymentAgent, PaymentAuditLog, PaymentRequest, PaymentRequestStatus, PaymentRiskLevel, UpsertTrustedWalletPayload } from "../../types/payguard";
 
 const ACTIVE_PROJECT_KEY = "oberyn.activeProjectId";
 const ACTIVE_PROJECT_EVENT = "oberyn:active-project-change";
 
 function formatMoney(amount: number, token: string) {
   return `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(amount)} ${token}`;
+}
+
+function formatNumber(amount: number) {
+  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(amount);
 }
 
 function formatDate(value?: string | null) {
@@ -125,7 +130,7 @@ function AgentList({ agents }: { agents: PaymentAgent[] }) {
                 </span>
                 <div className="min-w-0">
                   <p className="truncate font-extrabold text-slate-950" title={agent.name}>{agent.name}</p>
-                  <p className="mt-1 text-xs font-semibold text-slate-500">Max {formatMoney(agent.maxAmount, "USDC")}</p>
+                  <p className="mt-1 text-xs font-semibold text-slate-500">Max {formatNumber(agent.maxAmount)}</p>
                 </div>
               </div>
               <span className={`shrink-0 rounded-md px-2.5 py-1 text-xs font-bold ${agent.status === "blocked" ? "bg-red-50 text-red-700" : agent.status === "paused" ? "bg-slate-100 text-slate-700" : "bg-emerald-50 text-emerald-700"}`}>
@@ -173,6 +178,108 @@ function TrustlessWorkPanel({ isMockMode, message, baseUrl, network, docsUrl }: 
   );
 }
 
+function PayGuardConfigPanel({
+  onCreateAgent,
+  onUpsertWallet,
+  disabled,
+}: {
+  onCreateAgent: (payload: CreatePaymentAgentPayload) => Promise<void>;
+  onUpsertWallet: (payload: UpsertTrustedWalletPayload) => Promise<void>;
+  disabled?: boolean;
+}) {
+  const [agentForm, setAgentForm] = useState<CreatePaymentAgentPayload>({
+    name: "",
+    maxAmount: 0,
+    riskLevel: "low",
+    status: "active",
+    canCreatePaymentRequest: true,
+  });
+  const [walletForm, setWalletForm] = useState<UpsertTrustedWalletPayload>({
+    recipientName: "",
+    walletAddress: "",
+    token: "",
+    isVerified: true,
+  });
+
+  const canCreateAgent = Boolean(agentForm.name.trim() && agentForm.maxAmount > 0);
+  const canSaveWallet = Boolean(walletForm.recipientName.trim() && walletForm.walletAddress.trim() && walletForm.token.trim());
+
+  return (
+    <Card className="p-5">
+      <h2 className="text-lg font-extrabold text-slate-950">Configuracion PayGuard</h2>
+      <div className="mt-5 grid gap-5 xl:grid-cols-2">
+        <form
+          className="grid gap-4 rounded-lg border border-slate-200 p-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void onCreateAgent(agentForm).then(() => setAgentForm({ name: "", maxAmount: 0, riskLevel: "low", status: "active", canCreatePaymentRequest: true }));
+          }}
+        >
+          <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_160px]">
+            <label className="text-sm font-bold text-slate-700">
+              Agente
+              <Input className="mt-2" required value={agentForm.name} onChange={(event) => setAgentForm((current) => ({ ...current, name: event.target.value }))} />
+            </label>
+            <label className="text-sm font-bold text-slate-700">
+              Maximo
+              <Input className="mt-2" min="1" required step="0.01" type="number" value={agentForm.maxAmount} onChange={(event) => setAgentForm((current) => ({ ...current, maxAmount: Number(event.target.value) }))} />
+            </label>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="text-sm font-bold text-slate-700">
+              Riesgo
+              <Select className="mt-2" value={agentForm.riskLevel} onChange={(event) => setAgentForm((current) => ({ ...current, riskLevel: event.target.value as PaymentRiskLevel }))}>
+                <option value="low">Bajo</option>
+                <option value="medium">Medio</option>
+                <option value="high">Alto</option>
+              </Select>
+            </label>
+            <label className="text-sm font-bold text-slate-700">
+              Estado
+              <Select className="mt-2" value={agentForm.status} onChange={(event) => setAgentForm((current) => ({ ...current, status: event.target.value as CreatePaymentAgentPayload["status"] }))}>
+                <option value="active">Activo</option>
+                <option value="paused">Pausado</option>
+                <option value="blocked">Bloqueado</option>
+              </Select>
+            </label>
+          </div>
+          <Button type="submit" disabled={disabled || !canCreateAgent} className="h-11 gap-2">
+            <PlusCircle className="h-4 w-4" />
+            Guardar agente
+          </Button>
+        </form>
+
+        <form
+          className="grid gap-4 rounded-lg border border-slate-200 p-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void onUpsertWallet(walletForm).then(() => setWalletForm({ recipientName: "", walletAddress: "", token: "", isVerified: true }));
+          }}
+        >
+          <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_140px]">
+            <label className="text-sm font-bold text-slate-700">
+              Destinatario
+              <Input className="mt-2" required value={walletForm.recipientName} onChange={(event) => setWalletForm((current) => ({ ...current, recipientName: event.target.value }))} />
+            </label>
+            <label className="text-sm font-bold text-slate-700">
+              Token
+              <Input className="mt-2" required value={walletForm.token} onChange={(event) => setWalletForm((current) => ({ ...current, token: event.target.value.toUpperCase() }))} />
+            </label>
+          </div>
+          <label className="text-sm font-bold text-slate-700">
+            Wallet Stellar
+            <Input className="mt-2 font-mono text-xs" required value={walletForm.walletAddress} onChange={(event) => setWalletForm((current) => ({ ...current, walletAddress: event.target.value.trim() }))} />
+          </label>
+          <Button type="submit" disabled={disabled || !canSaveWallet} className="h-11 gap-2">
+            <Wallet className="h-4 w-4" />
+            Guardar wallet
+          </Button>
+        </form>
+      </div>
+    </Card>
+  );
+}
+
 function RequestForm({
   agents,
   trustedWallets,
@@ -190,21 +297,31 @@ function RequestForm({
     agentId: firstAgent?.id ?? "",
     recipientName: firstWallet?.recipientName ?? "",
     recipientWallet: firstWallet?.walletAddress ?? "",
-    amount: 75,
-    token: firstWallet?.token ?? "USDC",
-    reason: "Pago aprobado por politica PayGuard",
+    amount: 0,
+    token: firstWallet?.token ?? "",
+    reason: "",
     riskLevel: "low",
   });
 
   useEffect(() => {
-    setForm((current) => ({
-      ...current,
-      agentId: current.agentId || firstAgent?.id || "",
-      recipientName: current.recipientName || firstWallet?.recipientName || "",
-      recipientWallet: current.recipientWallet || firstWallet?.walletAddress || "",
-      token: current.token || firstWallet?.token || "USDC",
-    }));
-  }, [firstAgent?.id, firstWallet?.recipientName, firstWallet?.token, firstWallet?.walletAddress]);
+    setForm((current) => {
+      const currentAgentExists = agents.some((agent) => agent.id === current.agentId);
+      const currentWallet = trustedWallets.find((wallet) => wallet.walletAddress === current.recipientWallet);
+      const selectedWallet = currentWallet ?? firstWallet;
+
+      return {
+        ...current,
+        agentId: currentAgentExists ? current.agentId : firstAgent?.id ?? "",
+        recipientName: selectedWallet?.recipientName ?? "",
+        recipientWallet: selectedWallet?.walletAddress ?? "",
+        token: selectedWallet?.token ?? "",
+        amount: currentAgentExists && currentWallet ? current.amount : 0,
+        reason: currentAgentExists && currentWallet ? current.reason : "",
+      };
+    });
+  }, [agents, firstAgent?.id, firstWallet, trustedWallets]);
+
+  const isFormReady = Boolean(form.agentId && form.recipientName && form.recipientWallet && form.token && form.reason && form.amount > 0);
 
   return (
     <Card className="p-5">
@@ -219,7 +336,8 @@ function RequestForm({
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="text-sm font-bold text-slate-700">
             Agente
-            <Select className="mt-2" value={form.agentId} onChange={(event) => setForm((current) => ({ ...current, agentId: event.target.value }))}>
+            <Select className="mt-2" disabled={!agents.length} value={form.agentId} onChange={(event) => setForm((current) => ({ ...current, agentId: event.target.value }))}>
+              {!agents.length ? <option value="">Sin agentes configurados</option> : null}
               {agents.map((agent) => (
                 <option key={agent.id} value={agent.id}>
                   {agent.name}
@@ -239,28 +357,28 @@ function RequestForm({
         <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_160px]">
           <label className="text-sm font-bold text-slate-700">
             Destinatario
-            <Input className="mt-2" value={form.recipientName} onChange={(event) => setForm((current) => ({ ...current, recipientName: event.target.value }))} />
+            <Input className="mt-2" required value={form.recipientName} onChange={(event) => setForm((current) => ({ ...current, recipientName: event.target.value }))} />
           </label>
           <label className="text-sm font-bold text-slate-700">
             Token
-            <Input className="mt-2" value={form.token} onChange={(event) => setForm((current) => ({ ...current, token: event.target.value.toUpperCase() }))} />
+            <Input className="mt-2" required value={form.token} onChange={(event) => setForm((current) => ({ ...current, token: event.target.value.toUpperCase() }))} />
           </label>
         </div>
         <label className="text-sm font-bold text-slate-700">
           Wallet destino
-          <Input className="mt-2 font-mono text-xs" value={form.recipientWallet} onChange={(event) => setForm((current) => ({ ...current, recipientWallet: event.target.value }))} />
+          <Input className="mt-2 font-mono text-xs" required value={form.recipientWallet} onChange={(event) => setForm((current) => ({ ...current, recipientWallet: event.target.value }))} />
         </label>
         <div className="grid gap-4 sm:grid-cols-[180px_minmax(0,1fr)]">
           <label className="text-sm font-bold text-slate-700">
             Monto
-            <Input className="mt-2" min="1" step="0.01" type="number" value={form.amount} onChange={(event) => setForm((current) => ({ ...current, amount: Number(event.target.value) }))} />
+            <Input className="mt-2" min="1" required step="0.01" type="number" value={form.amount} onChange={(event) => setForm((current) => ({ ...current, amount: Number(event.target.value) }))} />
           </label>
           <label className="text-sm font-bold text-slate-700">
             Motivo
-            <Input className="mt-2" value={form.reason} onChange={(event) => setForm((current) => ({ ...current, reason: event.target.value }))} />
+            <Input className="mt-2" required value={form.reason} onChange={(event) => setForm((current) => ({ ...current, reason: event.target.value }))} />
           </label>
         </div>
-        <Button type="submit" disabled={disabled || !agents.length} className="h-11 gap-2">
+        <Button type="submit" disabled={disabled || !agents.length || !trustedWallets.length || !isFormReady} className="h-11 gap-2">
           <Banknote className="h-4 w-4" />
           Crear solicitud
         </Button>
@@ -383,6 +501,7 @@ function RequestActions({
   onCreateEscrow,
   onFund,
   onRelease,
+  canSubmitTransactions,
   disabled,
 }: {
   request: PaymentRequest | null;
@@ -393,6 +512,7 @@ function RequestActions({
   onCreateEscrow: () => void;
   onFund: () => void;
   onRelease: () => void;
+  canSubmitTransactions: boolean;
   disabled?: boolean;
 }) {
   if (!request) {
@@ -407,9 +527,9 @@ function RequestActions({
   const canApprove = request.status === "pending_approval" || request.status === "requires_multi_approval";
   const canReject = ["pending_approval", "requires_multi_approval", "approved"].includes(request.status);
   const canBlock = ["pending_approval", "requires_multi_approval", "approved", "escrow_created"].includes(request.status);
-  const canCreateEscrow = request.status === "approved" && !request.escrowId;
-  const canFund = request.status === "escrow_created" && Boolean(request.escrowId);
-  const canRelease = request.status === "funded" && Boolean(request.escrowId);
+  const canCreateEscrow = canSubmitTransactions && request.status === "approved" && !request.escrowId;
+  const canFund = canSubmitTransactions && request.status === "escrow_created" && Boolean(request.escrowId);
+  const canRelease = canSubmitTransactions && request.status === "funded" && Boolean(request.escrowId);
 
   return (
     <Card className="p-5">
@@ -450,6 +570,7 @@ function RequestActions({
           Release
         </Button>
       </div>
+      {!canSubmitTransactions ? <p className="mt-3 text-xs font-semibold text-slate-500">Trustless Work debe estar en live para crear, fondear o liberar escrow.</p> : null}
     </Card>
   );
 }
@@ -484,6 +605,11 @@ export function ProjectPayGuardPage() {
     const onChain = payguard.requests.filter((request) => ["escrow_created", "funded", "released"].includes(request.status)).length;
     return { pending, blocked, onChain };
   }, [payguard.requests]);
+
+  const payguardFormKey = useMemo(
+    () => `${payguard.agents.map((agent) => agent.id).join(",")}|${payguard.trustedWallets.map((wallet) => wallet.walletAddress).join(",")}`,
+    [payguard.agents, payguard.trustedWallets],
+  );
 
   async function runAction(action: () => Promise<unknown>, success: string) {
     setWorking(true);
@@ -528,10 +654,17 @@ export function ProjectPayGuardPage() {
         {payguard.error ? <p className="mt-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{payguard.error}</p> : null}
       </section>
 
+      <PayGuardConfigPanel
+        disabled={isWorking}
+        onCreateAgent={(payload) => runAction(() => payguard.createAgent(payload), "Agente PayGuard guardado.")}
+        onUpsertWallet={(payload) => runAction(() => payguard.upsertTrustedWallet(payload), "Wallet verificada guardada.")}
+      />
+
       <AgentList agents={payguard.agents} />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_440px]">
         <RequestForm
+          key={payguardFormKey}
           agents={payguard.agents}
           trustedWallets={payguard.trustedWallets}
           disabled={isWorking}
@@ -552,6 +685,7 @@ export function ProjectPayGuardPage() {
           onCreateEscrow={() => selectedRequest && void runAction(() => payguard.createEscrow(selectedRequest.id), "Escrow creado mediante Trustless Work.")}
           onFund={() => selectedRequest && void runAction(() => payguard.fundEscrow(selectedRequest.id), "Escrow fondeado.")}
           onRelease={() => selectedRequest && void runAction(() => payguard.releaseEscrow(selectedRequest.id), "Pago liberado.")}
+          canSubmitTransactions={payguard.trustlessWork.canSubmitTransactions}
         />
       </div>
 

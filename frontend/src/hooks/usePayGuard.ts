@@ -1,7 +1,7 @@
 import { useAuth } from "@clerk/react";
 import { useCallback, useEffect, useState } from "react";
 import { apiClient } from "../lib/api/client";
-import type { CreatePaymentRequestPayload, PayGuardSummary, PaymentRequest } from "../types/payguard";
+import type { CreatePaymentAgentPayload, CreatePaymentRequestPayload, PayGuardSummary, PaymentAgent, PaymentRequest, TrustedWallet, UpsertTrustedWalletPayload } from "../types/payguard";
 
 type ApiResponse<T> = {
   success: boolean;
@@ -65,11 +65,21 @@ export function usePayGuard(projectId?: string | null, organizationId?: string |
     return response.data;
   }
 
+  async function postPayGuardConfig<T>(path: string, body: unknown) {
+    if (!projectId) throw new Error("Selecciona un proyecto.");
+    const token = await getToken();
+    const response = await apiClient.post<ApiResponse<T>>(`/projects/${projectId}/payguard${path}`, body, token, organizationId);
+    await loadPayGuard();
+    return response.data;
+  }
+
   return {
     ...summary,
     isLoading,
     error,
     reloadPayGuard: loadPayGuard,
+    createAgent: (payload: CreatePaymentAgentPayload) => postPayGuardConfig<PaymentAgent>("/agents", payload),
+    upsertTrustedWallet: (payload: UpsertTrustedWalletPayload) => postPayGuardConfig<TrustedWallet>("/wallets", payload),
     createPaymentRequest: (payload: CreatePaymentRequestPayload) => postPaymentAction("/requests", payload),
     approve: (paymentRequestId: string) => postPaymentAction(`/requests/${paymentRequestId}/approve`),
     reject: (paymentRequestId: string) => postPaymentAction(`/requests/${paymentRequestId}/reject`),

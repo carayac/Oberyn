@@ -7,6 +7,8 @@ export const payguardRoutes = Router({ mergeParams: true });
 
 payguardRoutes.use(requireProjectAccess);
 payguardRoutes.get("/", asyncHandler(payguardController.summary));
+payguardRoutes.post("/agents", asyncHandler(payguardController.createAgent));
+payguardRoutes.post("/wallets", asyncHandler(payguardController.upsertTrustedWallet));
 payguardRoutes.post("/requests", asyncHandler(payguardController.createPaymentRequest));
 payguardRoutes.post("/requests/:paymentRequestId/approve", asyncHandler(payguardController.approve));
 payguardRoutes.post("/requests/:paymentRequestId/reject", asyncHandler(payguardController.reject));

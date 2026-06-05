@@ -18,7 +18,7 @@ create table if not exists trusted_wallets (
   recipient_name text not null,
   wallet_address text not null,
   is_verified boolean not null default false,
-  token text not null default 'USDC',
+  token text not null,
   metadata jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -32,7 +32,7 @@ create table if not exists payment_requests (
   recipient_name text not null,
   recipient_wallet text not null,
   amount numeric not null,
-  token text not null default 'USDC',
+  token text not null,
   reason text not null,
   risk_level text not null default 'low' check (risk_level in ('low', 'medium', 'high')),
   status text not null default 'pending_approval' check (

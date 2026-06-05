@@ -1,4 +1,3 @@
-import crypto from "node:crypto";
 import { Keypair, Networks, TransactionBuilder } from "@stellar/stellar-sdk";
 import { env } from "../config/env.js";
 import type { PaymentRequest, TrustlessWorkIntegrationStatus } from "../types/payguard.types.js";
@@ -31,10 +30,6 @@ type SendTransactionResponse = {
 
 const docsUrl = "https://docs.trustlesswork.com/trustless-work/api-rest/introduction";
 
-function hashFragment(input: unknown) {
-  return crypto.createHash("sha256").update(JSON.stringify(input)).digest("hex").slice(0, 24);
-}
-
 function isConfiguredForLive() {
   return Boolean(
     env.TRUSTLESS_WORK_API_KEY &&
@@ -50,6 +45,11 @@ function isConfiguredForLive() {
 
 function shouldUseMockMode() {
   return env.TRUSTLESS_WORK_MODE.toLowerCase() !== "live" || !isConfiguredForLive();
+}
+
+function assertLiveMode(operation: string) {
+  if (!shouldUseMockMode()) return;
+  throw new Error(`Trustless Work no esta en modo live para ${operation}. Configura TRUSTLESS_WORK_MODE=live y las credenciales/roles Stellar requeridos antes de ejecutar operaciones reales.`);
 }
 
 function networkPassphrase() {
@@ -123,16 +123,6 @@ function escrowIdFrom(response: SendTransactionResponse) {
   return response.contractId ?? response.escrow?.contractId ?? undefined;
 }
 
-function mockResult(paymentRequest: PaymentRequest, action: string): TrustlessWorkOperationResult {
-  const fragment = hashFragment({ action, paymentRequestId: paymentRequest.id, at: Date.now() });
-  return {
-    escrowId: paymentRequest.escrowId ?? `mock_escrow_${fragment}`,
-    txHash: `mock_tx_${fragment}`,
-    status: "SUCCESS",
-    raw: { mock: true, action, network: env.TRUSTLESS_WORK_NETWORK },
-  };
-}
-
 function deployPayload(paymentRequest: PaymentRequest) {
   const approver = env.TRUSTLESS_WORK_APPROVER_PUBLIC_KEY || env.TRUSTLESS_WORK_SIGNER_PUBLIC_KEY;
 
@@ -151,7 +141,7 @@ function deployPayload(paymentRequest: PaymentRequest) {
     },
     amount: paymentRequest.amount,
     platformFee: env.TRUSTLESS_WORK_PLATFORM_FEE,
-    milestones: [{ description: paymentRequest.reason.slice(0, 160) || "PayGuard approved payment" }],
+    milestones: [{ description: paymentRequest.reason.slice(0, 160) }],
     trustline: {
       symbol: paymentRequest.token,
       address: env.TRUSTLESS_WORK_USDC_ISSUER,
@@ -178,7 +168,7 @@ export const trustlessWorkAdapter = {
   },
 
   createEscrowFromPaymentRequest: async (paymentRequest: PaymentRequest): Promise<TrustlessWorkOperationResult> => {
-    if (shouldUseMockMode()) return mockResult(paymentRequest, "create_escrow");
+    assertLiveMode("create_escrow");
 
     const { submitted } = await executeUnsignedEndpoint("/deployer/single-release", deployPayload(paymentRequest));
     const escrowId = escrowIdFrom(submitted);
@@ -188,7 +178,7 @@ export const trustlessWorkAdapter = {
   },
 
   fundEscrow: async (paymentRequest: PaymentRequest): Promise<TrustlessWorkOperationResult> => {
-    if (shouldUseMockMode()) return mockResult(paymentRequest, "fund_escrow");
+    assertLiveMode("fund_escrow");
     if (!paymentRequest.escrowId) throw new Error("No existe escrow para fondear.");
 
     const { submitted } = await executeUnsignedEndpoint("/escrow/single-release/fund-escrow", {
@@ -201,7 +191,7 @@ export const trustlessWorkAdapter = {
   },
 
   releaseEscrow: async (paymentRequest: PaymentRequest): Promise<TrustlessWorkOperationResult> => {
-    if (shouldUseMockMode()) return mockResult(paymentRequest, "release_escrow");
+    assertLiveMode("release_escrow");
     if (!paymentRequest.escrowId) throw new Error("No existe escrow para liberar.");
 
     const { submitted } = await executeUnsignedEndpoint("/escrow/single-release/release-funds", {
@@ -213,14 +203,7 @@ export const trustlessWorkAdapter = {
   },
 
   getEscrowStatus: async (escrowId: string) => {
-    if (shouldUseMockMode()) {
-      return {
-        escrowId,
-        status: "mock_active",
-        network: env.TRUSTLESS_WORK_NETWORK,
-        mock: true,
-      };
-    }
+    assertLiveMode("get_escrow_status");
 
     return getJson<Record<string, unknown>>("/escrow/single-release/get-escrow", {
       contractId: escrowId,

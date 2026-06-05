@@ -4,6 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node index.mjs"
+    "start": "node index.mjs",
+    "payguard:setup": "node payguard-setup.mjs",
+    "payguard:config": "node payguard-smoke.mjs config",
+    "payguard:test": "node payguard-smoke.mjs create"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "oberyn": "file:../.."
   }
 }
