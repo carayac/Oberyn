@@ -26,6 +26,7 @@ import { Link, useParams } from "react-router-dom";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { useOrganizations } from "../../hooks/useOrganizations";
+import { useProjects } from "../../hooks/useProjects";
 import { apiClient } from "../../lib/api/client";
 import { getProjectAuditRoute } from "../../lib/constants/routes";
 import type { EvidenceProof, EvidenceVerification } from "../../types/evidence";
@@ -44,7 +45,7 @@ function formatDate(value?: string | null) {
 
 function decisionLabel(value: string) {
   if (value === "blocked") return "Bloqueada";
-  if (value === "approval_required") return "Requiere aprobación";
+  if (value === "approval_required" || value === "requires_approval") return "Requiere aprobación";
   if (value === "approved") return "Permitida";
   return value;
 }
@@ -60,6 +61,61 @@ function shortValue(value?: string | null, size = 12) {
   if (!value) return "Pendiente";
   if (value.length <= size * 2 + 3) return value;
   return `${value.slice(0, size)}...${value.slice(-size)}`;
+}
+
+function metadataText(metadata: Record<string, unknown> | undefined, keys: string[], fallback = "No disponible") {
+  if (!metadata) return fallback;
+  for (const key of keys) {
+    const value = metadata[key];
+    if (typeof value === "string" && value.trim()) return value;
+    if (typeof value === "number" || typeof value === "boolean") return String(value);
+  }
+  return fallback;
+}
+
+function inferSource(eventType: string, metadata?: Record<string, unknown>) {
+  const source = metadataText(metadata, ["source"], "");
+  if (source) return source;
+  if (eventType.startsWith("gateway")) return "gateway";
+  if (eventType.startsWith("sdk")) return "sdk";
+  return "api";
+}
+
+let logoDataUrlPromise: Promise<string | null> | null = null;
+
+async function getOberynLogoDataUrl() {
+  if (logoDataUrlPromise) return logoDataUrlPromise;
+
+  logoDataUrlPromise = (async () => {
+    try {
+      const response = await fetch("/assets/oberyn-logo.svg");
+      const svg = await response.text();
+      const svgUrl = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
+      const image = new Image();
+      image.decoding = "async";
+      const loaded = new Promise<void>((resolve, reject) => {
+        image.onload = () => resolve();
+        image.onerror = () => reject(new Error("No se pudo cargar el logo de Oberyn."));
+      });
+      image.src = svgUrl;
+      await loaded;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = 1500;
+      canvas.height = 420;
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("No se pudo preparar el logo para el PDF.");
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(svgUrl);
+      return canvas.toDataURL("image/png");
+    } catch {
+      return null;
+    }
+  })();
+
+  return logoDataUrlPromise;
 }
 
 function DetailRow({ Icon, label, value, badge }: { Icon: typeof FileText; label: string; value?: string | number | null; badge?: boolean }) {
@@ -110,12 +166,15 @@ function TimelineStep({ Icon, title, detail, done }: { Icon: typeof FileText; ti
 export function ProjectEvidencePage() {
   const { projectId = "", eventId = "" } = useParams();
   const { getToken, isLoaded, isSignedIn } = useAuth();
-  const { activeOrganizationId, isLoading: isLoadingOrganizations } = useOrganizations();
+  const { activeOrganization, activeOrganizationId, isLoading: isLoadingOrganizations } = useOrganizations();
+  const { projects } = useProjects(activeOrganizationId);
   const [evidence, setEvidence] = useState<EvidenceProof | null>(null);
   const [verification, setVerification] = useState<EvidenceVerification | null>(null);
   const [isLoading, setLoading] = useState(true);
   const [isVerifying, setVerifying] = useState(false);
+  const [isGeneratingPdf, setGeneratingPdf] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const currentProject = projects.find((project) => project.id === projectId) ?? null;
 
   const loadEvidence = useCallback(async () => {
     if (!isLoaded || !isSignedIn || !projectId || !eventId || isLoadingOrganizations) return;
@@ -170,6 +229,85 @@ export function ProjectEvidencePage() {
   async function copyTransparencyLink() {
     await navigator.clipboard.writeText(window.location.href);
     setMessage("Enlace de evidencia copiado.");
+  }
+
+  async function downloadEvidencePdf() {
+    if (!evidence) return;
+
+    setGeneratingPdf(true);
+    setMessage(null);
+    try {
+      const verified = verification?.verified ?? Boolean(evidence.stellarTxHash);
+      const [{ pdf }, { EvidenceReceiptPdf }] = await Promise.all([
+        import("@react-pdf/renderer"),
+        import("../../components/evidence/EvidenceReceiptPdf"),
+      ]);
+      const logoSrc = await getOberynLogoDataUrl();
+      const blob = await pdf(
+        <EvidenceReceiptPdf
+          generatedAt={new Date().toISOString()}
+          logoSrc={logoSrc}
+          organization={{
+            id: activeOrganization?.id ?? activeOrganizationId ?? "No disponible",
+            name: activeOrganization?.name ?? "Organización activa",
+            slug: activeOrganization?.slug ?? null,
+          }}
+          project={{
+            id: evidence.projectId,
+            name: currentProject?.name ?? evidence.projectId,
+            slug: currentProject?.slug ?? null,
+            environment: currentProject?.environment ?? metadataText(evidence.metadata, ["environment", "env"], "No especificado"),
+          }}
+          event={{
+            id: evidence.eventId,
+            eventType: evidence.eventType,
+            actionName: evidence.actionName,
+            decision: evidence.decision,
+            riskLevel: evidence.riskLevel,
+            source: inferSource(evidence.eventType, evidence.metadata),
+            serviceName: metadataText(evidence.metadata, ["serviceName", "service", "provider", "serviceProvider"], "Servicio auditado"),
+            serviceProvider: metadataText(evidence.metadata, ["serviceProvider", "provider"], "No especificado"),
+            actorLabel: metadataText(evidence.metadata, ["actorLabel", "actor", "bot", "agent", "user"], "Agente / SDK"),
+            createdAt: evidence.createdAt,
+          }}
+          evidence={{
+            eventHash: evidence.eventHash,
+            merkleRoot: evidence.merkleRoot,
+            stellarTxHash: evidence.stellarTxHash,
+            stellarNetwork: evidence.stellarNetwork ?? "testnet",
+            ledger: evidence.ledger,
+            batchId: evidence.batchId,
+            batchPosition: evidence.batchPosition,
+            anchoredAt: evidence.anchoredAt,
+            explorerUrl: evidence.explorerUrl,
+            verified,
+            verifiedAt: verification?.checkedAt ?? null,
+            sensitiveDataStoredOnChain: evidence.sensitiveDataStoredOnChain,
+          }}
+          verification={{
+            statusLabel: verified ? "Evento verificado" : "Pendiente de verificación",
+            integrityMessage: verified
+              ? "El hash del evento coincide con la evidencia registrada y el anclaje disponible."
+              : "El evento tiene evidencia criptográfica, pero todavía no se confirmó una verificación completa.",
+            publicVerificationUrl: window.location.href,
+          }}
+        />,
+      ).toBlob();
+
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = `oberyn-evidencia-${shortValue(evidence.eventId, 8).replace("...", "-")}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+      setMessage("Comprobante PDF generado.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo generar el PDF.");
+    } finally {
+      setGeneratingPdf(false);
+    }
   }
 
   return (
@@ -271,9 +409,9 @@ export function ProjectEvidencePage() {
                       <RefreshCw className={isVerifying ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
                       Verificar integridad
                     </Button>
-                    <Button variant="secondary" className="h-11 gap-2 font-extrabold" disabled>
+                    <Button variant="secondary" className="h-11 gap-2 font-extrabold" onClick={downloadEvidencePdf} disabled={isGeneratingPdf}>
                       <Download className="h-4 w-4" />
-                      Descargar comprobante PDF
+                      {isGeneratingPdf ? "Generando PDF..." : "Descargar comprobante PDF"}
                     </Button>
                     <Button variant="secondary" className="h-11 gap-2 font-extrabold" onClick={copyTransparencyLink}>
                       <Clipboard className="h-4 w-4" />
@@ -309,7 +447,7 @@ export function ProjectEvidencePage() {
                 </div>
                 <div className="mt-4 grid gap-2 sm:grid-cols-3">
                   <Button variant="secondary" className="h-11 gap-2 font-extrabold" onClick={copyTransparencyLink}><LinkIcon className="h-4 w-4" />Por enlace</Button>
-                  <Button variant="secondary" className="h-11 gap-2 font-extrabold" disabled><FileText className="h-4 w-4" />Exportar PDF</Button>
+                  <Button variant="secondary" className="h-11 gap-2 font-extrabold" onClick={downloadEvidencePdf} disabled={isGeneratingPdf}><FileText className="h-4 w-4" />Exportar PDF</Button>
                   <Button variant="secondary" className="h-11 gap-2 font-extrabold" disabled><Mail className="h-4 w-4" />Enviar</Button>
                 </div>
               </Card>
