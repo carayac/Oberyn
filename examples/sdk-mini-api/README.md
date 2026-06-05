@@ -8,6 +8,7 @@ Mini proyecto para probar el SDK contra APIs externas con inferencia automatica 
 - `oberyn.shield.protect` para detener prompts maliciosos antes de llamar al proveedor.
 - `oberyn.api.request` para proteger llamadas HTTP sin pasar `decision`, `riskLevel` ni `service`.
 - `oberyn.proof.guard` para proteger tool calls con contexto de accion.
+- `oberyn.payguard.config` y `oberyn.payguard.requestPayment` para crear solicitudes de pago reales conectadas al dashboard.
 - `oberyn.record` para registrar el cierre del demo sin datos quemados.
 - Una pregunta real a DeepSeek y la respuesta textual que devuelve el modelo.
 
@@ -42,6 +43,46 @@ OBERYN_SDK_KEY=ob_pk_...
 OBERYN_SDK_ENDPOINT=http://localhost:4000/api/sdk/events
 ```
 
+## PayGuard
+
+El demo crea una solicitud de pago PayGuard usando los agentes y wallets verificadas del proyecto real asociado a `OBERYN_SDK_KEY`.
+
+Flujo:
+
+```txt
+examples/sdk-mini-api
+  -> oberyn.payguard.config()
+  -> oberyn.payguard.requestPayment()
+  -> dashboard > Project > PayGuard
+```
+
+Variables opcionales en `examples/.env`:
+
+```env
+OBERYN_RUN_PAYGUARD_DEMO=1
+OBERYN_PAYGUARD_AGENT_ID=
+OBERYN_PAYGUARD_RECIPIENT_NAME=
+OBERYN_PAYGUARD_RECIPIENT_WALLET=
+OBERYN_PAYGUARD_AMOUNT=75
+OBERYN_PAYGUARD_TOKEN=USDC
+OBERYN_PAYGUARD_REASON=SDK PayGuard demo
+OBERYN_PAYGUARD_RISK_LEVEL=medium
+```
+
+Si no defines `OBERYN_PAYGUARD_AGENT_ID` ni `OBERYN_PAYGUARD_RECIPIENT_WALLET`, el demo toma el primer agente activo y la primera wallet verificada del proyecto. Despues de ejecutar `npm start`, abre:
+
+```txt
+Proyecto > PayGuard
+```
+
+La solicitud debe aparecer como `pending_approval`, `requires_multi_approval` o `blocked`, segun las reglas. El SDK no crea escrow, no fondea y no libera pagos; esas acciones quedan en el dashboard despues de aprobacion humana.
+
+Para saltar esta prueba:
+
+```env
+OBERYN_RUN_PAYGUARD_DEMO=0
+```
+
 ## DeepSeek
 
 Para probar DeepSeek real, agrega:
@@ -67,6 +108,7 @@ En el dashboard deberias ver:
 - Flujos por `actionName`, como `deepseek.chat.completions.create` y `jsonplaceholder.posts.create`.
 - Integraciones detectadas desde URLs y targets.
 - Auditoria de decisiones y ejecuciones.
+- Solicitud PayGuard creada desde SDK con `auditHash`.
 - Riesgo calculado por Oberyn.
 - Evento final `sdk_mini_api_demo.completed` registrado con `record`.
 

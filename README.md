@@ -10,6 +10,7 @@ Oberyn gives AI-powered systems a control plane: it detects providers, evaluates
 - Protect prompts, tool calls, and HTTP requests before execution.
 - Infer risk and decisions without hardcoding `decision` or `riskLevel`.
 - Require human approval for high-risk actions.
+- Govern AI-generated payment requests with PayGuard before funds move.
 - Track integrations, flows, approvals, and audit events.
 - Record hashed audit evidence with optional Stellar anchoring.
 - Test real provider traffic through the SDK mini project.
@@ -116,6 +117,7 @@ The frontend includes project-level views for:
 - Integrations
 - Flows
 - Human approvals
+- PayGuard payment governance and Trustless Work escrow status
 - Rules
 - Audit events
 - SDK setup
@@ -131,6 +133,7 @@ Important routes:
 /api/projects/:projectId/flows
 /api/projects/:projectId/rules
 /api/projects/:projectId/approvals
+/api/projects/:projectId/payguard
 /api/projects/:projectId/audit
 /api/projects/:projectId/sdk/config
 /api/sdk/events
@@ -149,6 +152,11 @@ The schema includes:
 - flows
 - rules
 - approval_requests
+- payment_agents
+- trusted_wallets
+- payment_requests
+- payment_approvals
+- payment_audit_logs
 - audit_events
 - sdk_keys
 - gateway_configs
@@ -183,12 +191,30 @@ SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 CLERK_SECRET_KEY=your_clerk_secret_key
 CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
 OBERYN_SDK_FALLBACK_SECRET=change-me
+TRUSTLESS_WORK_MODE=mock
+TRUSTLESS_WORK_API_KEY=
+TRUSTLESS_WORK_BASE_URL=https://dev.api.trustlesswork.com
+TRUSTLESS_WORK_NETWORK=testnet
+TRUSTLESS_WORK_SIGNER_PUBLIC_KEY=
+TRUSTLESS_WORK_SIGNER_SECRET_KEY=
+TRUSTLESS_WORK_APPROVER_PUBLIC_KEY=
+TRUSTLESS_WORK_PLATFORM_ADDRESS=
+TRUSTLESS_WORK_RELEASE_SIGNER_PUBLIC_KEY=
+TRUSTLESS_WORK_DISPUTE_RESOLVER_PUBLIC_KEY=
+TRUSTLESS_WORK_USDC_ISSUER=
+TRUSTLESS_WORK_PLATFORM_FEE=0
 ```
 
 Apply the schema in Supabase SQL editor:
 
 ```txt
 database/schema.sql
+```
+
+For an existing Supabase project, run migrations in order and include:
+
+```txt
+database/migrations/006_payguard.sql
 ```
 
 ### Configure frontend
@@ -212,6 +238,61 @@ Local URLs:
 Frontend: http://localhost:5173
 Backend:  http://localhost:4000
 ```
+
+## PayGuard
+
+PayGuard lets AI agents create payment requests while keeping execution behind policy checks, audit logs, and human approval.
+
+Core rule:
+
+```txt
+The agent proposes. The human approves. Oberyn executes on-chain.
+```
+
+How to test locally:
+
+1. Start the app with `npm run dev`.
+2. Open a project and go to `Project > PayGuard`.
+3. Use the default demo agent and verified demo wallet to create a payment request.
+4. Amounts up to 1000 USDC become `pending_approval`; amounts over 1000 USDC become `requires_multi_approval`; blocked agents or unverified wallets become `blocked`.
+5. Approve a pending request, then run `Crear escrow`, `Fund`, and `Release`.
+6. Review the audit panel for `PAYMENT_REQUEST_CREATED`, `POLICY_EVALUATED`, `HUMAN_APPROVED`, `ESCROW_CREATED`, `ESCROW_FUNDED`, and `PAYMENT_RELEASED`.
+
+Agents can also create payment requests through the SDK:
+
+```ts
+const payguard = await oberyn.payguard.config();
+const agent = payguard.agents.find((item) => item.status === "active");
+const wallet = payguard.trustedWallets[0];
+
+const request = await oberyn.payguard.requestPayment({
+  agentId: agent!.id,
+  recipientName: wallet!.recipientName,
+  recipientWallet: wallet!.walletAddress,
+  amount: 250,
+  token: "USDC",
+  reason: "Invoice #1842",
+  riskLevel: "medium"
+});
+```
+
+The SDK only creates the request. It does not expose escrow creation, funding, or release methods to the agent.
+
+Mock mode:
+
+- `TRUSTLESS_WORK_MODE=mock` is the default.
+- If Trustless Work API key, Stellar role public keys, signer secret, or USDC issuer are missing, PayGuard stays in mock mode.
+- Mock mode simulates escrow IDs, transaction hashes, funding, release, and status checks.
+- The frontend shows a `Trustless Work Mock Mode` badge.
+
+Production connection:
+
+- Store `TRUSTLESS_WORK_API_KEY` only in `backend/.env`.
+- Configure `TRUSTLESS_WORK_MODE=live`.
+- Configure the Stellar signer and role public keys used by Trustless Work: signer, approver, platform address, release signer, dispute resolver, and USDC issuer.
+- Apply `database/migrations/006_payguard.sql`.
+- Replace demo trusted wallets with verified recipient wallets for the project.
+- Decide whether Oberyn signs Trustless Work XDR server-side after human approval or whether a wallet-signing step should be added for non-custodial customer signing.
 
 ## SDK Mini Project
 

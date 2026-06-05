@@ -24,6 +24,8 @@ POST /api/sdk/events
 POST /api/sdk/events/batch
 POST /api/sdk/heartbeat
 POST /api/sdk/approval-status
+POST /api/sdk/payguard/config
+POST /api/sdk/payguard/payment-requests
 ```
 
 La autenticacion usa la clave publica del proyecto en `x-oberyn-key`. Esta clave solo puede enviar eventos SDK, evaluar acciones y consultar aprobaciones asociadas al proyecto. No es una clave de administrador y no debe confundirse con tokens de proveedores.
@@ -100,6 +102,10 @@ Variables disponibles:
 - `OBERYN_SDK_ENDPOINT`: endpoint runtime de Oberyn. En desarrollo puede ser `http://localhost:4000/api/sdk/events`; en produccion usa tu dominio de API.
 - `OBERYN_APPROVAL_MODE`: `throw` lanza error cuando se requiere aprobacion; `poll` espera hasta que el humano apruebe o rechace.
 - `OBERYN_RUN_APPROVAL_DEMO`: `1` activa el escenario del mini proyecto que espera aprobacion humana antes de llamar a DeepSeek.
+- `OBERYN_RUN_PAYGUARD_DEMO`: `1` crea una solicitud PayGuard desde el mini proyecto; `0` la omite.
+- `OBERYN_PAYGUARD_AGENT_ID`: opcional; si falta, el demo usa el primer agente PayGuard activo del proyecto.
+- `OBERYN_PAYGUARD_RECIPIENT_WALLET`: opcional; si falta, el demo usa la primera wallet verificada del proyecto.
+- `OBERYN_PAYGUARD_AMOUNT`: monto de prueba para la solicitud PayGuard.
 - `DEEPSEEK_API_KEY`: clave privada del proveedor. Se queda en tu aplicacion; Oberyn no la necesita.
 - `DEEPSEEK_MODEL`: modelo DeepSeek, por ejemplo `deepseek-chat`.
 - `DEEPSEEK_PROMPT`: prompt configurable para el demo normal.
@@ -310,6 +316,45 @@ try {
 ```
 
 El callback solo se ejecuta si Oberyn devuelve `approved` o si la aprobacion humana se resuelve cuando `approvalMode: "poll"` esta activo.
+
+## Solicitudes de pago con PayGuard
+
+El SDK tambien puede crear solicitudes de pago para PayGuard. Esta API esta pensada para agentes de IA: el agente propone el pago, pero no recibe metodos para crear escrow, fondear ni liberar fondos.
+
+```ts
+const payguard = await oberyn.payguard.config();
+const agent = payguard.agents.find((item) => item.status === "active");
+const wallet = payguard.trustedWallets[0];
+
+const paymentRequest = await oberyn.payguard.requestPayment({
+  agentId: agent!.id,
+  recipientName: wallet!.recipientName,
+  recipientWallet: wallet!.walletAddress,
+  amount: 250,
+  token: "USDC",
+  reason: "Factura aprobada por orden de compra #1842",
+  riskLevel: "medium"
+});
+
+console.log(paymentRequest.status);
+console.log(paymentRequest.auditHash);
+```
+
+El backend evalua la solicitud con el policy engine de PayGuard:
+
+1. Agente bloqueado o sin permiso para crear solicitudes: `blocked`.
+2. Wallet no verificada: `blocked`.
+3. Pago hasta 1000 USDC: `pending_approval`.
+4. Pago mayor a 1000 USDC: `requires_multi_approval`.
+5. Se registra auditoria y `auditHash`.
+
+Despues de eso, el flujo continua en el dashboard:
+
+```txt
+Proyecto > PayGuard
+```
+
+Solo un humano autenticado puede aprobar, rechazar o bloquear. Solo una solicitud aprobada puede crear escrow en Trustless Work. El SDK no expone metodos para ejecutar pagos directamente.
 
 ## Aprobacion humana y ejecucion posterior
 

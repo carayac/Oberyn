@@ -153,6 +153,73 @@ function printDeepSeekAnswer(result) {
   });
 }
 
+function envNumber(name, fallback) {
+  const value = Number(process.env[name]);
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+function shortHash(value) {
+  if (!value) return "pending";
+  return value.length > 18 ? `${value.slice(0, 8)}...${value.slice(-6)}` : value;
+}
+
+async function runPayGuardDemo() {
+  if (process.env.OBERYN_RUN_PAYGUARD_DEMO === "0") {
+    console.log("\nPayGuard demo skipped");
+    console.log("Set OBERYN_RUN_PAYGUARD_DEMO=1 or remove the variable to enable it.");
+    return null;
+  }
+
+  console.log("\nPayGuard SDK demo");
+  console.log("Loading real PayGuard agents and trusted wallets from the dashboard project...");
+
+  const config = await oberyn.payguard.config();
+  const agent =
+    config.agents.find((item) => item.id === process.env.OBERYN_PAYGUARD_AGENT_ID) ??
+    config.agents.find((item) => item.status === "active" && item.canCreatePaymentRequest && !item.canExecutePayment) ??
+    config.agents[0];
+  const wallet =
+    config.trustedWallets.find((item) => item.walletAddress === process.env.OBERYN_PAYGUARD_RECIPIENT_WALLET) ??
+    config.trustedWallets[0];
+
+  if (!agent) {
+    throw new Error("No PayGuard payment agent is available for this project. Open Project > PayGuard to seed or create one.");
+  }
+
+  if (!wallet) {
+    throw new Error("No verified PayGuard wallet is available for this project. Open Project > PayGuard and add a trusted wallet.");
+  }
+
+  const defaultAmount = Math.min(75, Number(agent.maxAmount || 75));
+  const amount = envNumber("OBERYN_PAYGUARD_AMOUNT", defaultAmount);
+  const paymentRequest = await oberyn.payguard.requestPayment({
+    agentId: agent.id,
+    recipientName: process.env.OBERYN_PAYGUARD_RECIPIENT_NAME ?? wallet.recipientName,
+    recipientWallet: process.env.OBERYN_PAYGUARD_RECIPIENT_WALLET ?? wallet.walletAddress,
+    amount,
+    token: process.env.OBERYN_PAYGUARD_TOKEN ?? wallet.token ?? "USDC",
+    reason: process.env.OBERYN_PAYGUARD_REASON ?? `SDK PayGuard demo ${new Date().toISOString()}`,
+    riskLevel: process.env.OBERYN_PAYGUARD_RISK_LEVEL ?? "medium",
+  });
+
+  console.log("PayGuard request created from SDK");
+  console.log({
+    projectId: config.projectId,
+    requestId: paymentRequest.id,
+    status: paymentRequest.status,
+    riskLevel: paymentRequest.riskLevel,
+    amount: `${paymentRequest.amount} ${paymentRequest.token}`,
+    agent: agent.name,
+    recipientName: paymentRequest.recipientName,
+    policyApplied: paymentRequest.policyApplied,
+    auditHash: shortHash(paymentRequest.auditHash),
+    trustlessWorkMode: config.trustlessWork.mode,
+  });
+  console.log("Open Oberyn dashboard > Project > PayGuard to approve/reject/block and execute escrow after approval.");
+
+  return paymentRequest;
+}
+
 async function runDeepSeekHumanApprovalDemo() {
   const prompt = process.env.DEEPSEEK_APPROVAL_PROMPT ?? "Responde exactamente: accion aprobada por humano en Oberyn.";
   const runId = `deepseek-human-approval-${Date.now()}`;
@@ -247,6 +314,8 @@ async function runMaliciousDeepSeekDemo() {
 async function main() {
   console.log("Oberyn SDK mini API demo");
   console.log("Runtime endpoint:", process.env.OBERYN_SDK_ENDPOINT ?? "http://localhost:4000/api/sdk/events");
+
+  await runPayGuardDemo();
 
   if (process.env.OBERYN_RUN_APPROVAL_DEMO === "1") {
     await runDeepSeekHumanApprovalDemo();

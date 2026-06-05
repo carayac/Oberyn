@@ -5,6 +5,11 @@ alter table bots enable row level security;
 alter table flows enable row level security;
 alter table rules enable row level security;
 alter table approval_requests enable row level security;
+alter table payment_agents enable row level security;
+alter table trusted_wallets enable row level security;
+alter table payment_requests enable row level security;
+alter table payment_approvals enable row level security;
+alter table payment_audit_logs enable row level security;
 alter table audit_events enable row level security;
 alter table exceptions enable row level security;
 alter table manual_services enable row level security;
@@ -34,6 +39,21 @@ create policy "Backend service role can manage rules" on rules
   for all using (auth.role() = 'service_role') with check (auth.role() = 'service_role');
 
 create policy "Backend service role can manage approvals" on approval_requests
+  for all using (auth.role() = 'service_role') with check (auth.role() = 'service_role');
+
+create policy "Backend service role can manage payment agents" on payment_agents
+  for all using (auth.role() = 'service_role') with check (auth.role() = 'service_role');
+
+create policy "Backend service role can manage trusted wallets" on trusted_wallets
+  for all using (auth.role() = 'service_role') with check (auth.role() = 'service_role');
+
+create policy "Backend service role can manage payment requests" on payment_requests
+  for all using (auth.role() = 'service_role') with check (auth.role() = 'service_role');
+
+create policy "Backend service role can manage payment approvals" on payment_approvals
+  for all using (auth.role() = 'service_role') with check (auth.role() = 'service_role');
+
+create policy "Backend service role can manage payment audit logs" on payment_audit_logs
   for all using (auth.role() = 'service_role') with check (auth.role() = 'service_role');
 
 create policy "Backend service role can manage audit events" on audit_events

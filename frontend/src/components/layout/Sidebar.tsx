@@ -1,5 +1,5 @@
 import { UserButton } from "@clerk/react";
-import { Bot, Building2, Code2, FileText, GitBranch, Home, Menu, Plug, Settings, ShieldCheck, UserCheck } from "lucide-react";
+import { Banknote, Bot, Building2, Code2, FileText, GitBranch, Home, Menu, Plug, Settings, ShieldCheck, UserCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useOrganizations } from "../../hooks/useOrganizations";
@@ -99,6 +99,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         items: [
           { id: "rules", label: "Reglas", to: projectRoute("rules"), Icon: ShieldCheck },
           { id: "approvals", label: "Aprobaciones", to: projectRoute("approvals"), Icon: UserCheck },
+          { id: "payguard", label: "PayGuard", to: projectRoute("payguard"), Icon: Banknote },
           { id: "audit", label: "Auditoría", to: projectRoute("audit"), Icon: FileText },
         ],
       },

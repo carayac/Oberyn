@@ -25,6 +25,7 @@ import { ProjectSettingsPage } from "../pages/projects/ProjectSettingsPage";
 import { ProjectIntegrationsPage } from "../pages/projects/ProjectIntegrationsPage";
 import { ProjectRulesPage } from "../pages/projects/ProjectRulesPage";
 import { ProjectApprovalsPage } from "../pages/projects/ProjectApprovalsPage";
+import { ProjectPayGuardPage } from "../pages/projects/ProjectPayGuardPage";
 import { ProjectAuditPage } from "../pages/projects/ProjectAuditPage";
 import { ProjectEvidencePage } from "../pages/projects/ProjectEvidencePage";
 import { ProjectExceptionsPage } from "../pages/projects/ProjectExceptionsPage";
@@ -70,6 +71,7 @@ export function AppRoutes() {
         <Route path={appRoutes.projectIntegrations} element={<ProjectIntegrationsPage />} />
         <Route path={appRoutes.projectRules} element={<ProjectRulesPage />} />
         <Route path={appRoutes.projectApprovals} element={<ProjectApprovalsPage />} />
+        <Route path={appRoutes.projectPayGuard} element={<ProjectPayGuardPage />} />
         <Route path={appRoutes.projectAudit} element={<ProjectAuditPage />} />
         <Route path={appRoutes.projectEvidence} element={<ProjectEvidencePage />} />
         <Route path={appRoutes.projectExceptions} element={<ProjectExceptionsPage />} />

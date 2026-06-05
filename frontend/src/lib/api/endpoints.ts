@@ -6,6 +6,7 @@ export const endpoints = {
   integrations: (projectId: string) => `/projects/${projectId}/integrations`,
   rules: (projectId: string) => `/projects/${projectId}/rules`,
   approvals: (projectId: string) => `/projects/${projectId}/approvals`,
+  payguard: (projectId: string) => `/projects/${projectId}/payguard`,
   audit: (projectId: string) => `/projects/${projectId}/audit`,
   evidence: (projectId: string, eventId: string) => `/projects/${projectId}/evidence/${eventId}`,
   exceptions: (projectId: string) => `/projects/${projectId}/exceptions`,

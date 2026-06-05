@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { supabaseAdmin } from "../config/supabase.js";
 import { containsSensitiveData, decisionService, normalizeDecision, normalizeRisk } from "./decision.service.js";
+import { payguardService } from "./payguard.service.js";
 
 type SdkEventInput = {
   eventType?: string;
@@ -457,6 +458,41 @@ export const sdkService = {
       reason: data.reason ? String(data.reason) : null,
       resolvedAt: data.resolved_at ? new Date(String(data.resolved_at)).toISOString() : null,
     };
+  },
+
+  payguardConfig: async (publicKey: string) => {
+    const key = await resolveSdkKey(publicKey);
+    const summary = await payguardService.summary(String(key.project_id));
+    return {
+      projectId: String(key.project_id),
+      agents: summary.agents
+        .filter((agent) => agent.canCreatePaymentRequest)
+        .map((agent) => ({
+          id: agent.id,
+          name: agent.name,
+          status: agent.status,
+          riskLevel: agent.riskLevel,
+          maxAmount: agent.maxAmount,
+          canCreatePaymentRequest: agent.canCreatePaymentRequest,
+          canApprovePayment: agent.canApprovePayment,
+          canExecutePayment: agent.canExecutePayment,
+        })),
+      trustedWallets: summary.trustedWallets
+        .filter((wallet) => wallet.isVerified)
+        .map((wallet) => ({
+          id: wallet.id,
+          recipientName: wallet.recipientName,
+          walletAddress: wallet.walletAddress,
+          token: wallet.token,
+          isVerified: wallet.isVerified,
+        })),
+      trustlessWork: summary.trustlessWork,
+    };
+  },
+
+  createPayGuardPaymentRequest: async (publicKey: string, payload: Record<string, unknown>) => {
+    const key = await resolveSdkKey(publicKey);
+    return payguardService.createPaymentRequest(String(key.project_id), payload);
   },
 
   ingestEvent: async (publicKey: string, payload: SdkEventInput) => {

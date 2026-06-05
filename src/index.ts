@@ -98,6 +98,84 @@ export type OberynApprovalStatus = {
   resolvedAt?: string | null;
 };
 
+export type OberynPayGuardRiskLevel = "low" | "medium" | "high";
+
+export type OberynPayGuardPaymentStatus =
+  | "draft"
+  | "pending_approval"
+  | "requires_multi_approval"
+  | "approved"
+  | "rejected"
+  | "blocked"
+  | "escrow_created"
+  | "funded"
+  | "released"
+  | "failed";
+
+export type OberynPayGuardPaymentRequestInput = {
+  agentId: string;
+  recipientName: string;
+  recipientWallet: string;
+  amount: number;
+  token?: string;
+  reason: string;
+  riskLevel?: OberynPayGuardRiskLevel;
+};
+
+export type OberynPayGuardPaymentRequest = {
+  id: string;
+  projectId: string;
+  agentId: string;
+  recipientName: string;
+  recipientWallet: string;
+  amount: number;
+  token: string;
+  reason: string;
+  riskLevel: OberynPayGuardRiskLevel;
+  status: OberynPayGuardPaymentStatus;
+  policyApplied: string[];
+  auditHash: string;
+  escrowId?: string | null;
+  txHash?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type OberynPayGuardAgent = {
+  id: string;
+  name: string;
+  status: "active" | "paused" | "blocked";
+  riskLevel: OberynPayGuardRiskLevel;
+  maxAmount: number;
+  canCreatePaymentRequest: boolean;
+  canApprovePayment: boolean;
+  canExecutePayment: boolean;
+};
+
+export type OberynPayGuardTrustedWallet = {
+  id: string;
+  recipientName: string;
+  walletAddress: string;
+  token: string;
+  isVerified: boolean;
+};
+
+export type OberynPayGuardConfig = {
+  projectId: string;
+  agents: OberynPayGuardAgent[];
+  trustedWallets: OberynPayGuardTrustedWallet[];
+  trustlessWork: {
+    mode: "mock" | "live";
+    isMockMode: boolean;
+    configured: boolean;
+    canSubmitTransactions: boolean;
+    baseUrl: string;
+    network: string;
+    message: string;
+    docsUrl: string;
+  };
+};
+
 export type OberynConfig = {
   apiKey: string;
   endpoint?: string;
@@ -121,6 +199,12 @@ export type OberynClient = {
   evaluate(event: OberynEvent): Promise<OberynDecision>;
   audit(event: OberynEvent & { decisionId?: string; status?: "completed" | "failed"; response?: unknown; error?: string }): Promise<{ recorded: boolean; eventId: string; decisionId: string }>;
   approvalStatus(input: { decisionId?: string; approvalId?: string }): Promise<OberynApprovalStatus>;
+  payguard: {
+    config(): Promise<OberynPayGuardConfig>;
+    getConfig(): Promise<OberynPayGuardConfig>;
+    requestPayment(input: OberynPayGuardPaymentRequestInput): Promise<OberynPayGuardPaymentRequest>;
+    createPaymentRequest(input: OberynPayGuardPaymentRequestInput): Promise<OberynPayGuardPaymentRequest>;
+  };
   flush(): Promise<void>;
   track<T>(actionName: string, fn: () => Promise<T> | T, options?: Omit<OberynEvent, "actionName" | "decision">): Promise<T>;
   protect<T>(actionName: string, fn: () => Promise<T> | T, options?: OberynProtectOptions): Promise<T>;
@@ -527,6 +611,18 @@ export function createOberyn(config: OberynConfig): OberynClient {
     return request<OberynApprovalStatus>("/approval-status", input);
   }
 
+  async function requestPayment(input: OberynPayGuardPaymentRequestInput) {
+    return request<OberynPayGuardPaymentRequest>("/payguard/payment-requests", {
+      token: "USDC",
+      riskLevel: "low",
+      ...input,
+    });
+  }
+
+  async function payguardConfig() {
+    return request<OberynPayGuardConfig>("/payguard/config", {});
+  }
+
   async function ensureDecisionAllows(decision: OberynDecision) {
     if (decision.decision === "blocked") throw new OberynBlockedError(decision);
     if (decision.decision !== "requires_approval") return;
@@ -846,6 +942,12 @@ export function createOberyn(config: OberynConfig): OberynClient {
     evaluate,
     audit,
     approvalStatus,
+    payguard: {
+      config: payguardConfig,
+      getConfig: payguardConfig,
+      requestPayment,
+      createPaymentRequest: requestPayment,
+    },
     flush,
     track,
     protect,

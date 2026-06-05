@@ -22,6 +22,7 @@ export const appRoutes = {
   projectIntegrations: "/projects/:projectId/integrations",
   projectRules: "/projects/:projectId/rules",
   projectApprovals: "/projects/:projectId/approvals",
+  projectPayGuard: "/projects/:projectId/payguard",
   projectAudit: "/projects/:projectId/audit",
   projectEvidence: "/projects/:projectId/evidence/:eventId",
   projectExceptions: "/projects/:projectId/exceptions",

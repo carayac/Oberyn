@@ -27,7 +27,7 @@ import { Card } from "../../components/ui/Card";
 import { useDashboardData } from "../../hooks/useDashboardData";
 import { useOrganizations } from "../../hooks/useOrganizations";
 import { useProjects } from "../../hooks/useProjects";
-import { getProjectApprovalsRoute, getProjectAuditRoute, getProjectRulesRoute } from "../../lib/constants/routes";
+import { getProjectApprovalsRoute, getProjectAuditRoute, getProjectPayGuardRoute, getProjectRulesRoute } from "../../lib/constants/routes";
 import type { ApprovalRequest } from "../../types/approval";
 import type { AuditEvent } from "../../types/audit";
 import type { Flow } from "../../types/flow";
@@ -679,6 +679,9 @@ export function DashboardPage() {
         <div className="flex flex-wrap gap-3">
           <Link className="font-semibold text-[#008f1f]" to={getProjectApprovalsRoute(selectedProject.id)}>
             Revisar aprobaciones
+          </Link>
+          <Link className="font-semibold text-[#008f1f]" to={getProjectPayGuardRoute(selectedProject.id)}>
+            Abrir PayGuard
           </Link>
           <Link className="font-semibold text-[#008f1f]" to={getProjectAuditRoute(selectedProject.id)}>
             Abrir auditoría

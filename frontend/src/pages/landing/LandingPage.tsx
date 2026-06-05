@@ -35,6 +35,7 @@ import {
 
 const navItems = [
   { label: "Producto", href: "#producto" },
+  { label: "PayGuard", href: "#payguard" },
   { label: "Cómo funciona", href: "#como-funciona" },
   { label: "Seguridad", href: "#seguridad" },
   { label: "Auditoría", href: "#auditoria" },
@@ -153,6 +154,16 @@ const useCases = [
     examples: ["Reportes", "Automatizaciones", "Base de datos"],
   },
 ];
+
+const payGuardCards = [
+  { icon: UserX, title: "Human-approved AI payments" },
+  { icon: Link2, title: "Trustless Work escrow execution" },
+  { icon: FileCheck, title: "Audit-ready payment logs" },
+  { icon: Shield, title: "Policy-based agent permissions" },
+  { icon: Banknote, title: "Stablecoin-native settlement" },
+];
+
+const payGuardFlow = ["AI Agent", "Payment Request", "Oberyn Policy Check", "Human Approval", "Trustless Work Escrow", "On-chain Payment"];
 
 const footerLinks = {
   producto: [
@@ -469,6 +480,56 @@ function Solution() {
           <p className="mx-auto mt-3 max-w-3xl leading-relaxed text-muted-foreground">
             Cada proyecto puede tener sus propias reglas de riesgo, aprobación, datos sensibles, servicios permitidos y acciones bloqueadas. Oberyn no obliga un comportamiento único: se adapta al contexto de tu agente, bot o integración.
           </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PayGuardLanding() {
+  return (
+    <section id="payguard" className="bg-muted/30 py-20 lg:py-28">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:items-center">
+          <div>
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-primary">
+              <Banknote className="h-4 w-4" />
+              <span className="text-sm font-medium">PayGuard</span>
+            </div>
+
+            <h2 className="text-balance text-3xl font-bold text-foreground sm:text-4xl">AI agents can request payments. Only verified approvals can move funds.</h2>
+            <p className="mt-5 text-pretty text-lg leading-relaxed text-muted-foreground">
+              Oberyn PayGuard lets AI agents prepare payment requests without giving them direct control over funds. Every payment is checked against policy rules, recorded in an audit trail, approved by a human, and then executed through Trustless Work escrow infrastructure.
+            </p>
+            <p className="mt-6 rounded-2xl border border-primary/20 bg-primary/5 p-5 text-lg font-semibold text-primary">
+              The agent proposes. The human approves. Oberyn executes on-chain.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+            <div className="grid gap-3 sm:grid-cols-2">
+              {payGuardCards.map((card) => (
+                <div key={card.title} className="flex items-center gap-3 rounded-xl border border-border bg-background p-4">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <card.icon className="h-5 w-5" />
+                  </span>
+                  <span className="text-sm font-semibold text-foreground">{card.title}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-8 rounded-xl border border-border bg-muted/40 p-5">
+              <h3 className="text-sm font-semibold text-foreground">Payment control flow</h3>
+              <div className="mt-5 flex flex-wrap items-center gap-2">
+                {payGuardFlow.map((step, index) => (
+                  <div key={step} className="flex items-center gap-2">
+                    <span className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground">{step}</span>
+                    {index < payGuardFlow.length - 1 ? <ArrowRight className="h-4 w-4 text-primary" /> : null}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -852,6 +913,7 @@ export function LandingPage() {
         <Hero />
         <Problem />
         <Solution />
+        <PayGuardLanding />
         <HowItWorks />
         <SdkGateway />
         <StellarAudit />

@@ -118,7 +118,11 @@ export function RegisterPage() {
     setInfoMessage(null);
 
     try {
-      await clerk.authenticateWithMetamask({ redirectUrl: appRoutes.onboardingSuccess });
+      const result = (await clerk.authenticateWithMetamask({ redirectUrl: appRoutes.dashboard })) as { createdSessionId?: string | null } | undefined;
+      if (result?.createdSessionId && setActive) {
+        await setActive({ session: result.createdSessionId });
+      }
+      navigate(appRoutes.dashboard, { replace: true });
     } catch (error) {
       setErrorMessage(getClerkErrorMessage(error, "No pudimos conectar MetaMask con Clerk. Revisa que MetaMask este habilitado en Clerk."));
     } finally {
