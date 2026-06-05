@@ -161,7 +161,7 @@ The schema includes:
 - sdk_keys
 - gateway_configs
 
-See [database/schema.sql](database/schema.sql).
+   See [database/schema.sql](database/schema.sql).
 
 ## Quickstart
 
