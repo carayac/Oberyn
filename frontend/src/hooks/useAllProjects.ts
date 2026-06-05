@@ -37,7 +37,7 @@ function getProjectStats(projects: Project[]) {
 }
 
 export function useAllProjects(organizations: Organization[], isOrganizationsLoading: boolean) {
-  const { getToken, isLoaded, isSignedIn } = useAuth();
+  const { getToken, isLoaded, isSignedIn, userId } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +52,7 @@ export function useAllProjects(organizations: Organization[], isOrganizationsLoa
       return;
     }
 
-    const cacheKey = organizations.map((organization) => organization.id).sort().join("|");
+    const cacheKey = `${userId ?? "anonymous"}:${organizations.map((organization) => organization.id).sort().join("|")}`;
     const cached = allProjectsCache.get(cacheKey);
     if (cached) {
       setProjects(cached);
@@ -68,7 +68,8 @@ export function useAllProjects(organizations: Organization[], isOrganizationsLoa
       let request = allProjectsRequests.get(cacheKey);
       if (!request) {
         request = (async () => {
-          const token = await getToken();
+          const token = await getToken({ skipCache: true });
+          if (!token) throw new Error("No se pudo obtener la sesión activa. Vuelve a iniciar sesión.");
           const response = await apiClient.get<ApiResponse<Project[]>>("/projects/all", token);
 
           return response.data
@@ -87,7 +88,7 @@ export function useAllProjects(organizations: Organization[], isOrganizationsLoa
     } finally {
       setLoading(false);
     }
-  }, [getToken, isLoaded, isOrganizationsLoading, isSignedIn, organizations]);
+  }, [getToken, isLoaded, isOrganizationsLoading, isSignedIn, organizations, userId]);
 
   useEffect(() => {
     void loadProjects();
@@ -99,7 +100,8 @@ export function useAllProjects(organizations: Organization[], isOrganizationsLoa
     const project = projects.find((item) => item.id === projectId);
     if (!project) return;
 
-    const token = isLoaded && isSignedIn ? await getToken() : null;
+    const token = isLoaded && isSignedIn ? await getToken({ skipCache: true }) : null;
+    if (!token) throw new Error("No se pudo obtener la sesión activa. Vuelve a iniciar sesión.");
     const nextStatus = project.status === "paused" ? "active" : "paused";
     const response = await apiClient.patch<ApiResponse<Project>>(`/projects/${projectId}`, { status: nextStatus }, token, project.organizationId);
     const updated = normalizeProject(response.data);
@@ -114,7 +116,8 @@ export function useAllProjects(organizations: Organization[], isOrganizationsLoa
     const project = projects.find((item) => item.id === projectId);
     if (!project) throw new Error("No se encontró el proyecto para modificar.");
 
-    const token = isLoaded && isSignedIn ? await getToken() : null;
+    const token = isLoaded && isSignedIn ? await getToken({ skipCache: true }) : null;
+    if (!token) throw new Error("No se pudo obtener la sesión activa. Vuelve a iniciar sesión.");
     const response = await apiClient.patch<ApiResponse<Project>>(
       `/projects/${projectId}`,
       {
@@ -142,7 +145,8 @@ export function useAllProjects(organizations: Organization[], isOrganizationsLoa
     const project = projects.find((item) => item.id === projectId);
     if (!project) return;
 
-    const token = isLoaded && isSignedIn ? await getToken() : null;
+    const token = isLoaded && isSignedIn ? await getToken({ skipCache: true }) : null;
+    if (!token) throw new Error("No se pudo obtener la sesión activa. Vuelve a iniciar sesión.");
     await apiClient.delete<ApiResponse<{ id: string; archived: boolean }>>(`/projects/${projectId}`, token, project.organizationId);
     setProjects((current) => {
       const nextProjects = current.map((item) => (item.id === projectId ? { ...item, status: "archived" as const } : item));

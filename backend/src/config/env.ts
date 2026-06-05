@@ -1,4 +1,6 @@
-import "dotenv/config";
+import dotenv from "dotenv";
+
+dotenv.config({ path: new URL("../../.env", import.meta.url) });
 
 export const env = {
   NODE_ENV: process.env.NODE_ENV ?? "development",
@@ -16,6 +18,7 @@ export const env = {
   STELLAR_EXPLORER_BASE_URL: process.env.STELLAR_EXPLORER_BASE_URL ?? "https://stellar.expert/explorer/testnet/tx",
   STELLAR_ANCHOR_BATCH_SIZE: Number(process.env.STELLAR_ANCHOR_BATCH_SIZE ?? 20),
   TRUSTLESS_WORK_MODE: process.env.TRUSTLESS_WORK_MODE ?? "mock",
+  TRUSTLESS_WORK_KEY_ID: process.env.TRUSTLESS_WORK_KEY_ID ?? "",
   TRUSTLESS_WORK_API_KEY: process.env.TRUSTLESS_WORK_API_KEY ?? "",
   TRUSTLESS_WORK_BASE_URL: process.env.TRUSTLESS_WORK_BASE_URL ?? "https://dev.api.trustlesswork.com",
   TRUSTLESS_WORK_NETWORK: process.env.TRUSTLESS_WORK_NETWORK ?? "testnet",

@@ -508,7 +508,7 @@ export function ProjectPayGuardPage() {
               {payguard.trustlessWork.isMockMode ? <span className="rounded-md bg-amber-100 px-2.5 py-1 text-xs font-extrabold text-amber-800">Trustless Work Mock Mode</span> : null}
             </div>
             <p className="mt-3 max-w-3xl text-base font-medium leading-7 text-slate-600">
-              The agent proposes. The human approves. Oberyn executes on-chain.
+              El agente propone. La persona aprueba. Oberyn ejecuta el pago en blockchain.
             </p>
           </div>
           <Button type="button" variant="secondary" onClick={() => void runAction(payguard.reloadPayGuard, "PayGuard actualizado.")} disabled={payguard.isLoading || isWorking} className="h-11 gap-2">

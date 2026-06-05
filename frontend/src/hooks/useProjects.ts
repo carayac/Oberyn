@@ -38,40 +38,51 @@ function useProjectStats(projects: Project[]) {
 }
 
 export function useProjects(organizationId?: string | null) {
-  const { getToken, isLoaded, isSignedIn } = useAuth();
+  const { getToken, isLoaded, isSignedIn, userId } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   async function getAuthToken() {
-    if (!isLoaded || !isSignedIn) return null;
-    return getToken();
+    if (!isLoaded || !isSignedIn) throw new Error("Inicia sesión para cargar tus proyectos.");
+    const token = await getToken();
+    if (!token) throw new Error("No se pudo obtener la sesión activa. Vuelve a iniciar sesión.");
+    return token;
   }
 
   async function fetchProjects(organizationId: string) {
-    const cached = projectsCache.get(organizationId);
+    const cacheKey = `${userId ?? "anonymous"}:${organizationId}`;
+    const cached = projectsCache.get(cacheKey);
     if (cached) return cached;
 
-    const existingRequest = projectsRequests.get(organizationId);
+    const existingRequest = projectsRequests.get(cacheKey);
     if (existingRequest) return existingRequest;
 
     const request = (async () => {
       const token = await getAuthToken();
       const response = await apiClient.get<ApiResponse<Project[]>>("/projects", token, organizationId);
       const normalized = response.data.map(normalizeProject);
-      projectsCache.set(organizationId, normalized);
-      projectsRequests.delete(organizationId);
+      projectsCache.set(cacheKey, normalized);
+      projectsRequests.delete(cacheKey);
       return normalized;
     })().catch((requestError) => {
-      projectsRequests.delete(organizationId);
+      projectsRequests.delete(cacheKey);
       throw requestError;
     });
 
-    projectsRequests.set(organizationId, request);
+    projectsRequests.set(cacheKey, request);
     return request;
   }
 
   async function loadProjects({ force = false } = {}) {
+    if (!isLoaded) return;
+    if (!isSignedIn) {
+      setProjects([]);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
     if (!organizationId) {
       setProjects([]);
       setLoading(false);
@@ -79,8 +90,9 @@ export function useProjects(organizationId?: string | null) {
       return;
     }
 
-    if (force) projectsCache.delete(organizationId);
-    const cached = projectsCache.get(organizationId);
+    const cacheKey = `${userId ?? "anonymous"}:${organizationId}`;
+    if (force) projectsCache.delete(cacheKey);
+    const cached = projectsCache.get(cacheKey);
     if (cached && !force) {
       setProjects(cached);
       setLoading(false);
@@ -125,8 +137,9 @@ export function useProjects(organizationId?: string | null) {
       organizationId,
     );
     const project = normalizeProject(response.data);
-    const nextProjects = [project, ...(projectsCache.get(organizationId) ?? projects).filter((item) => item.id !== project.id)];
-    projectsCache.set(organizationId, nextProjects);
+    const cacheKey = `${userId ?? "anonymous"}:${organizationId}`;
+    const nextProjects = [project, ...(projectsCache.get(cacheKey) ?? projects).filter((item) => item.id !== project.id)];
+    projectsCache.set(cacheKey, nextProjects);
     setProjects(nextProjects);
     return project;
   }
@@ -141,7 +154,7 @@ export function useProjects(organizationId?: string | null) {
     const response = await apiClient.patch<ApiResponse<Project>>(`/projects/${projectId}`, { status: nextStatus }, token, organizationId);
     const updated = normalizeProject(response.data);
     const nextProjects = projects.map((item) => (item.id === projectId ? updated : item));
-    projectsCache.set(organizationId, nextProjects);
+    projectsCache.set(`${userId ?? "anonymous"}:${organizationId}`, nextProjects);
     setProjects(nextProjects);
   }
 
@@ -165,7 +178,7 @@ export function useProjects(organizationId?: string | null) {
     );
     const updated = normalizeProject(response.data);
     const nextProjects = projects.map((item) => (item.id === projectId ? updated : item));
-    projectsCache.set(organizationId, nextProjects);
+    projectsCache.set(`${userId ?? "anonymous"}:${organizationId}`, nextProjects);
     setProjects(nextProjects);
     return updated;
   }
@@ -175,7 +188,7 @@ export function useProjects(organizationId?: string | null) {
     const token = await getAuthToken();
     await apiClient.delete<ApiResponse<{ id: string; archived: boolean }>>(`/projects/${projectId}`, token, organizationId);
     const nextProjects = projects.map((item) => (item.id === projectId ? { ...item, status: "archived" as const } : item));
-    projectsCache.set(organizationId, nextProjects);
+    projectsCache.set(`${userId ?? "anonymous"}:${organizationId}`, nextProjects);
     setProjects(nextProjects);
   }
 

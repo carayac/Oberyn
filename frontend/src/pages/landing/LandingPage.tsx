@@ -156,14 +156,14 @@ const useCases = [
 ];
 
 const payGuardCards = [
-  { icon: UserX, title: "Human-approved AI payments" },
-  { icon: Link2, title: "Trustless Work escrow execution" },
-  { icon: FileCheck, title: "Audit-ready payment logs" },
-  { icon: Shield, title: "Policy-based agent permissions" },
-  { icon: Banknote, title: "Stablecoin-native settlement" },
+  { icon: UserX, title: "Pagos aprobados por personas" },
+  { icon: Link2, title: "Ejecución con escrow de Trustless Work" },
+  { icon: FileCheck, title: "Registros de pago listos para auditoría" },
+  { icon: Shield, title: "Permisos de agentes basados en reglas" },
+  { icon: Banknote, title: "Liquidación nativa con stablecoins" },
 ];
 
-const payGuardFlow = ["AI Agent", "Payment Request", "Oberyn Policy Check", "Human Approval", "Trustless Work Escrow", "On-chain Payment"];
+const payGuardFlow = ["Agente de IA", "Solicitud de pago", "Validación de reglas", "Aprobación humana", "Escrow de Trustless Work", "Pago en blockchain"];
 
 const footerLinks = {
   producto: [
@@ -174,7 +174,7 @@ const footerLinks = {
   recursos: [
     { label: "Documentación", href: "#" },
     { label: "Blog", href: "#" },
-    { label: "Changelog", href: "#" },
+    { label: "Cambios", href: "#" },
     { label: "Estado", href: "#" },
   ],
   empresa: [
@@ -278,7 +278,7 @@ function Hero() {
             { icon: Skull, label: "Hackeo del agente" },
             { icon: UserX, label: "Acceso no autorizado" },
             { icon: Bug, label: "Errores catastróficos" },
-            { icon: AlertTriangle, label: "Prompt injection" },
+            { icon: AlertTriangle, label: "Inyección de prompts" },
           ].map((item) => (
             <div key={item.label} className="flex items-center gap-2 rounded-full border border-destructive/20 bg-destructive/5 px-4 py-2">
               <item.icon className="h-4 w-4 text-destructive" />
@@ -337,7 +337,7 @@ function Hero() {
                   <div className="h-3 w-3 rounded-full bg-chart-4/60" />
                   <div className="h-3 w-3 rounded-full bg-primary/60" />
                 </div>
-                <span className="ml-2 text-xs text-muted-foreground">Dashboard — Oberyn</span>
+                <span className="ml-2 text-xs text-muted-foreground">Panel — Oberyn</span>
               </div>
 
               <div className="space-y-4 p-6">
@@ -351,7 +351,7 @@ function Hero() {
                         <span className="text-sm font-medium text-foreground">Ataque detectado y bloqueado</span>
                         <span className="rounded-full bg-destructive/10 px-2 py-1 text-xs font-medium text-destructive">Bloqueado</span>
                       </div>
-                      <p className="mt-1 text-xs text-muted-foreground">Prompt injection detectado — Intento de bypass de reglas de seguridad</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Inyección de prompts detectada — intento de evadir reglas de seguridad</p>
                     </div>
                   </div>
                 </div>
@@ -396,7 +396,7 @@ function Hero() {
                         <span className="text-sm font-medium text-foreground">Todo auditado en Stellar</span>
                         <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">Verificado</span>
                       </div>
-                      <p className="mt-1 text-xs text-muted-foreground">42 acciones registradas hoy — Evidencia inmutable on-chain</p>
+                      <p className="mt-1 text-xs text-muted-foreground">42 acciones registradas hoy — evidencia inmutable en blockchain</p>
                     </div>
                   </div>
                 </div>
@@ -497,12 +497,12 @@ function PayGuardLanding() {
               <span className="text-sm font-medium">PayGuard</span>
             </div>
 
-            <h2 className="text-balance text-3xl font-bold text-foreground sm:text-4xl">AI agents can request payments. Only verified approvals can move funds.</h2>
+            <h2 className="text-balance text-3xl font-bold text-foreground sm:text-4xl">Los agentes pueden solicitar pagos. Solo las aprobaciones verificadas pueden mover fondos.</h2>
             <p className="mt-5 text-pretty text-lg leading-relaxed text-muted-foreground">
-              Oberyn PayGuard lets AI agents prepare payment requests without giving them direct control over funds. Every payment is checked against policy rules, recorded in an audit trail, approved by a human, and then executed through Trustless Work escrow infrastructure.
+              Oberyn PayGuard permite que los agentes de IA preparen solicitudes de pago sin darles control directo sobre los fondos. Cada pago se valida contra reglas, queda registrado en auditoría, requiere aprobación humana y luego se ejecuta mediante la infraestructura de escrow de Trustless Work.
             </p>
             <p className="mt-6 rounded-2xl border border-primary/20 bg-primary/5 p-5 text-lg font-semibold text-primary">
-              The agent proposes. The human approves. Oberyn executes on-chain.
+              El agente propone. La persona aprueba. Oberyn ejecuta el pago en blockchain.
             </p>
           </div>
 
@@ -519,7 +519,7 @@ function PayGuardLanding() {
             </div>
 
             <div className="mt-8 rounded-xl border border-border bg-muted/40 p-5">
-              <h3 className="text-sm font-semibold text-foreground">Payment control flow</h3>
+              <h3 className="text-sm font-semibold text-foreground">Flujo de control del pago</h3>
               <div className="mt-5 flex flex-wrap items-center gap-2">
                 {payGuardFlow.map((step, index) => (
                   <div key={step} className="flex items-center gap-2">

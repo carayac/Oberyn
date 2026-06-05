@@ -1,4 +1,3 @@
-import { getAuth } from "@clerk/express";
 import type { NextFunction, Request, Response } from "express";
 import { organizationsService } from "../services/organizations.service.js";
 
@@ -8,7 +7,7 @@ export async function requireOrganization(req: Request, res: Response, next: Nex
     return res.status(400).json({ success: false, error: { message: "x-organization-id header is required" } });
   }
 
-  const userId = res.locals.userId ?? getAuth(req).userId;
+  const userId = res.locals.userId;
   if (!userId) {
     return res.status(401).json({ success: false, error: { message: "Authentication required" } });
   }
