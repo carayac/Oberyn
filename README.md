@@ -1,196 +1,183 @@
-# Oberyn
+# 🛡️ Oberyn
 
-AI governance, runtime protection, human approvals, and audit trails for apps that use agents, LLMs, and external APIs.
+> **Control, reglas, aprobaciones humanas y auditoría verificable para agentes de IA que ya no solo responden: ahora operan.**
 
-Oberyn gives AI-powered systems a control plane: it detects providers, evaluates risk, blocks dangerous actions, requests human approval when needed, and records auditable evidence.
+![React](https://img.shields.io/badge/Frontend-React%20%2B%20Vite-61DAFB?style=for-the-badge&logo=react&logoColor=111827)
+![Node](https://img.shields.io/badge/Backend-Node%20%2B%20Express-16A34A?style=for-the-badge&logo=node.js&logoColor=white)
+![Supabase](https://img.shields.io/badge/Data-Supabase-3FCF8E?style=for-the-badge&logo=supabase&logoColor=111827)
+![Clerk](https://img.shields.io/badge/Auth-Clerk-6C47FF?style=for-the-badge&logo=clerk&logoColor=white)
+![Stellar](https://img.shields.io/badge/Evidence-Stellar-111827?style=for-the-badge&logo=stellar&logoColor=white)
 
-## Features
+Oberyn es una capa de confianza para aplicaciones con IA. Permite que agentes, bots y flujos automatizados llamen APIs, ejecuten herramientas, propongan pagos y trabajen dentro de sistemas reales sin perder control sobre **qué hacen, por qué lo hacen, quién lo aprobó y cómo se demuestra después**.
 
-- Detect integrations such as OpenAI, Anthropic, DeepSeek, Supabase, Stripe, and custom APIs.
-- Protect prompts, tool calls, and HTTP requests before execution.
-- Infer risk and decisions without hardcoding `decision` or `riskLevel`.
-- Require human approval for high-risk actions.
-- Govern AI-generated payment requests with PayGuard before funds move.
-- Track integrations, flows, approvals, and audit events.
-- Record hashed audit evidence with optional Stellar anchoring.
-- Test real provider traffic through the SDK mini project.
+---
 
-## Repository Structure
+## ✨ Qué problema resuelve
+
+Los agentes de IA ya pueden:
+
+- consultar datos privados;
+- llamar APIs externas;
+- modificar registros;
+- ejecutar procesos internos;
+- iniciar solicitudes de pago;
+- interactuar con herramientas críticas.
+
+El riesgo aparece cuando la IA pasa de hablar a actuar.
+
+**Una respuesta incorrecta se corrige. Una acción crítica mal ejecutada puede tener consecuencias reales.**
+
+Oberyn intercepta esas acciones antes de que ocurran, evalúa reglas y riesgo, solicita aprobación humana cuando corresponde y registra evidencia auditable.
+
+---
+
+## 🧠 Cómo funciona
+
+```mermaid
+flowchart LR
+  A["App / Bot / Agente"] --> B["Oberyn SDK"]
+  B --> C["Motor de reglas y riesgo"]
+  C --> D{"Decisión"}
+  D -->|Permitida| E["Ejecutar acción"]
+  D -->|Bloqueada| F["Detener acción"]
+  D -->|Requiere revisión| G["Aprobación humana"]
+  G --> E
+  C --> H["Auditoría"]
+  H --> I["Evidencia verificable / Stellar"]
+```
+
+La regla base:
+
+```txt
+Si la IA puede ejecutar algo importante,
+Oberyn debe poder revisarlo, limitarlo y registrarlo.
+```
+
+---
+
+## 🚀 Módulos principales
+
+| Módulo | Qué hace |
+| --- | --- |
+| **SDK** | Protege prompts, tool calls, llamadas HTTP, procesos internos y eventos de agentes desde el código del cliente. |
+| **Reglas** | Define qué puede hacer la IA, qué se bloquea y qué requiere aprobación humana. |
+| **Aprobaciones** | Centraliza solicitudes sensibles para que una persona apruebe, rechace o bloquee. |
+| **Auditoría** | Registra eventos, decisiones, riesgo, acciones, servicios y evidencia. |
+| **Evidencia Stellar** | Ancla hashes de eventos para demostrar integridad sin exponer datos sensibles. |
+| **PayGuard** | Permite que agentes propongan pagos, pero solo una aprobación verificada puede mover fondos. |
+| **Integraciones** | Detecta o registra servicios usados por el proyecto. |
+| **Flujos** | Agrupa procesos protegidos por acción, servicio o agente. |
+
+---
+
+## 💸 PayGuard
+
+PayGuard es la extensión de Oberyn para pagos iniciados por IA.
+
+La idea es simple:
+
+```txt
+El agente propone.
+La persona aprueba.
+Oberyn ejecuta con control verificable.
+```
+
+PayGuard valida:
+
+- agente autorizado;
+- destinatario verificado;
+- monto permitido;
+- token configurado;
+- riesgo de la operación;
+- aprobación humana;
+- registro de auditoría.
+
+Cuando está conectado en modo real, Oberyn puede usar **Trustless Work** para crear, fondear y liberar un escrow después de pasar las reglas y aprobación.
+
+---
+
+## 🔐 Evidencia con Stellar
+
+Oberyn no guarda prompts sensibles ni datos privados en blockchain.
+
+Lo que se ancla es evidencia criptográfica:
+
+- hash del evento;
+- hash raíz / prueba de integridad;
+- timestamp;
+- referencia de transacción;
+- estado de verificación.
+
+Esto permite demostrar que un evento de auditoría no fue alterado después de generarse.
+
+---
+
+## 🏗️ Arquitectura
 
 ```txt
 .
-+-- backend/              Express API, Clerk auth, Supabase services
-+-- frontend/             React + Vite dashboard
-+-- src/                  Oberyn SDK source
-+-- dist/                 Built SDK package output
-+-- database/             Supabase/Postgres schema
-+-- docs/                 Technical docs rendered by the app
-+-- examples/
-|   +-- sdk-mini-api/      SDK demo with DeepSeek + JSONPlaceholder
-+-- scripts/              Local development helpers
-+-- vercel.json           Vercel Services config
+├── backend/              API Express, Clerk, Supabase, SDK ingestion, PayGuard, Stellar
+├── frontend/             Dashboard React + Vite
+├── src/                  Código fuente del SDK `oberyn`
+├── dist/                 Build del SDK
+├── database/             Schema y migraciones Supabase/Postgres
+├── docs/                 Documentación técnica renderizada por la app
+├── examples/             Demos SDK, Gateway y PayGuard
+├── packages/             Paquetes auxiliares
+└── scripts/              Helpers de desarrollo local
 ```
 
-## Architecture
+---
 
-```txt
-Your app / agent / backend
-  -> Oberyn SDK
-  -> Oberyn API backend
-  -> Supabase
-  -> Oberyn dashboard
-```
+## ⚙️ Stack
 
-Runtime flow:
+- **Frontend:** React 19, Vite, Tailwind CSS, React Router, Clerk.
+- **Backend:** Node.js, Express, TypeScript, Zod.
+- **Base de datos:** Supabase / Postgres.
+- **Auth:** Clerk.
+- **SDK:** paquete local `oberyn`.
+- **Auditoría verificable:** Stellar.
+- **Pagos controlados:** PayGuard + Trustless Work.
 
-1. Your app describes an action with `actionName`, prompt, URL, payload, actor, or metadata.
-2. The SDK enriches the event and sends it to Oberyn.
-3. Oberyn detects provider/service, infers risk, evaluates project rules, and returns a decision.
-4. If approved, the app executes the action.
-5. If blocked, the action does not run.
-6. If approval is required, the SDK can wait until a human approves or rejects.
-7. Oberyn records integrations, flows, approvals, and audit events.
+---
 
-## SDK
+## 🧪 Quickstart local
 
-Install from npm:
-
-```bash
-npm i oberyn
-```
-
-Initialize:
-
-```ts
-import { createOberyn } from "oberyn";
-
-const oberyn = createOberyn({
-  apiKey: process.env.OBERYN_SDK_KEY!,
-  endpoint: process.env.OBERYN_SDK_ENDPOINT!,
-  environment: "production",
-  approvalMode: "poll"
-});
-```
-
-Protect an external API call:
-
-```ts
-const result = await oberyn.api.request(
-  "https://api.deepseek.com/chat/completions",
-  {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
-      "content-type": "application/json"
-    },
-    body: JSON.stringify({
-      model: "deepseek-chat",
-      messages: [{ role: "user", content: "Explain Oberyn in one sentence." }]
-    })
-  },
-  {
-    actionName: "deepseek.chat.completions.create"
-  }
-);
-```
-
-Protect a critical tool call:
-
-```ts
-const refund = await oberyn.proof.guard(
-  {
-    name: "billing.refund.create",
-    category: "payments",
-    target: "stripe",
-    arguments: { paymentIntentId, amount },
-    actor: { id: user.id, role: user.role }
-  },
-  () => stripe.refunds.create({ payment_intent: paymentIntentId, amount })
-);
-```
-
-## Dashboard
-
-The frontend includes project-level views for:
-
-- Main dashboard and recent activity
-- Integrations
-- Flows
-- Human approvals
-- PayGuard payment governance and Trustless Work escrow status
-- Rules
-- Audit events
-- SDK setup
-- Technical docs
-
-## Backend API
-
-Important routes:
-
-```txt
-/api/projects
-/api/projects/:projectId/integrations
-/api/projects/:projectId/flows
-/api/projects/:projectId/rules
-/api/projects/:projectId/approvals
-/api/projects/:projectId/payguard
-/api/projects/:projectId/audit
-/api/projects/:projectId/sdk/config
-/api/sdk/events
-/api/sdk/evaluate
-/api/sdk/audit
-/api/sdk/approval-status
-```
-
-## Database
-
-The schema includes:
-
-- organizations
-- projects
-- integrations
-- flows
-- rules
-- approval_requests
-- payment_agents
-- trusted_wallets
-- payment_requests
-- payment_approvals
-- payment_audit_logs
-- audit_events
-- sdk_keys
-- gateway_configs
-
-   See [database/schema.sql](database/schema.sql).
-
-## Quickstart
-
-### Prerequisites
-
-- Node.js 22 recommended
-- npm
-- Supabase project or local Postgres
-- Clerk application
-
-### Install dependencies
+### 1. Instalar dependencias
 
 ```bash
 npm --prefix backend install
 npm --prefix frontend install
 ```
 
-### Configure backend
+Si vas a probar el mini proyecto del SDK:
 
-Create `backend/.env`:
+```bash
+npm --prefix examples/sdk-mini-api install
+```
+
+### 2. Configurar backend
+
+Crea `backend/.env`:
 
 ```env
 PORT=4000
+
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+
 CLERK_SECRET_KEY=your_clerk_secret_key
 CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
+
 OBERYN_SDK_FALLBACK_SECRET=change-me
+
+STELLAR_NETWORK=testnet
+STELLAR_HORIZON_URL=https://horizon-testnet.stellar.org
+STELLAR_SOURCE_PUBLIC_KEY=your_stellar_public_key
+STELLAR_SOURCE_SECRET_KEY=your_stellar_secret_key
+STELLAR_EXPLORER_BASE_URL=https://stellar.expert/explorer/testnet/tx
+
 TRUSTLESS_WORK_MODE=mock
 TRUSTLESS_WORK_API_KEY=
 TRUSTLESS_WORK_BASE_URL=https://dev.api.trustlesswork.com
@@ -205,221 +192,247 @@ TRUSTLESS_WORK_USDC_ISSUER=
 TRUSTLESS_WORK_PLATFORM_FEE=0
 ```
 
-Apply the schema in Supabase SQL editor:
+> Nunca pongas `SUPABASE_SERVICE_ROLE_KEY`, `CLERK_SECRET_KEY`, claves privadas Stellar o tokens de Trustless Work en el frontend.
 
-```txt
-database/schema.sql
-```
+### 3. Configurar frontend
 
-For an existing Supabase project, run migrations in order and include:
-
-```txt
-database/migrations/006_payguard.sql
-database/migrations/007_remove_payguard_demo_seed.sql
-```
-
-### Configure frontend
-
-Create `frontend/.env`:
+Crea `frontend/.env`:
 
 ```env
 VITE_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
 VITE_API_BASE_URL=http://localhost:4000/api
 ```
 
-### Run locally
+### 4. Crear tablas en Supabase
+
+Ejecuta el schema y migraciones en orden:
+
+```txt
+database/schema.sql
+database/migrations/001_extend_organizations.sql
+database/migrations/002_sdk_ingestion.sql
+database/migrations/003_gateway_configs.sql
+database/migrations/004_runtime_controls.sql
+database/migrations/005_stellar_evidence.sql
+database/migrations/006_payguard.sql
+```
+
+### 5. Levantar todo
+
+Desde la raíz:
 
 ```bash
 npm run dev
 ```
 
-Local URLs:
+URLs locales:
 
 ```txt
 Frontend: http://localhost:5173
 Backend:  http://localhost:4000
+Docs:     http://localhost:5173/docs/sdk
 ```
 
-## PayGuard
+---
 
-PayGuard lets AI agents create payment requests while keeping execution behind policy checks, audit logs, and human approval.
+## 📦 SDK
 
-Technical guide: `docs/payguard.md`.
+Instalación en un proyecto:
 
-Core rule:
-
-```txt
-The agent proposes. The human approves. Oberyn executes on-chain.
+```bash
+npm install oberyn
 ```
 
-How to test locally:
-
-1. Start the app with `npm run dev`.
-2. Apply `database/migrations/006_payguard.sql` and `database/migrations/007_remove_payguard_demo_seed.sql` in the connected Supabase project.
-3. Open a project and go to `Project > PayGuard`.
-4. Use `Configuracion PayGuard` to create a real payment agent and register a real verified Stellar wallet.
-5. Create a payment request with that real verified wallet and token.
-6. Amounts up to 1000 units of the configured token become `pending_approval`; amounts over 1000 become `requires_multi_approval`; blocked agents or unverified wallets become `blocked`.
-7. Approve a pending request, then run `Crear escrow`, `Fund`, and `Release` only when Trustless Work is configured in `live`.
-8. Review the audit panel for `PAYMENT_REQUEST_CREATED`, `POLICY_EVALUATED`, `HUMAN_APPROVED`, `ESCROW_CREATED`, `ESCROW_FUNDED`, and `PAYMENT_RELEASED`.
-
-Agents can also create payment requests through the SDK:
+Inicialización:
 
 ```ts
-const payguard = await oberyn.payguard.config();
-const agent = payguard.agents.find((item) => item.status === "active");
-const wallet = payguard.trustedWallets[0];
+import { createOberyn } from "oberyn";
 
-const request = await oberyn.payguard.requestPayment({
-  agentId: agent!.id,
-  recipientName: wallet!.recipientName,
-  recipientWallet: wallet!.walletAddress,
-  amount: Number(process.env.PAYGUARD_AMOUNT),
-  token: wallet!.token,
-  reason: process.env.PAYGUARD_REASON!,
-  riskLevel: "medium"
+const oberyn = createOberyn({
+  apiKey: process.env.OBERYN_SDK_KEY!,
+  endpoint: process.env.OBERYN_SDK_ENDPOINT!,
+  environment: "production",
+  approvalMode: "poll"
 });
 ```
 
-The SDK only creates the request. It does not expose escrow creation, funding, or release methods to the agent.
+Proteger una acción crítica:
 
-Mock mode:
-
-- `TRUSTLESS_WORK_MODE=mock` is the default.
-- If Trustless Work API key, Stellar role public keys, signer secret, or USDC issuer are missing, PayGuard stays in mock mode.
-- Mock mode reports that Trustless Work is not ready and blocks escrow/fund/release operations instead of simulating contract IDs or transaction hashes.
-- The frontend shows a `Trustless Work Mock Mode` badge and disables on-chain actions.
-
-Production connection:
-
-- Store `TRUSTLESS_WORK_API_KEY` only in `backend/.env`.
-- Configure `TRUSTLESS_WORK_MODE=live`.
-- Configure the Stellar signer and role public keys used by Trustless Work: signer, approver, platform address, release signer, dispute resolver, and USDC issuer.
-- Apply `database/migrations/006_payguard.sql` and `database/migrations/007_remove_payguard_demo_seed.sql`.
-- Configure verified recipient wallets for the project.
-- Decide whether Oberyn signs Trustless Work XDR server-side after human approval or whether a wallet-signing step should be added for non-custodial customer signing.
-
-## SDK Mini Project
-
-The mini project demonstrates:
-
-- Prompt inspection
-- DeepSeek calls protected by Oberyn
-- Malicious prompt blocking
-- Human approval before execution
-- JSONPlaceholder GET/POST requests
-- Final audit event with `record`
-
-Configure `examples/.env`:
-
-```env
-OBERYN_SDK_KEY=ob_pk_your_project_public_key
-OBERYN_SDK_ENDPOINT=http://localhost:4000/api/sdk/events
-OBERYN_APPROVAL_MODE=throw
-OBERYN_RUN_APPROVAL_DEMO=0
-
-DEEPSEEK_API_KEY=your_deepseek_api_key
-DEEPSEEK_MODEL=deepseek-chat
+```ts
+const result = await oberyn.proof.guard(
+  {
+    name: "billing.refund.create",
+    category: "payments",
+    target: "stripe",
+    arguments: { paymentIntentId, amount },
+    actor: { id: user.id, role: user.role }
+  },
+  () => stripe.refunds.create({ payment_intent: paymentIntentId, amount })
+);
 ```
 
-Run:
+Proteger una llamada HTTP:
+
+```ts
+const response = await oberyn.api.request(
+  "https://api.deepseek.com/chat/completions",
+  {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      model: "deepseek-chat",
+      messages: [{ role: "user", content: "Resume este ticket." }]
+    })
+  },
+  {
+    actionName: "deepseek.chat.completions.create"
+  }
+);
+```
+
+Documentación: [`docs/sdk.md`](docs/sdk.md)
+
+---
+
+## 🧾 PayGuard local
+
+El ejemplo vive en:
+
+```txt
+examples/sdk-mini-api
+```
+
+Configura `examples/sdk-mini-api/.env`:
+
+```env
+OBERYN_SDK_KEY=ob_pk_your_project_key
+OBERYN_SDK_ENDPOINT=http://localhost:4000/api/sdk/events
+OBERYN_SERVICE_NAME=payguard-demo
+
+OBERYN_PAYGUARD_AGENT_ID=
+OBERYN_PAYGUARD_RECIPIENT_WALLET=
+OBERYN_PAYGUARD_AMOUNT=
+OBERYN_PAYGUARD_REASON=
+
+OBERYN_PAYGUARD_RECIPIENT_NAME=
+OBERYN_PAYGUARD_TOKEN=USDC
+OBERYN_PAYGUARD_RISK_LEVEL=low
+```
+
+Comandos:
 
 ```bash
 cd examples/sdk-mini-api
-npm install
-npm start
+npm run payguard:setup
+npm run payguard:config
+npm run payguard:test
 ```
 
-To test human approval:
+`payguard:test` crea una solicitud real en el proyecto. La aprobación, ejecución y auditoría se revisan desde el dashboard.
 
-```env
-OBERYN_APPROVAL_MODE=poll
-OBERYN_RUN_APPROVAL_DEMO=1
-```
+---
 
-Then approve the pending request in:
+## 🧭 Documentación interna
 
-```txt
-Project > Approvals
-```
+| Documento | Ruta |
+| --- | --- |
+| SDK | [`docs/sdk.md`](docs/sdk.md) |
+| PayGuard | [`docs/payguard.md`](docs/payguard.md) |
+| Gateway | [`docs/gateway.md`](docs/gateway.md) |
 
-## Deployment
-
-Recommended production split:
-
-```txt
-Frontend: Vercel
-Backend:  Render, Railway, Fly.io, or another Node host
-Database: Supabase
-```
-
-Frontend production env:
-
-```env
-VITE_API_BASE_URL=https://your-backend.example.com/api
-```
-
-This repo also includes `vercel.json` for Vercel Services:
-
-```json
-{
-  "experimentalServices": {
-    "frontend": {
-      "root": "frontend",
-      "routePrefix": "/",
-      "framework": "vite"
-    },
-    "backend": {
-      "root": "backend",
-      "routePrefix": "/_/backend",
-      "framework": "express",
-      "entrypoint": "src/server.ts"
-    }
-  }
-}
-```
-
-For that setup:
-
-```env
-VITE_API_BASE_URL=/_/backend/api
-```
-
-## Documentation
-
-SDK docs live in:
-
-```txt
-docs/sdk.md
-```
-
-The dashboard renders them at:
+En la app:
 
 ```txt
 /docs/sdk
+/docs/gateway
 ```
 
-## Roadmap
+---
 
-- Oberyn Local Agent for Codex, Claude Code, Cursor, VS Code, and terminal workflows
-- Browser companion for ChatGPT, Claude, Gemini, and other web AI tools
-- Enterprise connectors for compliance logs and SaaS audit trails
-- More granular rule builder
-- Cost and token analytics by provider/model
-- Gateway runtime in a future version
-- Expanded Stellar evidence and verification UI
+## ✅ Comandos útiles
 
-## Security Notes
+```bash
+# Frontend
+npm --prefix frontend run dev
+npm --prefix frontend run typecheck
+npm --prefix frontend run build
 
-- Do not expose `SUPABASE_SERVICE_ROLE_KEY` in the frontend.
-- Do not send provider API keys in `metadata` or `payload`.
-- `OBERYN_SDK_KEY` identifies a project and sends runtime events; it is not a provider secret.
-- Provider secrets such as `DEEPSEEK_API_KEY` stay in your application.
+# Backend
+npm --prefix backend run dev
+npm --prefix backend run typecheck
+npm --prefix backend run test
+npm --prefix backend run test:payments
 
-## Contributing
+# Todo local
+npm run dev
+```
 
-Issues, ideas, and pull requests are welcome. Keep changes focused, include verification steps, and update docs when SDK behavior, event shapes, approvals, integrations, or deployment configuration changes.
+---
 
-## License
+## 🧱 Estado del producto
 
-License information has not been finalized yet.
+| Área | Estado |
+| --- | --- |
+| Landing pública | Funcional |
+| Auth con Clerk | Funcional |
+| Organizaciones y proyectos | Funcional |
+| SDK runtime | Funcional |
+| Reglas y aprobaciones | Funcional |
+| Auditoría | Funcional |
+| Evidencia Stellar | Funcional en testnet/configuración local |
+| PayGuard | Funcional con modo mock/live según variables |
+| Gateway | Runtime técnico avanzado, interfaz pública en desarrollo |
+| Bots | Próximamente |
+
+---
+
+## 🛡️ Seguridad
+
+- No enviar API keys de proveedores dentro de `metadata`, `payload` o prompts.
+- Mantener claves privadas solo en backend.
+- Usar `OBERYN_SDK_KEY` para identificar el proyecto, no como secreto de proveedor.
+- Revisar eventos de auditoría antes de activar flujos críticos en producción.
+- Configurar wallets verificadas antes de usar PayGuard en modo live.
+
+---
+
+## 🌱 Roadmap
+
+- Mejor experiencia guiada para SDK y PayGuard.
+- Asistente local para herramientas como Codex, Claude Code, Cursor y terminal.
+- Conectores de navegador para IA usada desde web apps.
+- Más analítica de riesgo, costo y servicios por proyecto.
+- Gateway público con configuración completa.
+- Verificación pública de evidencia.
+- Reglas más visuales y plantillas por caso de uso.
+
+---
+
+## 🤝 Contribuir
+
+Las contribuciones son bienvenidas. Mantén los cambios enfocados, agrega pasos de verificación y actualiza documentación cuando cambien:
+
+- formas de eventos del SDK;
+- reglas;
+- aprobaciones;
+- PayGuard;
+- Stellar;
+- migraciones;
+- rutas públicas.
+
+---
+
+## 📄 Licencia
+
+Licencia pendiente de definir.
+
+---
+
+<p align="center">
+  <strong>Oberyn gobierna acciones de IA antes de que impacten sistemas reales.</strong>
+  <br />
+  IA que opera, pero con límites, evidencia y control humano.
+</p>
