@@ -165,25 +165,12 @@ const payGuardCards = [
 
 const payGuardFlow = ["Agente de IA", "Solicitud de pago", "Validación de reglas", "Aprobación humana", "Escrow de Trustless Work", "Pago en blockchain"];
 
-const footerLinks = {
-  producto: [
-    { label: "SDK", href: "#" },
-    { label: "Reglas", href: "#" },
-    { label: "Auditoría", href: "#" },
-  ],
-  recursos: [
-    { label: "Documentación", href: "#" },
-    { label: "Blog", href: "#" },
-    { label: "Cambios", href: "#" },
-    { label: "Estado", href: "#" },
-  ],
-  empresa: [
-    { label: "Sobre nosotros", href: "#" },
-    { label: "Contacto", href: "#" },
-    { label: "Privacidad", href: "#" },
-    { label: "Términos", href: "#" },
-  ],
-};
+const controlQuestions = [
+  "¿Qué intentó hacer la IA?",
+  "¿Tenía permiso para hacerlo?",
+  "¿Debía ejecutarse o requería aprobación?",
+  "¿Cómo demostramos qué pasó después?",
+];
 
 type ButtonProps = {
   children: ReactNode;
@@ -290,10 +277,13 @@ function Hero() {
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
           <div className="max-w-2xl">
             <h1 className="text-balance text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-              Tu agente de IA tiene acceso a todo. <span className="text-primary">¿Quién lo controla?</span>
+              La IA ya no solo responde. <span className="text-primary">Ahora opera.</span>
             </h1>
             <p className="text-pretty mt-6 text-lg leading-relaxed text-muted-foreground">
-              Un agente comprometido puede eliminar bases de datos, enviar pagos no autorizados o filtrar datos sensibles. Oberyn intercepta cada acción antes de que llegue a tus APIs, aplica reglas y requiere aprobación humana para operaciones de riesgo.
+              Los agentes de IA ya pueden llamar APIs, modificar datos, ejecutar procesos internos y proponer pagos. Oberyn es la capa de confianza que gobierna esas acciones antes de que ocurran.
+            </p>
+            <p className="mt-4 text-pretty text-lg leading-relaxed text-muted-foreground">
+              Cuando una IA pasa de hablar a actuar, la pregunta no es solo qué puede hacer: es quién la gobierna, qué límites tiene y cómo lo demostramos.
             </p>
 
             <div className="mt-8 rounded-xl border border-border bg-muted/50 p-4">
@@ -428,6 +418,18 @@ function Problem() {
             Los agentes de IA, bots y asistentes conectados a APIs pueden modificar datos, enviar información sensible o ejecutar acciones críticas sobre tus sistemas — sin suficiente control humano.
           </p>
 
+          <div className="mx-auto mt-10 grid max-w-4xl gap-3 sm:grid-cols-2">
+            {controlQuestions.map((question) => (
+              <div key={question} className="rounded-xl border border-destructive/20 bg-destructive/5 px-5 py-4 text-left text-sm font-semibold text-destructive">
+                {question}
+              </div>
+            ))}
+          </div>
+
+          <p className="text-pretty mx-auto mt-8 max-w-3xl text-base leading-7 text-muted-foreground">
+            Muchas herramientas se enfocan en proteger el chat o analizar el prompt. El riesgo real aparece cuando la IA pasa de hablar a actuar: una respuesta incorrecta puede corregirse; una acción crítica mal ejecutada puede tener consecuencias reales.
+          </p>
+
           <div className="mt-12 flex flex-wrap justify-center gap-4">
             {risks.map((risk) => (
               <div key={risk.label} className="flex items-center gap-3 rounded-xl border border-border bg-card px-5 py-3 shadow-sm">
@@ -452,9 +454,9 @@ function Solution() {
             <span className="text-sm font-medium">La solución</span>
           </div>
 
-          <h2 className="text-balance text-3xl font-bold text-foreground sm:text-4xl">Tres pilares para proteger tu IA</h2>
+          <h2 className="text-balance text-3xl font-bold text-foreground sm:text-4xl">Control antes de ejecutar, evidencia después de cada acción</h2>
 
-          <p className="text-pretty mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">Oberyn actúa como una capa de protección entre tu IA y tus sistemas críticos.</p>
+          <p className="text-pretty mx-auto mt-4 max-w-3xl text-lg text-muted-foreground">Oberyn evalúa prompts, acciones, permisos y riesgo en tiempo real para decidir si una operación se permite, se bloquea o requiere aprobación humana.</p>
         </div>
 
         <div className="grid gap-8 md:grid-cols-3">
@@ -497,9 +499,12 @@ function PayGuardLanding() {
               <span className="text-sm font-medium">PayGuard</span>
             </div>
 
-            <h2 className="text-balance text-3xl font-bold text-foreground sm:text-4xl">Los agentes pueden solicitar pagos. Solo las aprobaciones verificadas pueden mover fondos.</h2>
+            <h2 className="text-balance text-3xl font-bold text-foreground sm:text-4xl">El agente propone el pago. La persona lo aprueba. Oberyn lo ejecuta con control verificable.</h2>
             <p className="mt-5 text-pretty text-lg leading-relaxed text-muted-foreground">
               Oberyn PayGuard permite que los agentes de IA preparen solicitudes de pago sin darles control directo sobre los fondos. Cada pago se valida contra reglas, queda registrado en auditoría, requiere aprobación humana y luego se ejecuta mediante la infraestructura de escrow de Trustless Work.
+            </p>
+            <p className="mt-4 text-pretty text-base leading-7 text-muted-foreground">
+              Usamos blockchain donde sí aporta valor: custodiar fondos, trazar cada paso y demostrar cuándo se solicitó, aprobó, fondeó y liberó un pago.
             </p>
             <p className="mt-6 rounded-2xl border border-primary/20 bg-primary/5 p-5 text-lg font-semibold text-primary">
               El agente propone. La persona aprueba. Oberyn ejecuta el pago en blockchain.
@@ -839,66 +844,27 @@ function Footer() {
   return (
     <footer className="border-t border-border bg-card">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="py-12 lg:py-16">
-          <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
-            <div className="col-span-2 md:col-span-1">
-              <a href="/" className="flex items-center">
-                <img src="/assets/oberyn-logo.svg" alt="Oberyn" className="h-8 w-auto" />
-              </a>
-              <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">Capa de protección para soluciones con IA conectadas a APIs y plataformas.</p>
-            </div>
+        <div className="flex flex-col gap-8 py-12 lg:flex-row lg:items-center lg:justify-between lg:py-14">
+          <div>
+            <a href="/" className="flex items-center">
+              <img src="/assets/oberyn-logo.svg" alt="Oberyn" className="h-8 w-auto" />
+            </a>
+            <p className="mt-4 max-w-xl text-sm leading-relaxed text-muted-foreground">Capa de control, reglas y auditoría para agentes de IA que ejecutan acciones importantes.</p>
+          </div>
 
-            <div>
-              <h3 className="mb-4 text-sm font-semibold text-foreground">Producto</h3>
-              <ul className="space-y-3">
-                {footerLinks.producto.map((link) => (
-                  <li key={link.label}>
-                    <a href={link.href} className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-                      {link.label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="mb-4 text-sm font-semibold text-foreground">Recursos</h3>
-              <ul className="space-y-3">
-                {footerLinks.recursos.map((link) => (
-                  <li key={link.label}>
-                    <a href={link.href} className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-                      {link.label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="mb-4 text-sm font-semibold text-foreground">Empresa</h3>
-              <ul className="space-y-3">
-                {footerLinks.empresa.map((link) => (
-                  <li key={link.label}>
-                    <a href={link.href} className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-                      {link.label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Link to="/docs/sdk" className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-background px-5 text-sm font-medium shadow-xs transition-all hover:bg-accent hover:text-accent-foreground">
+              Documentación
+            </Link>
+            <Button to="/login">Iniciar sesión</Button>
           </div>
         </div>
 
         <div className="flex flex-col items-center justify-between gap-4 border-t border-border py-6 sm:flex-row">
           <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} Oberyn. Todos los derechos reservados.</p>
-          <div className="flex items-center gap-4">
-            <a href="#" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-              Privacidad
-            </a>
-            <a href="#" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-              Términos
-            </a>
-          </div>
+          <Link to="/docs/sdk" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+            Documentación
+          </Link>
         </div>
       </div>
     </footer>
@@ -911,13 +877,13 @@ export function LandingPage() {
       <Header />
       <main>
         <Hero />
+        <UseCases />
         <Problem />
         <Solution />
         <PayGuardLanding />
         <HowItWorks />
         <SdkGateway />
         <StellarAudit />
-        <UseCases />
         <CTASection />
       </main>
       <Footer />

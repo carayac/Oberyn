@@ -15,6 +15,7 @@ import type { Project } from "../../types/project";
 
 const ACTIVE_PROJECT_KEY = "oberyn.activeProjectId";
 const ACTIVE_PROJECT_EVENT = "oberyn:active-project-change";
+const INTEGRATIONS_PAGE_SIZE = 2;
 
 type ApiResponse<T> = {
   success: boolean;
@@ -98,6 +99,45 @@ function statusClass(status: string) {
   if (status === "detected") return "bg-sky-50 text-sky-700";
   if (status === "manual") return "bg-amber-50 text-amber-700";
   return "bg-slate-100 text-slate-600";
+}
+
+function clampPage(page: number, totalItems: number, pageSize: number) {
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  return Math.min(Math.max(1, page), totalPages);
+}
+
+function PaginationControls({
+  page,
+  totalItems,
+  pageSize,
+  onPageChange,
+}: {
+  page: number;
+  totalItems: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+}) {
+  if (totalItems <= pageSize) return null;
+
+  const totalPages = Math.ceil(totalItems / pageSize);
+  const start = (page - 1) * pageSize + 1;
+  const end = Math.min(page * pageSize, totalItems);
+
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+      <span>
+        {start}-{end} de {totalItems}
+      </span>
+      <div className="flex gap-2">
+        <Button type="button" variant="secondary" className="h-9 px-3" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
+          Anterior
+        </Button>
+        <Button type="button" variant="secondary" className="h-9 px-3" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>
+          Siguiente
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 function methodClass(method: string) {
@@ -443,6 +483,7 @@ export function ProjectIntegrationsPage() {
   const [analysis, setAnalysis] = useState<DetectionResult | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [isAnalyzing, setAnalyzing] = useState(false);
+  const [integrationsPage, setIntegrationsPage] = useState(1);
 
   useEffect(() => {
     if (routeProjectId) setSelectedProjectId(routeProjectId);
@@ -484,6 +525,8 @@ export function ProjectIntegrationsPage() {
 
   const insights = useMemo(() => integrations.map((integration) => buildInsight(integration, auditEvents)), [auditEvents, integrations]);
   const selectedInsight = insights.find((insight) => insight.integration.id === selectedIntegrationId) ?? insights[0] ?? null;
+  const safeIntegrationsPage = clampPage(integrationsPage, insights.length, INTEGRATIONS_PAGE_SIZE);
+  const visibleInsights = insights.slice((safeIntegrationsPage - 1) * INTEGRATIONS_PAGE_SIZE, safeIntegrationsPage * INTEGRATIONS_PAGE_SIZE);
   const sdkActiveCount = insights.filter((insight) => insight.sdkActive).length;
   const detectedWaitingCount = insights.filter((insight) => !insight.sdkActive && insight.integration.status === "detected").length;
   const highRiskEvents = insights.reduce((total, insight) => total + insight.highRisk, 0);
@@ -496,6 +539,14 @@ export function ProjectIntegrationsPage() {
     window.dispatchEvent(new CustomEvent(ACTIVE_PROJECT_EVENT, { detail: { projectId: nextProjectId } }));
     navigate(`/projects/${nextProjectId}/integrations`);
   }
+
+  useEffect(() => {
+    setIntegrationsPage(1);
+  }, [selectedProject?.id]);
+
+  useEffect(() => {
+    setIntegrationsPage((current) => clampPage(current, insights.length, INTEGRATIONS_PAGE_SIZE));
+  }, [insights.length]);
 
   async function readFiles(fileList: FileList | null) {
     if (!fileList) return;
@@ -617,9 +668,10 @@ export function ProjectIntegrationsPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {insights.map((insight) => (
+              {visibleInsights.map((insight) => (
                 <IntegrationCard key={insight.integration.id} insight={insight} isSelected={selectedInsight?.integration.id === insight.integration.id} onSelect={() => setSelectedIntegrationId(insight.integration.id)} />
               ))}
+              <PaginationControls page={safeIntegrationsPage} totalItems={insights.length} pageSize={INTEGRATIONS_PAGE_SIZE} onPageChange={setIntegrationsPage} />
               {!insights.length ? (
                 <Card className="p-8 text-center">
                   <Activity className="mx-auto h-12 w-12 text-[#008f1f]" />

@@ -98,7 +98,7 @@ function policyArray(value: unknown) {
 function isPayGuardTableMissing(error: unknown) {
   const detail = error as { code?: string; message?: string; details?: string };
   const text = `${detail?.message ?? ""} ${detail?.details ?? ""}`;
-  return detail?.code === "42P01" || detail?.code === "PGRST205" || /payment_agents|payment_requests|payment_audit_logs|payment_approvals|trusted_wallets|schema cache|does not exist/i.test(text);
+  return detail?.code === "42P01" || detail?.code === "PGRST205" || /schema cache|relation .* does not exist|could not find the table/i.test(text);
 }
 
 function throwPayGuardConnectionError(error: unknown): never {
@@ -745,6 +745,23 @@ async function markFailedDb(projectId: string, request: PaymentRequest, error: u
   return updated;
 }
 
+async function recordFailedExternalAttempt(projectId: string, request: PaymentRequest, error: unknown, actorId: string) {
+  const message = error instanceof Error ? error.message : "La operacion con Trustless Work fallo.";
+  await insertAuditLogs([
+    createAuditLog({
+      projectId,
+      paymentRequestId: request.id,
+      agentId: request.agentId,
+      action: "PAYMENT_FAILED",
+      previousStatus: request.status,
+      newStatus: request.status,
+      actorType: "system",
+      actorId: systemActorId,
+      metadata: { message, triggeredBy: actorId, retryable: true },
+    }),
+  ]);
+}
+
 async function createEscrowDb(projectId: string, paymentRequestId: string, actorId: string) {
   const request = await getRequestFromDb(projectId, paymentRequestId);
   if (request.status !== "approved") throw new Error("Solo una solicitud aprobada puede crear escrow.");
@@ -770,7 +787,7 @@ async function createEscrowDb(projectId: string, paymentRequestId: string, actor
     ]);
     return updated;
   } catch (error) {
-    await markFailedDb(projectId, request, error);
+    await recordFailedExternalAttempt(projectId, request, error, actorId);
     throw error;
   }
 }
@@ -778,7 +795,7 @@ async function createEscrowDb(projectId: string, paymentRequestId: string, actor
 async function fundEscrowDb(projectId: string, paymentRequestId: string, actorId: string) {
   const request = await getRequestFromDb(projectId, paymentRequestId);
   if (!request.escrowId) throw new Error("No se puede fondear sin escrow.");
-  if (request.status !== "escrow_created") throw new Error("Solo un escrow creado puede fondearse.");
+  if (request.status !== "escrow_created" && request.status !== "failed") throw new Error("Solo un escrow creado puede fondearse.");
   const integration = trustlessWorkAdapter.integrationStatus();
   if (!integration.canSubmitTransactions) throw new Error(integration.message);
 
@@ -800,7 +817,7 @@ async function fundEscrowDb(projectId: string, paymentRequestId: string, actorId
     ]);
     return updated;
   } catch (error) {
-    await markFailedDb(projectId, request, error);
+    await recordFailedExternalAttempt(projectId, request, error, actorId);
     throw error;
   }
 }
@@ -836,6 +853,28 @@ async function releaseEscrowDb(projectId: string, paymentRequestId: string, acto
   }
 }
 
+async function approveAndPayDb(projectId: string, paymentRequestId: string, actorId: string) {
+  let request = await getRequestFromDb(projectId, paymentRequestId);
+
+  if (request.status === "pending_approval" || request.status === "requires_multi_approval") {
+    request = await approveDb(projectId, paymentRequestId, actorId);
+  }
+
+  if (request.status === "approved" && !request.escrowId) {
+    request = await createEscrowDb(projectId, paymentRequestId, actorId);
+  }
+
+  if (request.status === "escrow_created") {
+    request = await fundEscrowDb(projectId, paymentRequestId, actorId);
+  }
+
+  if (request.status === "funded") {
+    request = await releaseEscrowDb(projectId, paymentRequestId, actorId);
+  }
+
+  return request;
+}
+
 export const payguardService = {
   summary: async (projectId: string) => withPayGuardConnection(() => readSummaryFromDb(projectId)),
 
@@ -850,6 +889,8 @@ export const payguardService = {
   reject: async (projectId: string, paymentRequestId: string, actorId: string) => withPayGuardConnection(() => rejectDb(projectId, paymentRequestId, actorId)),
 
   block: async (projectId: string, paymentRequestId: string, actorId: string) => withPayGuardConnection(() => blockDb(projectId, paymentRequestId, actorId)),
+
+  approveAndPay: async (projectId: string, paymentRequestId: string, actorId: string) => withPayGuardConnection(() => approveAndPayDb(projectId, paymentRequestId, actorId)),
 
   createEscrow: async (projectId: string, paymentRequestId: string, actorId: string) => withPayGuardConnection(() => createEscrowDb(projectId, paymentRequestId, actorId)),
 

@@ -82,6 +82,7 @@ export function usePayGuard(projectId?: string | null, organizationId?: string |
     upsertTrustedWallet: (payload: UpsertTrustedWalletPayload) => postPayGuardConfig<TrustedWallet>("/wallets", payload),
     createPaymentRequest: (payload: CreatePaymentRequestPayload) => postPaymentAction("/requests", payload),
     approve: (paymentRequestId: string) => postPaymentAction(`/requests/${paymentRequestId}/approve`),
+    approveAndPay: (paymentRequestId: string) => postPaymentAction(`/requests/${paymentRequestId}/approve-and-pay`),
     reject: (paymentRequestId: string) => postPaymentAction(`/requests/${paymentRequestId}/reject`),
     block: (paymentRequestId: string) => postPaymentAction(`/requests/${paymentRequestId}/block`),
     createEscrow: (paymentRequestId: string) => postPaymentAction(`/requests/${paymentRequestId}/create-escrow`),

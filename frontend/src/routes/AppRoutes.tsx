@@ -46,6 +46,7 @@ export function AppRoutes() {
         <Route path={appRoutes.forgotPassword} element={<ForgotPasswordPage />} />
         <Route path={appRoutes.onboardingSuccess} element={<AccountSuccessPage />} />
       </Route>
+      <Route path="/docs" element={<Navigate to="/docs/sdk" replace />} />
       <Route path={appRoutes.docs} element={<TechnicalDocsPage />} />
       <Route path={appRoutes.apiDocsFallback} element={<DocsRedirectPage />} />
       <Route

@@ -18,19 +18,19 @@ type MarkdownBlock =
 
 const gatewayDoc: { title: string; description: string; sections: DocSection[] } = {
   title: "Oberyn Gateway",
-  description: "Modulo en desarrollo para futuras versiones de Oberyn. La configuracion, endpoints y pruebas runtime permanecen ocultas hasta que el Gateway este listo.",
+  description: "Módulo en desarrollo para enrutar tráfico hacia modelos y APIs externas con inspección, reglas y auditoría antes de llegar al proveedor.",
   sections: [
     {
       title: "Estado",
-      body: ["Gateway estara disponible en futuras versiones. Por ahora no se exponen tokens, endpoints, pruebas de trafico ni configuracion operativa desde la interfaz."],
+      body: ["Gateway estará disponible en futuras versiones. Por ahora la integración recomendada para usuarios es el SDK de Oberyn."],
     },
     {
-      title: "Que se habilitara",
-      body: ["El Gateway se planea como un proxy seguro para modelos y APIs externas, con inspeccion de trafico, reglas centralizadas y auditoria de requests."],
+      title: "Qué permitirá",
+      body: ["El Gateway funcionará como un proxy seguro para modelos y APIs externas, con inspección de tráfico, reglas centralizadas y auditoría de solicitudes."],
     },
     {
       title: "Mientras tanto",
-      body: ["Usa el SDK de Oberyn para proteger prompts, guardar eventos de auditoria y controlar acciones sensibles dentro de tus aplicaciones."],
+      body: ["Usa el SDK de Oberyn para proteger prompts, guardar eventos de auditoría y controlar acciones sensibles dentro de tus aplicaciones."],
     },
   ],
 };
@@ -207,9 +207,9 @@ export function TechnicalDocsPage() {
       <div className="mx-auto max-w-5xl">
         <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <AuthBrandLogo />
-          <Link to="/dashboard" className="inline-flex items-center gap-2 text-sm font-semibold text-[#008f1f]">
+          <Link to="/" className="inline-flex items-center gap-2 text-sm font-semibold text-[#008f1f]">
             <ArrowLeft className="h-4 w-4" />
-            Volver al dashboard
+            Volver al inicio
           </Link>
         </div>
 
@@ -221,7 +221,7 @@ export function TechnicalDocsPage() {
             <div>
               <h1 className="text-3xl font-bold text-slate-950">{isGateway ? gatewayDoc.title : "Oberyn SDK"}</h1>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-                {isGateway ? gatewayDoc.description : "Documentacion completa renderizada desde docs/sdk.md. Esta pagina debe reflejar la guia tecnica actual del SDK."}
+                {isGateway ? gatewayDoc.description : "Guía para integrar Oberyn en tu aplicación, proteger acciones importantes y registrar eventos auditables sin exponer claves privadas."}
               </p>
             </div>
           </div>

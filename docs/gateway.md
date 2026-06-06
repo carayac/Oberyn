@@ -1,6 +1,6 @@
 # Oberyn Gateway Technical Guide
 
-Last updated: 2026-06-01
+Last updated: 2026-06-05
 
 ## Purpose
 
@@ -157,7 +157,9 @@ node examples/gateway-mini-api/index.mjs
 
 ## Current Implementation Status
 
-The Gateway persists configuration, forwards approved traffic to the upstream provider, supports request-level upstream overrides, supports approved retries, streams SSE responses, handles JSON and raw bodies, enforces rate limits, constrains upstream hosts, detects services from traffic including DeepSeek/OpenAI/Anthropic/Gemini/Mistral/Cohere, applies project rules, blocks prompt attacks when prompt inspection is enabled, blocks sensitive payloads when enabled, creates approval requests when required, writes `audit_events`, updates project activity, and exposes admin controls in the Gateway project page.
+The Gateway backend runtime exists for internal and local real-project testing. It persists configuration, forwards approved traffic to the upstream provider, supports request-level upstream overrides, supports approved retries, streams SSE responses, handles JSON and raw bodies, enforces rate limits, constrains upstream hosts, detects services from traffic including DeepSeek/OpenAI/Anthropic/Gemini/Mistral/Cohere, applies project rules, blocks prompt attacks when prompt inspection is enabled, blocks sensitive payloads when enabled, creates approval requests when required, writes `audit_events`, and updates project activity.
+
+The product dashboard page is still intentionally shown as a preview module. User-facing Gateway configuration, token management, endpoint setup, and traffic tests are hidden until the module is enabled for production use. For now, the SDK is the recommended user-facing integration path.
 
 ## Maintenance Rule
 

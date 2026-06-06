@@ -2,7 +2,7 @@
 
 Mini proyecto para probar el SDK contra el backend real de Oberyn.
 
-## Configuracion
+## Configuración
 
 Desde `examples/sdk-mini-api`:
 
@@ -11,40 +11,24 @@ npm install
 Copy-Item .env.example .env
 ```
 
-Edita `.env` y define al menos:
+Edita `.env` y define al menos la clave pública real del proyecto:
 
 ```env
 OBERYN_SDK_KEY=
 OBERYN_SDK_ENDPOINT=http://localhost:4000/api/sdk/events
 ```
 
-La clave `OBERYN_SDK_KEY` debe ser la clave publica real del proyecto en Oberyn. Este mini proyecto ya no incluye claves por defecto.
+La clave `OBERYN_SDK_KEY` debe ser la clave pública real del proyecto en Oberyn. Este mini proyecto ya no incluye claves por defecto.
 
 ## PayGuard
 
-Primero arranca el backend desde la raiz:
+Primero arranca el backend desde la raíz:
 
 ```powershell
 npm run dev:backend
 ```
 
-Luego lee la configuracion PayGuard real del proyecto conectado:
-
-```powershell
-cd examples/sdk-mini-api
-npm run payguard:config
-```
-
-Ese comando imprime los agentes PayGuard que pueden crear solicitudes y las wallets verificadas del proyecto. Para crear una solicitud real, llena en `.env`:
-
-```env
-OBERYN_PAYGUARD_AMOUNT=
-OBERYN_PAYGUARD_REASON=
-```
-
-`OBERYN_PAYGUARD_AGENT_ID` y `OBERYN_PAYGUARD_RECIPIENT_WALLET` son opcionales si el proyecto ya tiene al menos un agente real y una wallet verificada real. El script toma el primer registro real que devuelve `oberyn.payguard.config()`.
-
-Si `payguard:config` muestra `agents: 0` o `verifiedWallets: 0`, configura filas reales de prueba en `.env`:
+Para agregar un agente de pago y una wallet real al proyecto, completa:
 
 ```env
 OBERYN_PAYGUARD_AGENT_NAME=
@@ -57,8 +41,24 @@ OBERYN_PAYGUARD_TOKEN=
 Luego crea o actualiza esas filas reales en Supabase:
 
 ```powershell
+cd examples/sdk-mini-api
 npm run payguard:setup
 ```
+
+Después lee la configuración PayGuard real del proyecto conectado:
+
+```powershell
+npm run payguard:config
+```
+
+Ese comando imprime los agentes PayGuard que pueden crear solicitudes y las wallets verificadas del proyecto. Para crear una solicitud real, llena en `.env`:
+
+```env
+OBERYN_PAYGUARD_AMOUNT=
+OBERYN_PAYGUARD_REASON=
+```
+
+`OBERYN_PAYGUARD_AGENT_ID` y `OBERYN_PAYGUARD_RECIPIENT_WALLET` son opcionales si el proyecto ya tiene al menos un agente real y una wallet verificada real. El script toma el primer registro real que devuelve `oberyn.payguard.config()`.
 
 Ejecuta:
 
@@ -73,9 +73,9 @@ oberyn.payguard.config()
 oberyn.payguard.requestPayment()
 ```
 
-No selecciona agentes o wallets inventadas, no usa una clave SDK fija y no crea escrow. La solicitud queda en el dashboard del proyecto para aprobar, rechazar o bloquear. Las acciones de escrow/fund/release solo funcionan si Trustless Work esta configurado en `live`.
+No selecciona agentes o wallets inventadas, no usa una clave SDK fija y no crea escrow. La solicitud queda en el dashboard del proyecto para aprobar, rechazar o bloquear. Las acciones de escrow, fondeo y liberación solo funcionan si Trustless Work está configurado en `live`.
 
-## Demo Completo
+## Demo completo
 
 `npm start` ejecuta el demo amplio del SDK. PayGuard queda desactivado por defecto para evitar crear solicitudes reales sin querer.
 

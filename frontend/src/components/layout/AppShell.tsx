@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
+import { SystemHelpWidget } from "../help/SystemHelpWidget";
 import { Sidebar } from "./Sidebar";
 
 export function AppShell() {
@@ -8,7 +9,12 @@ export function AppShell() {
   const isOnboarding = location.pathname.startsWith("/onboarding/");
 
   if (isOnboarding) {
-    return <Outlet />;
+    return (
+      <>
+        <Outlet />
+        <SystemHelpWidget />
+      </>
+    );
   }
 
   return (
@@ -25,6 +31,7 @@ export function AppShell() {
           <Outlet />
         </div>
       </main>
+      <SystemHelpWidget />
     </div>
   );
 }

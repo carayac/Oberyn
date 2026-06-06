@@ -14,6 +14,7 @@ export const payguardController = {
   approve: async (req: Request, res: Response) => res.json(ok(await payguardService.approve(req.params.projectId, req.params.paymentRequestId, actorId(res)))),
   reject: async (req: Request, res: Response) => res.json(ok(await payguardService.reject(req.params.projectId, req.params.paymentRequestId, actorId(res)))),
   block: async (req: Request, res: Response) => res.json(ok(await payguardService.block(req.params.projectId, req.params.paymentRequestId, actorId(res)))),
+  approveAndPay: async (req: Request, res: Response) => res.json(ok(await payguardService.approveAndPay(req.params.projectId, req.params.paymentRequestId, actorId(res)))),
   createEscrow: async (req: Request, res: Response) => res.json(ok(await payguardService.createEscrow(req.params.projectId, req.params.paymentRequestId, actorId(res)))),
   fundEscrow: async (req: Request, res: Response) => res.json(ok(await payguardService.fundEscrow(req.params.projectId, req.params.paymentRequestId, actorId(res)))),
   releaseEscrow: async (req: Request, res: Response) => res.json(ok(await payguardService.releaseEscrow(req.params.projectId, req.params.paymentRequestId, actorId(res)))),

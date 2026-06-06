@@ -13,6 +13,7 @@ payguardRoutes.post("/requests", asyncHandler(payguardController.createPaymentRe
 payguardRoutes.post("/requests/:paymentRequestId/approve", asyncHandler(payguardController.approve));
 payguardRoutes.post("/requests/:paymentRequestId/reject", asyncHandler(payguardController.reject));
 payguardRoutes.post("/requests/:paymentRequestId/block", asyncHandler(payguardController.block));
+payguardRoutes.post("/requests/:paymentRequestId/approve-and-pay", asyncHandler(payguardController.approveAndPay));
 payguardRoutes.post("/requests/:paymentRequestId/create-escrow", asyncHandler(payguardController.createEscrow));
 payguardRoutes.post("/requests/:paymentRequestId/fund", asyncHandler(payguardController.fundEscrow));
 payguardRoutes.post("/requests/:paymentRequestId/release", asyncHandler(payguardController.releaseEscrow));

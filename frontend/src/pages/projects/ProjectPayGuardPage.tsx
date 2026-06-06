@@ -1,6 +1,5 @@
 import {
   AlertTriangle,
-  ArrowRight,
   Ban,
   Banknote,
   Bot,
@@ -10,7 +9,6 @@ import {
   ExternalLink,
   FileText,
   Link2,
-  LockKeyhole,
   PlusCircle,
   RefreshCw,
   ShieldCheck,
@@ -31,6 +29,8 @@ import type { CreatePaymentAgentPayload, CreatePaymentRequestPayload, PaymentAge
 
 const ACTIVE_PROJECT_KEY = "oberyn.activeProjectId";
 const ACTIVE_PROJECT_EVENT = "oberyn:active-project-change";
+const PAYMENT_REQUESTS_PAGE_SIZE = 6;
+const PAYMENT_AUDIT_PAGE_SIZE = 5;
 
 function formatMoney(amount: number, token: string) {
   return `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(amount)} ${token}`;
@@ -69,13 +69,13 @@ function statusLabel(status: PaymentRequestStatus) {
   const labels: Record<PaymentRequestStatus, string> = {
     draft: "Borrador",
     pending_approval: "Pendiente",
-    requires_multi_approval: "Multiaprobacion",
+    requires_multi_approval: "Requiere revisión",
     approved: "Aprobada",
     rejected: "Rechazada",
     blocked: "Bloqueada",
-    escrow_created: "Escrow creado",
-    funded: "Fondeado",
-    released: "Liberado",
+    escrow_created: "Pago preparado",
+    funded: "Fondos reservados",
+    released: "Pago enviado",
     failed: "Fallida",
   };
   return labels[status];
@@ -87,6 +87,45 @@ function statusClass(status: PaymentRequestStatus) {
   if (status === "pending_approval" || status === "requires_multi_approval") return "bg-amber-50 text-amber-700";
   if (status === "released" || status === "funded" || status === "escrow_created" || status === "approved") return "bg-emerald-50 text-emerald-700";
   return "bg-slate-50 text-slate-700";
+}
+
+function clampPage(page: number, totalItems: number, pageSize: number) {
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  return Math.min(Math.max(1, page), totalPages);
+}
+
+function PaginationControls({
+  page,
+  totalItems,
+  pageSize,
+  onPageChange,
+}: {
+  page: number;
+  totalItems: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+}) {
+  if (totalItems <= pageSize) return null;
+
+  const totalPages = Math.ceil(totalItems / pageSize);
+  const start = (page - 1) * pageSize + 1;
+  const end = Math.min(page * pageSize, totalItems);
+
+  return (
+    <div className="flex flex-col gap-3 border-t border-slate-100 px-5 py-4 text-sm font-semibold text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+      <span>
+        {start}-{end} de {totalItems}
+      </span>
+      <div className="flex gap-2">
+        <Button type="button" variant="secondary" className="h-9 px-3" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
+          Anterior
+        </Button>
+        <Button type="button" variant="secondary" className="h-9 px-3" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>
+          Siguiente
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 function PermissionPill({ enabled, label }: { enabled: boolean; label: string }) {
@@ -396,6 +435,14 @@ function RequestsTable({
   selectedId?: string | null;
   onSelect: (requestId: string) => void;
 }) {
+  const [page, setPage] = useState(1);
+  const safePage = clampPage(page, requests.length, PAYMENT_REQUESTS_PAGE_SIZE);
+  const visibleRequests = requests.slice((safePage - 1) * PAYMENT_REQUESTS_PAGE_SIZE, safePage * PAYMENT_REQUESTS_PAGE_SIZE);
+
+  useEffect(() => {
+    setPage((current) => clampPage(current, requests.length, PAYMENT_REQUESTS_PAGE_SIZE));
+  }, [requests.length]);
+
   return (
     <Card className="overflow-hidden p-0">
       <div className="border-b border-slate-200 px-5 py-4">
@@ -410,7 +457,6 @@ function RequestsTable({
             <col className="w-[120px]" />
             <col className="w-[150px]" />
             <col className="w-[155px]" />
-            <col className="w-[90px]" />
           </colgroup>
           <thead className="bg-slate-50 text-xs font-extrabold text-slate-500">
             <tr>
@@ -419,12 +465,11 @@ function RequestsTable({
               <th className="px-4 py-3">Monto</th>
               <th className="px-4 py-3">Riesgo</th>
               <th className="px-4 py-3">Estado</th>
-              <th className="px-4 py-3">Escrow / TX</th>
-              <th className="px-4 py-3">Ver</th>
+              <th className="px-4 py-3">Comprobante</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {requests.map((request) => (
+            {visibleRequests.map((request) => (
               <tr key={request.id} className={selectedId === request.id ? "cursor-pointer bg-emerald-50/70" : "cursor-pointer hover:bg-slate-50"} onClick={() => onSelect(request.id)}>
                 <td className="px-4 py-4">
                   <p className="font-mono text-xs font-bold text-slate-700">{shortValue(request.id)}</p>
@@ -442,11 +487,8 @@ function RequestsTable({
                   <span className={`rounded-md px-2.5 py-1 text-xs font-extrabold ${statusClass(request.status)}`}>{statusLabel(request.status)}</span>
                 </td>
                 <td className="px-4 py-4">
-                  <p className="truncate font-mono text-xs text-slate-700" title={request.escrowId ?? ""}>{shortValue(request.escrowId)}</p>
-                  <p className="mt-1 truncate font-mono text-xs text-slate-500" title={request.txHash ?? ""}>{shortValue(request.txHash)}</p>
-                </td>
-                <td className="px-4 py-4">
-                  <ArrowRight className="h-5 w-5 text-[#008f1f]" />
+                  <p className="truncate font-mono text-xs text-slate-700" title={request.txHash ?? request.escrowId ?? ""}>{shortValue(request.txHash ?? request.escrowId)}</p>
+                  <p className="mt-1 text-xs font-semibold text-slate-500">{request.status === "released" ? "Transferido" : request.escrowId ? "En proceso" : "Pendiente"}</p>
                 </td>
               </tr>
             ))}
@@ -454,12 +496,24 @@ function RequestsTable({
         </table>
       </div>
       {!requests.length ? <p className="px-5 py-8 text-sm font-semibold text-slate-500">Aun no hay solicitudes de PayGuard.</p> : null}
+      <PaginationControls page={safePage} totalItems={requests.length} pageSize={PAYMENT_REQUESTS_PAGE_SIZE} onPageChange={setPage} />
     </Card>
   );
 }
 
 function AuditPanel({ request, logs }: { request: PaymentRequest | null; logs: PaymentAuditLog[] }) {
-  const visibleLogs = request ? logs.filter((log) => log.paymentRequestId === request.id) : logs.slice(0, 8);
+  const [page, setPage] = useState(1);
+  const filteredLogs = request ? logs.filter((log) => log.paymentRequestId === request.id) : logs;
+  const safePage = clampPage(page, filteredLogs.length, PAYMENT_AUDIT_PAGE_SIZE);
+  const visibleLogs = filteredLogs.slice((safePage - 1) * PAYMENT_AUDIT_PAGE_SIZE, safePage * PAYMENT_AUDIT_PAGE_SIZE);
+
+  useEffect(() => {
+    setPage(1);
+  }, [request?.id]);
+
+  useEffect(() => {
+    setPage((current) => clampPage(current, filteredLogs.length, PAYMENT_AUDIT_PAGE_SIZE));
+  }, [filteredLogs.length]);
 
   return (
     <Card className="p-5">
@@ -488,6 +542,7 @@ function AuditPanel({ request, logs }: { request: PaymentRequest | null; logs: P
         ))}
         {!visibleLogs.length ? <p className="text-sm font-semibold text-slate-500">Selecciona una solicitud para ver su historial.</p> : null}
       </div>
+      <PaginationControls page={safePage} totalItems={filteredLogs.length} pageSize={PAYMENT_AUDIT_PAGE_SIZE} onPageChange={setPage} />
     </Card>
   );
 }
@@ -495,23 +550,17 @@ function AuditPanel({ request, logs }: { request: PaymentRequest | null; logs: P
 function RequestActions({
   request,
   approvalsCount,
-  onApprove,
+  onApproveAndPay,
   onReject,
   onBlock,
-  onCreateEscrow,
-  onFund,
-  onRelease,
   canSubmitTransactions,
   disabled,
 }: {
   request: PaymentRequest | null;
   approvalsCount: number;
-  onApprove: () => void;
+  onApproveAndPay: () => void;
   onReject: () => void;
   onBlock: () => void;
-  onCreateEscrow: () => void;
-  onFund: () => void;
-  onRelease: () => void;
   canSubmitTransactions: boolean;
   disabled?: boolean;
 }) {
@@ -519,17 +568,14 @@ function RequestActions({
     return (
       <Card className="p-5">
         <h2 className="text-lg font-extrabold text-slate-950">Acciones humanas</h2>
-        <p className="mt-3 text-sm font-semibold text-slate-500">Selecciona una solicitud para aprobar, rechazar o bloquear.</p>
+        <p className="mt-3 text-sm font-semibold text-slate-500">Selecciona una solicitud para decidir si el pago se envía o se bloquea.</p>
       </Card>
     );
   }
 
-  const canApprove = request.status === "pending_approval" || request.status === "requires_multi_approval";
+  const canApproveAndPay = canSubmitTransactions && (request.status === "pending_approval" || request.status === "requires_multi_approval" || request.status === "approved" || request.status === "escrow_created" || request.status === "funded");
   const canReject = ["pending_approval", "requires_multi_approval", "approved"].includes(request.status);
   const canBlock = ["pending_approval", "requires_multi_approval", "approved", "escrow_created"].includes(request.status);
-  const canCreateEscrow = canSubmitTransactions && request.status === "approved" && !request.escrowId;
-  const canFund = canSubmitTransactions && request.status === "escrow_created" && Boolean(request.escrowId);
-  const canRelease = canSubmitTransactions && request.status === "funded" && Boolean(request.escrowId);
 
   return (
     <Card className="p-5">
@@ -541,10 +587,10 @@ function RequestActions({
         <span className={`rounded-md px-2.5 py-1 text-xs font-extrabold ${statusClass(request.status)}`}>{statusLabel(request.status)}</span>
       </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-3">
-        <Button type="button" disabled={disabled || !canApprove} onClick={onApprove} className="gap-2">
+      <div className="mt-5 grid gap-3 sm:grid-cols-[minmax(0,1fr)_160px_160px]">
+        <Button type="button" disabled={disabled || !canApproveAndPay} onClick={onApproveAndPay} className="min-h-11 gap-2 whitespace-normal text-center leading-tight">
           <CheckCircle2 className="h-4 w-4" />
-          Aprobar
+          Aprobar y enviar pago
         </Button>
         <Button type="button" variant="secondary" disabled={disabled || !canReject} onClick={onReject} className="gap-2 text-red-600">
           <XCircle className="h-4 w-4" />
@@ -556,21 +602,17 @@ function RequestActions({
         </Button>
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        <Button type="button" variant="secondary" disabled={disabled || !canCreateEscrow} onClick={onCreateEscrow} className="gap-2">
-          <LockKeyhole className="h-4 w-4" />
-          Crear escrow
-        </Button>
-        <Button type="button" variant="secondary" disabled={disabled || !canFund} onClick={onFund} className="gap-2">
-          <Wallet className="h-4 w-4" />
-          Fund
-        </Button>
-        <Button type="button" variant="secondary" disabled={disabled || !canRelease} onClick={onRelease} className="gap-2">
-          <Banknote className="h-4 w-4" />
-          Release
-        </Button>
+      <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
+        <p className="text-sm font-extrabold text-slate-950">Proceso protegido</p>
+        <div className="mt-3 grid gap-2 text-xs font-bold text-slate-600 sm:grid-cols-3">
+          <span className={request.escrowId ? "text-emerald-700" : ""}>1. Reserva segura</span>
+          <span className={request.status === "funded" || request.status === "released" ? "text-emerald-700" : ""}>2. Fondos reservados</span>
+          <span className={request.status === "released" ? "text-emerald-700" : ""}>3. Pago enviado</span>
+        </div>
+        {request.escrowId ? <p className="mt-3 break-all font-mono text-xs text-slate-500">Referencia Trustless Work: {request.escrowId}</p> : null}
+        {request.txHash ? <p className="mt-2 break-all font-mono text-xs text-slate-500">Última transacción: {request.txHash}</p> : null}
       </div>
-      {!canSubmitTransactions ? <p className="mt-3 text-xs font-semibold text-slate-500">Trustless Work debe estar en live para crear, fondear o liberar escrow.</p> : null}
+      {!canSubmitTransactions ? <p className="mt-3 text-xs font-semibold text-slate-500">Trustless Work debe estar en live para enviar pagos reales.</p> : null}
     </Card>
   );
 }
@@ -679,12 +721,9 @@ export function ProjectPayGuardPage() {
           request={selectedRequest}
           approvalsCount={approvalsCount}
           disabled={isWorking}
-          onApprove={() => selectedRequest && void runAction(() => payguard.approve(selectedRequest.id), "Decision humana registrada.")}
+          onApproveAndPay={() => selectedRequest && void runAction(() => payguard.approveAndPay(selectedRequest.id), "Pago aprobado y enviado correctamente.")}
           onReject={() => selectedRequest && void runAction(() => payguard.reject(selectedRequest.id), "Solicitud rechazada.")}
           onBlock={() => selectedRequest && void runAction(() => payguard.block(selectedRequest.id), "Solicitud bloqueada.")}
-          onCreateEscrow={() => selectedRequest && void runAction(() => payguard.createEscrow(selectedRequest.id), "Escrow creado mediante Trustless Work.")}
-          onFund={() => selectedRequest && void runAction(() => payguard.fundEscrow(selectedRequest.id), "Escrow fondeado.")}
-          onRelease={() => selectedRequest && void runAction(() => payguard.releaseEscrow(selectedRequest.id), "Pago liberado.")}
           canSubmitTransactions={payguard.trustlessWork.canSubmitTransactions}
         />
       </div>
@@ -695,7 +734,7 @@ export function ProjectPayGuardPage() {
         <div className="flex gap-4">
           <FileText className="h-6 w-6 shrink-0 text-[#008f1f]" />
           <p className="text-sm font-semibold leading-6 text-slate-700">
-            Un agente puede crear solicitudes, pero no hay ningun endpoint ni permiso para que ejecute pagos directamente. Crear escrow, fondear y liberar quedan bloqueados hasta que el estado de la solicitud lo permita.
+            Un agente puede crear solicitudes, pero no puede mover fondos directamente. La persona responsable aprueba el pago y Oberyn ejecuta la reserva segura, el fondeo y la liberación con Trustless Work por debajo.
           </p>
         </div>
       </Card>

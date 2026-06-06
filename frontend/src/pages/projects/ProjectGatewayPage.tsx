@@ -12,7 +12,7 @@ export function ProjectGatewayPage() {
           </span>
           <h1 className="mt-4 text-3xl font-bold tracking-normal text-slate-950">Gateway de Oberyn</h1>
           <p className="mt-3 text-sm leading-6 text-slate-600">
-            El Gateway sera una implementacion disponible en futuras versiones. Esta seccion queda como vista previa del modulo, pero las opciones de configuracion, tokens, endpoints y pruebas de trafico estan ocultas hasta que el runtime este listo para produccion.
+            El Gateway será una implementación disponible en futuras versiones. Esta sección queda como vista previa del módulo, pero las opciones de configuración, tokens, endpoints y pruebas de tráfico están ocultas hasta que el runtime esté listo para producción.
           </p>
         </div>
 
@@ -26,12 +26,12 @@ export function ProjectGatewayPage() {
             {
               Icon: ShieldCheck,
               title: "Inspeccion antes de enviar",
-              text: "Evaluara prompts, payloads y reglas del proyecto antes de contactar al proveedor externo.",
+              text: "Evaluará prompts, payloads y reglas del proyecto antes de contactar al proveedor externo.",
             },
             {
               Icon: LockKeyhole,
               title: "Credenciales bajo tu control",
-              text: "Las claves de proveedores seguiran viviendo en tu infraestructura y no seran almacenadas por Oberyn.",
+              text: "Las claves de proveedores seguirán viviendo en tu infraestructura y no serán almacenadas por Oberyn.",
             },
           ].map(({ Icon, title, text }) => (
             <Card key={title} className="p-5">
@@ -45,9 +45,9 @@ export function ProjectGatewayPage() {
         </div>
 
         <Card className="mt-6 border-amber-200 bg-amber-50/60 p-5">
-          <h2 className="font-bold text-amber-900">Disponible proximamente</h2>
+          <h2 className="font-bold text-amber-900">Disponible próximamente</h2>
           <p className="mt-2 text-sm leading-6 text-amber-800">
-            Por ahora, usa el SDK de Oberyn para proteger acciones, inspeccionar prompts y registrar auditoria. Cuando el Gateway este listo, esta pagina habilitara configuracion, estado operativo y guias de conexion.
+            Por ahora, usa el SDK de Oberyn para proteger acciones, inspeccionar prompts y registrar auditoría. Cuando el Gateway esté listo, esta página habilitará configuración, estado operativo y guías de conexión.
           </p>
         </Card>
       </section>

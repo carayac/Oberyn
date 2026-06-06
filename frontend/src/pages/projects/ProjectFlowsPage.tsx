@@ -14,6 +14,7 @@ import type { Project } from "../../types/project";
 
 const ACTIVE_PROJECT_KEY = "oberyn.activeProjectId";
 const ACTIVE_PROJECT_EVENT = "oberyn:active-project-change";
+const FLOWS_PAGE_SIZE = 2;
 
 type ApiResponse<T> = {
   success: boolean;
@@ -112,6 +113,34 @@ function decisionLabel(decision: string) {
   if (decision === "requires_approval") return "Aprobacion";
   if (decision === "approved") return "Permitido";
   return decision || "Sin decision";
+}
+
+function clampPage(page: number, totalItems: number, pageSize: number) {
+  return Math.max(1, Math.min(page, Math.max(1, Math.ceil(totalItems / pageSize))));
+}
+
+function PaginationControls({ page, totalItems, pageSize, onPageChange }: { page: number; totalItems: number; pageSize: number; onPageChange: (page: number) => void }) {
+  if (totalItems <= pageSize) return null;
+
+  const totalPages = Math.ceil(totalItems / pageSize);
+  const firstItem = (page - 1) * pageSize + 1;
+  const lastItem = Math.min(page * pageSize, totalItems);
+
+  return (
+    <div className="mt-5 flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-sm font-semibold text-slate-500">
+        {firstItem}-{lastItem} de {totalItems}
+      </p>
+      <div className="flex gap-2">
+        <Button type="button" variant="secondary" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
+          Anterior
+        </Button>
+        <Button type="button" variant="secondary" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>
+          Siguiente
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 function ProjectSelect({ projects, projectId, onChange }: { projects: Project[]; projectId: string; onChange: (projectId: string) => void }) {
@@ -310,6 +339,7 @@ export function ProjectFlowsPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [form, setForm] = useState<FlowForm>(initialForm);
   const [message, setMessage] = useState<string | null>(null);
+  const [flowsPage, setFlowsPage] = useState(1);
 
   const selectedFlow = useMemo(() => flows.find((flow) => flow.id === selectedFlowId) ?? flows[0] ?? null, [flows, selectedFlowId]);
 
@@ -379,12 +409,22 @@ export function ProjectFlowsPage() {
     const matchesStatus = statusFilter === "all" || flow.status === statusFilter;
     return matchesQuery && matchesStatus;
   });
+  const safeFlowsPage = clampPage(flowsPage, filteredFlows.length, FLOWS_PAGE_SIZE);
+  const visibleFlows = filteredFlows.slice((safeFlowsPage - 1) * FLOWS_PAGE_SIZE, safeFlowsPage * FLOWS_PAGE_SIZE);
 
   const insights = flows.map((flow) => buildInsight(flow, auditEvents));
   const totalEvents = insights.reduce((total, insight) => total + insight.events.length, 0);
   const highRiskFlows = insights.filter((insight) => riskRank[insight.highestRisk] >= riskRank.high).length;
   const protectedEvents = insights.reduce((total, insight) => total + insight.protectedCount, 0);
   const coverage = totalEvents ? Math.round((protectedEvents / totalEvents) * 100) : 0;
+
+  useEffect(() => {
+    setFlowsPage(1);
+  }, [query, selectedProject?.id, statusFilter]);
+
+  useEffect(() => {
+    setFlowsPage((current) => clampPage(current, filteredFlows.length, FLOWS_PAGE_SIZE));
+  }, [filteredFlows.length]);
 
   return (
     <div className="min-h-[calc(100dvh-40px)] text-slate-950">
@@ -460,9 +500,10 @@ export function ProjectFlowsPage() {
                 <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">Crea un flujo esperado o ejecuta el mini proyecto del SDK para que Oberyn detecte acciones reales automaticamente.</p>
               </Card>
             ) : null}
-            {filteredFlows.map((flow) => (
+            {visibleFlows.map((flow) => (
               <FlowCard key={flow.id} flow={flow} auditEvents={auditEvents} isSelected={selectedFlow?.id === flow.id} onSelect={() => setSelectedFlowId(flow.id)} />
             ))}
+            <PaginationControls page={safeFlowsPage} totalItems={filteredFlows.length} pageSize={FLOWS_PAGE_SIZE} onPageChange={setFlowsPage} />
           </div>
 
           <aside className="space-y-5">

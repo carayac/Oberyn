@@ -110,7 +110,7 @@ export function ProjectSDKPage() {
         activeOrganizationId,
       );
       setTestEventResult(response.data);
-      setMessage(response.data.accepted ? "Evento de prueba enviado y registrado en auditoria." : "El backend respondio, pero el evento no fue aceptado.");
+      setMessage(response.data.accepted ? "Evento de prueba enviado y registrado en auditoría." : "El backend respondió, pero el evento no fue aceptado.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "No se pudo enviar el evento de prueba.");
     } finally {
@@ -182,12 +182,12 @@ export const oberyn = createOberyn({
               <div>
                 <h2 className="font-bold text-slate-950">Evento registrado correctamente</h2>
                 <p className="mt-1 break-all text-sm font-semibold text-slate-600">ID: {testEventResult.eventId}</p>
-                <p className="mt-1 text-sm text-slate-600">Este evento crea actividad SDK, una integracion de prueba y un registro auditable para el proyecto.</p>
+                <p className="mt-1 text-sm text-slate-600">Este evento crea actividad SDK, una integración de prueba y un registro auditable para el proyecto.</p>
               </div>
             </div>
             <a href={`/projects/${projectId}/audit`} className="inline-flex">
               <Button variant="secondary" className="gap-2">
-                Ver auditoria
+                Ver auditoría
                 <ExternalLink className="h-4 w-4" />
               </Button>
             </a>

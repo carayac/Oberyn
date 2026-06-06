@@ -27,7 +27,7 @@ import { Card } from "../../components/ui/Card";
 import { useDashboardData } from "../../hooks/useDashboardData";
 import { useOrganizations } from "../../hooks/useOrganizations";
 import { useProjects } from "../../hooks/useProjects";
-import { getProjectApprovalsRoute, getProjectAuditRoute, getProjectPayGuardRoute, getProjectRulesRoute } from "../../lib/constants/routes";
+import { getEvidenceRoute, getProjectApprovalsRoute, getProjectAuditRoute, getProjectPayGuardRoute, getProjectRulesRoute } from "../../lib/constants/routes";
 import type { ApprovalRequest } from "../../types/approval";
 import type { AuditEvent } from "../../types/audit";
 import type { Flow } from "../../types/flow";
@@ -47,6 +47,7 @@ const ACTIVE_PROJECT_KEY = "oberyn.activeProjectId";
 const ACTIVE_PROJECT_EVENT = "oberyn:active-project-change";
 
 type ActivityRow = {
+  eventId: string;
   source: string;
   provider?: string | null;
   serviceType?: string | null;
@@ -117,6 +118,7 @@ function buildActivities(data: DashboardSnapshot): ActivityRow[] {
     const provider = integration?.provider ?? (typeof metadata.serviceProvider === "string" ? metadata.serviceProvider : typeof metadata.provider === "string" ? metadata.provider : null);
     const serviceType = integration?.serviceType ?? (typeof metadata.serviceType === "string" ? metadata.serviceType : null);
     return {
+      eventId: event.id,
       source: integration?.name ?? event.eventType,
       provider,
       serviceType,
@@ -167,7 +169,7 @@ function StatusPill({ status }: { status: string }) {
   return <span className={`inline-flex rounded-md px-2.5 py-1 text-xs font-bold ${statusClass(status)}`}>{status}</span>;
 }
 
-function ActivityTable({ rows }: { rows: ActivityRow[] }) {
+function ActivityTable({ rows, projectId }: { rows: ActivityRow[]; projectId: string }) {
   return (
     <Card className="p-0">
       <div className="border-b border-slate-200 px-5 py-4">
@@ -205,10 +207,14 @@ function ActivityTable({ rows }: { rows: ActivityRow[] }) {
                   <StatusPill status={row.status} />
                 </td>
                 <td className="whitespace-nowrap px-5 py-4">
-                  <span className="inline-flex items-center gap-1">
-                    {row.audit}
-                    {row.audit !== "Pendiente" ? <ExternalLink className="h-3.5 w-3.5 text-[#008f1f]" /> : null}
-                  </span>
+                  {row.audit !== "Pendiente" ? (
+                    <Link to={getEvidenceRoute(projectId, row.eventId)} className="inline-flex items-center gap-1 font-bold text-[#008f1f] hover:underline">
+                      {row.audit}
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </Link>
+                  ) : (
+                    <span>{row.audit}</span>
+                  )}
                 </td>
                 <td className="whitespace-nowrap px-5 py-4 text-right">{row.time}</td>
               </tr>
@@ -661,7 +667,7 @@ export function DashboardPage() {
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.75fr)_minmax(320px,0.75fr)]">
-        <ActivityTable rows={activities} />
+        <ActivityTable rows={activities} projectId={selectedProject.id} />
         <PoliciesPanel projectId={selectedProject.id} rules={dashboardData.rules} />
         <RiskPanel events={dashboardData.auditEvents} />
       </div>
